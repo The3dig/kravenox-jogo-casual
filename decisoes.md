@@ -11,3 +11,16 @@
 - **Por quê:** o Rone pediu Python, nada de HTML, e o mesmo estilo do jogo de
   referência (quadros que o personagem percorre).
 - A versão anterior ficou em `versoes-antigas/fogueira-html/`.
+
+## 2026-11-02: versão em Godot 4.5
+
+- **Era:** só a versão em Python.
+- **Passou a ser:** a versão em Python continua, e a mesma versão foi passada
+  para Godot 4.5 (`godot/`), no mesmo padrão do Cratera do Cisma
+  (Compatibility, exportação Web, modo `--robo`).
+- **Por quê:** o Rone pediu o jogo em Godot 4. A mecânica (quadros que o
+  Kravenox percorre, loja com custo e ondas) fica; não foi feita cópia das
+  fases, dos itens nem da arte do jogo de referência.
+- **Mudança nas duas versões:** o Kravenox ganhou uma mordida básica, e os
+  monstros aceleram depois de 20 s de onda. Sem isso, um tabuleiro só com
+  cura e velocidade deixava a onda sem fim.

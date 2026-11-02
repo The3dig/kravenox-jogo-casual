@@ -227,6 +227,7 @@ class Jogo:
         else:
             self.aviso("Onda " + str(w), 1.5)
         self.t_spawn = 0.8
+        self.t_onda = 0.0   # depois de 20 s de onda os monstros ficam mais rápidos
         self.gap = max(0.35, 1.3 - w * 0.06)
 
     def criar_monstro(self, tipo, x=None, y=None):
@@ -258,6 +259,11 @@ class Jogo:
     def ativar(self, i):
         q = self.quadros[i]
         self.brilho[i] = 0.35
+        # mordida básica: sempre acerta quem está colado nele (evita empate eterno)
+        bx, by = self.pos_kravenox()
+        for m in self.monstros:
+            if math.hypot(m["x"] - bx, m["y"] - by) < 60:
+                self.ferir(m, 5 + self.onda)
         if not q:
             return
         nv = q["nv"]
@@ -370,6 +376,8 @@ class Jogo:
                 self.criar_monstro(self.fila.pop(0))
                 self.t_spawn = self.gap * random.uniform(0.6, 1.3)
 
+        self.t_onda += dt
+        pressa = 1 + max(0, self.t_onda - 20) * 0.05
         kx, ky = self.pos_kravenox()
         for m in self.monstros:
             m["anim"] += dt
@@ -378,8 +386,8 @@ class Jogo:
             d = math.hypot(dx, dy) or 1
             alcance = 34 if not m["chefe"] else 70
             if d > alcance:
-                m["x"] += dx / d * m["vel"] * dt
-                m["y"] += dy / d * m["vel"] * dt
+                m["x"] += dx / d * m["vel"] * pressa * dt
+                m["y"] += dy / d * m["vel"] * pressa * dt
             else:
                 m["t_ataque"] -= dt
                 if m["t_ataque"] <= 0:

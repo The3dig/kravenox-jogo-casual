@@ -1,6 +1,7 @@
 # Kravenox: Quadros do Cisma
 
-Jogo casual do universo Kravenox, em **Python (pygame)**.
+Jogo casual do universo Kravenox. Tem duas versões iguais: **Python (pygame)**,
+no `kravenox_quadros.py`, e **Godot 4.5**, na pasta `godot/` (veja `godot/LEIAME.md`).
 
 O Kravenox anda sem parar por um anel de 12 quadros. Na loja de baixo você
 compra poderes e coloca nos quadros; quando ele pisa num quadro, o poder dali
@@ -22,6 +23,8 @@ python kravenox_quadros.py
 - **Lixo:** toque nele e depois num quadro para vender o item pela metade.
 - **Trocar:** sorteia outros 3 itens (a primeira troca de cada onda é grátis, depois custa 2).
 - **Iniciar onda** (ou espaço) começa a onda. **x1/x2** acelera.
+- O Kravenox sempre morde quem está colado nele. Depois de 20 s de onda, os
+  monstros ficam cada vez mais rápidos.
 - Matar monstros dá essência roxa, que paga a loja. Vencer a onda dá essência e cura.
 
 ## Poderes (dos poderes do Kravenox)

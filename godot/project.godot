@@ -1,0 +1,32 @@
+; Kravenox: Quadros do Cisma (Godot 4.5)
+
+config_version=5
+
+[application]
+
+config/name="Kravenox: Quadros do Cisma"
+config/description="O Kravenox percorre os quadros e ativa os poderes. Sobreviva às 15 ondas."
+run/main_scene="res://cenas/principal.tscn"
+config/features=PackedStringArray("4.5", "GL Compatibility")
+config/icon="res://icone.png"
+
+[display]
+
+window/size/viewport_width=480
+window/size/viewport_height=820
+window/size/window_width_override=480
+window/size/window_height_override=820
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+window/handheld/orientation=1
+
+[input_devices]
+
+pointing/emulate_mouse_from_touch=true
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/canvas_textures/default_texture_filter=0
+environment/defaults/default_clear_color=Color(0.08, 0.04, 0.05, 1)
