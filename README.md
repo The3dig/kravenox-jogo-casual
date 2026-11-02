@@ -5,8 +5,29 @@ Jogo casual do universo Kravenox, em **Godot 4.5**, na pasta `godot/` (veja
 
 O Kravenox anda sem parar por um anel de 12 quadros. Na loja de baixo você
 compra poderes e coloca nos quadros; quando ele pisa num quadro, o poder dali
-dispara. Ao iniciar a onda, os monstros do Reino Quebrado vêm de todos os
-lados. São 15 ondas, com chefe nas ondas 5, 10 e 15.
+dispara. Entre as ondas ele espera no meio do anel.
+
+## Estrutura
+
+- **76 capítulos**, um para cada capítulo do livro (35 do Livro I e 41 do
+  Livro II), com os títulos do RPG.
+- **19 mundos** de 4 capítulos cada. O mapa dos mundos mostra o que já foi
+  vencido, o próximo capítulo e o que ainda está trancado.
+- **4 fases por capítulo**; a 4ª tem chefe: Larva-Mãe nos dois primeiros
+  capítulos de cada mundo, Sentinela sem Rosto no terceiro e Thornox no último.
+- **Começa simples:** no capítulo 1 só existem Garras, Espinhos e Cristal e só
+  aparece a Larva. Os outros poderes e monstros entram aos poucos (Raio no 2,
+  Passo no 3, Esmagamento no 5, Fonte no 7, Rasgo no 9; Sentinela Esférica no
+  2, Verme no 4, Sentinela do Vazio no 6).
+- **Melhorias:** cada capítulo dá fragmentos (mais na primeira vitória). Na
+  tela de Melhorias eles viram vida, essência inicial, dano, velocidade e
+  trocas grátis, que valem para todos os capítulos.
+- O progresso fica salvo no aparelho.
+
+## Telas
+
+Abertura (logo e carregamento) → Início (Jogar, Melhorias, Bestiário, Som) →
+Mundos → Capítulo. O Bestiário mostra os monstros já encontrados.
 
 ## Como abrir
 
@@ -49,9 +70,9 @@ Cisma. Letras: Cinzel nos títulos e Alegreya Sans no texto (licença OFL, em
 
 ## Som
 
-As músicas são as do RPG 2D (`kravenox-jogar/rpg/music`): **Abismo** na loja,
-**Batalha** nas ondas, **Chefe** nas ondas 5 e 10, **Espinhos** contra o
-Thornox na onda 15, e **Vitória** e **Game over** no fim. Os efeitos (golpe,
+As músicas são as do RPG 2D (`kravenox-jogar/rpg/music`): **Reino** nos menus, **Abismo** na loja,
+**Batalha** nas ondas, **Chefe** na fase do chefe, **Espinhos** contra o
+Thornox, e **Vitória** e **Game over** no fim. Os efeitos (golpe,
 raio, esmagamento, dano, essência, chefe) são os do Cratera do Cisma. O botão
 de alto-falante no alto liga e desliga o som.
 

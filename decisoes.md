@@ -56,3 +56,15 @@
   `versoes-antigas/python/` (com a pasta `assets/` que ela usava).
 - **Por quê:** a do Godot é a que vai para o celular, e manter as duas
   dobrava o trabalho a cada mudança.
+
+## 2026-11-02: capítulos, mundos e melhorias
+
+- **Era:** uma partida só de 15 ondas, sem tela inicial.
+- **Passou a ser:** 76 capítulos (os do livro) em 19 mundos de 4; cada
+  capítulo tem 4 fases, a última com chefe. Tela de abertura, tela inicial
+  com Jogar, Melhorias, Bestiário e Som, mapa dos mundos, melhorias
+  permanentes compradas com fragmentos e progresso salvo. Os poderes e os
+  monstros vão sendo liberados aos poucos. Entre as ondas o Kravenox espera no
+  meio do anel.
+- **Por quê:** pedido do Rone: começar simples, ter evolução a cada missão e
+  cobrir os 76 capítulos.

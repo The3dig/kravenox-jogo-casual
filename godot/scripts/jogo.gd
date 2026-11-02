@@ -18,10 +18,42 @@ const OX := 57.0
 const OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const TOTAL_ONDAS := 15
+const FASES := 4             # ondas por capítulo; a 4ª tem chefe
+const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
+const CAPS_POR_MUNDO := 4
+const CENTRO := Vector2(240, 383)   # meio do anel: onde o Kravenox espera entre as ondas
 const ANEL := [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0), Vector2i(3, 1), Vector2i(3, 2),
 	Vector2i(3, 3), Vector2i(2, 3), Vector2i(1, 3), Vector2i(0, 3), Vector2i(0, 2), Vector2i(0, 1)]
-const CHEFES := {5: "larvamae", 10: "semrosto", 15: "thornox"}
+# Os 76 capítulos do livro (títulos do RPG em kravenox-jogar/rpg/js)
+const CAPITULOS := [
+	"O Despertar no Reino Quebrado", "Ecos do Cisma", "As Sentinelas", "A Vila Sem Nome", "A Primeira Raiz",
+	"O Sangue dos Irmãos", "A Coisa que Dormia", "Os Sinos do Vazio", "O Abismo entre os Irmãos", "A Filha Esquecida",
+	"O Sétimo Sino", "A Escolha", "A Quarta Essência", "O Reino em Guerra", "A Cidade das Cinzas",
+	"O Sangue da Essência", "O Gigante do Vazio", "O que Existia Antes", "O Coração do Primeiro", "A Queda de Valdora",
+	"A Sala da Fonte", "O Homem que Kravenox Seria", "As Ruínas do Passado", "O Último Caminho", "A Última Batalha",
+	"Depois do Fim", "Além das Montanhas", "A Primeira Cidade", "O Mundo que Virá", "A Queda da Primeira Cidade",
+	"O Exército das Sombras", "O Rei dos Espinhos", "O Peso da Escolha", "O Rei do Vazio", "A Nova Essência",
+	"A Cidade sem Nome", "O Irmão que Morreu", "O Último Rei", "A Guerra dos Mundos", "O Terceiro Espinho",
+	"O Primeiro Mundo", "Aquilo que Sou", "O Nascimento do Caos", "A Cidade que Não Existia", "O Pai dos Devoradores",
+	"A Prisão entre Mundos", "A Porta", "A Primeira Origem", "Os Antigos", "O Mundo sem Nome",
+	"A Cidade dos Espinhos", "O Homem Antes do Rei", "O Rei do Último Mundo", "A Escolha que Não Foi Sua", "Quando a Fonte Morreu",
+	"A Biblioteca do Fim", "O Primeiro Leitor", "O Mundo Depois do Fim", "Aquele que Existia Antes", "O Livro de Thornox",
+	"O Destino de Thornox", "A Estrada entre as Estrelas", "A Porta Dentro de Thornox", "O que a Fonte Escondeu", "O Caminho até o Fim",
+	"O Começo Depois do Fim", "Um Mundo sem Nome", "A Menina que Lembrava", "Aveline", "A Última Escolha de Aveline",
+	"A Estrela Azul", "O Primeiro Kravenox", "A Escolha que Faltava", "O Último Inimigo", "O Mundo Verde",
+	"O que Fica Depois do Fim",
+]
+# Começa simples: cada poder e cada monstro aparece a partir de um capítulo.
+const ITEM_DESDE := {"garras": 1, "espinhos": 1, "cristal": 1, "raio": 2, "passo": 3, "esmagamento": 5, "fonte": 7, "rasgo": 9}
+const MONSTRO_DESDE := {"larva": 1, "esfera": 2, "verme": 4, "sentinela": 6}
+# Melhorias permanentes, compradas com fragmentos ganhos a cada missão.
+const MELHORIAS := [
+	{"id": "vida", "nome": "Couraça de Espinhos", "desc": "+20 de vida", "max": 20, "custo": 4},
+	{"id": "essencia", "nome": "Essência Guardada", "desc": "+6 de essência no começo", "max": 20, "custo": 4},
+	{"id": "forca", "nome": "Fúria do Cisma", "desc": "+10% de dano dos poderes", "max": 20, "custo": 6},
+	{"id": "passo", "nome": "Passo Predador", "desc": "+6% de velocidade", "max": 5, "custo": 5},
+	{"id": "sorte", "nome": "Olho do Vazio", "desc": "+1 troca grátis por onda", "max": 2, "custo": 10},
+]
 
 # Paleta da fantasia sombria: preto azulado, roxo do Vazio, vermelho do
 # Kravenox, ouro velho para a interface.
@@ -108,8 +140,21 @@ var msg := ""
 var msg_t := 0.0
 var loja := []
 
+# telas e progresso
+var tela := "abertura"   # abertura / inicio / mundos / melhorias / bestiario / jogo
+var t_tela := 0.0
+var capitulo := 1
+var premio_fim := 0
+var k_meio := 1.0        # 1 = parado no meio do anel (entre as ondas)
+var rolagem := 0.0       # rolagem do mapa dos mundos
+var toque_ini := Vector2.ZERO
+var toque_rola := 0.0
+var arrastou := false
+var prog := {}
+var robo_tentativas := 0
+
 # som: trilhas do RPG 2D (kravenox-jogar/rpg/music) e efeitos do Cratera do Cisma
-const TRILHAS_EM_LACO := ["abismo", "batalha", "chefe", "espinhos"]
+const TRILHAS_EM_LACO := ["abismo", "batalha", "chefe", "espinhos", "reino"]
 const EFEITOS := ["acerto", "corte", "raio", "esmagamento", "dano", "gema", "chefe", "nivel", "thornox"]
 var musica: AudioStreamPlayer
 var faixa := ""
@@ -135,6 +180,15 @@ func _ready() -> void:
 	fundo = load("res://assets/arte/cratera.png")
 	vinheta = gerar_vinheta()
 	preparar_som()
+	carregar_progresso()
+	if robo:
+		tela = "jogo"
+		# --cap=60 começa no capítulo 60 com as melhorias no máximo (para testar o fim)
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--cap="):
+				capitulo = int(a.substr(6))
+				for m in MELHORIAS:
+					prog["melhorias"][m["id"]] = m["max"]
 	novo_jogo()
 
 
@@ -179,11 +233,13 @@ func som(nome: String) -> void:
 
 
 func musica_certa() -> String:
+	if tela != "jogo":
+		return "reino"
 	match estado:
 		"onda":
-			if onda == TOTAL_ONDAS:
-				return "espinhos"
-			return "chefe" if CHEFES.has(onda) else "batalha"
+			if onda == FASES:
+				return "espinhos" if chefe_do_capitulo() == "thornox" else "chefe"
+			return "batalha"
 		"vitoria":
 			return "vitoria"
 		"derrota":
@@ -228,11 +284,101 @@ func gerar_vinheta() -> Texture2D:
 	return ImageTexture.create_from_image(img)
 
 
+# ------------------------------------------------------------ progresso
+const ARQUIVO := "user://progresso.json"
+
+
+func carregar_progresso() -> void:
+	prog = {"liberado": 1, "feitos": {}, "fragmentos": 0, "melhorias": {}, "vistos": {}}
+	if robo or not FileAccess.file_exists(ARQUIVO):
+		return
+	var f := FileAccess.open(ARQUIVO, FileAccess.READ)
+	if f == null:
+		return
+	var d = JSON.parse_string(f.get_as_text())
+	if d is Dictionary:
+		for k in prog.keys():
+			if d.has(k):
+				prog[k] = d[k]
+	prog["liberado"] = clampi(int(prog["liberado"]), 1, TOTAL_CAPITULOS)
+	prog["fragmentos"] = int(prog["fragmentos"])
+
+
+func salvar() -> void:
+	if robo:
+		return
+	var f := FileAccess.open(ARQUIVO, FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify(prog))
+
+
+func mundo_de(c: int) -> int:
+	return (c - 1) / CAPS_POR_MUNDO + 1
+
+
+func feito(c: int) -> bool:
+	return prog["feitos"].has(str(c))
+
+
+func fim_capitulo(venceu: bool) -> void:
+	if venceu:
+		premio_fim = 3 + mundo_de(capitulo) + (0 if feito(capitulo) else 3)
+		prog["feitos"][str(capitulo)] = true
+		prog["liberado"] = maxi(int(prog["liberado"]), mini(capitulo + 1, TOTAL_CAPITULOS))
+	else:
+		premio_fim = maxi(0, onda - 1)
+	prog["fragmentos"] = int(prog["fragmentos"]) + premio_fim
+	salvar()
+
+
+func custo_melhoria(m: Dictionary) -> int:
+	return int(m["custo"]) * (nivel_melhoria(m["id"]) + 1)
+
+
+func comprar_melhoria(i: int) -> bool:
+	var m: Dictionary = MELHORIAS[i]
+	var lv := nivel_melhoria(m["id"])
+	var c := custo_melhoria(m)
+	if lv >= int(m["max"]) or int(prog["fragmentos"]) < c:
+		return false
+	prog["fragmentos"] = int(prog["fragmentos"]) - c
+	prog["melhorias"][m["id"]] = lv + 1
+	salvar()
+	som("nivel")
+	return true
+
+
+func pode_melhorar() -> bool:
+	for m in MELHORIAS:
+		if nivel_melhoria(m["id"]) < int(m["max"]) and int(prog["fragmentos"]) >= custo_melhoria(m):
+			return true
+	return false
+
+
+func comecar_capitulo(c: int) -> void:
+	capitulo = clampi(c, 1, TOTAL_CAPITULOS)
+	tela = "jogo"
+	novo_jogo()
+
+
+func ir_para(t: String) -> void:
+	tela = t
+	t_tela = 0.0
+	if t == "mundos":
+		rolagem = clampf((mundo_de(int(prog["liberado"])) - 1) * 168.0 - 160.0, 0.0, rolagem_max())
+
+
+func nivel_melhoria(id: String) -> int:
+	return int(prog["melhorias"].get(id, 0))
+
+
 func novo_jogo() -> void:
 	onda = 0
-	essencia = 25
-	hp_max = 150.0
+	essencia = 25 + 6 * nivel_melhoria("essencia") + 3 * (capitulo - 1)
+	hp_max = 150.0 + 20 * nivel_melhoria("vida")
 	hp = hp_max
+	k_vel = 1.4 * (1.0 + 0.06 * nivel_melhoria("passo"))
+	k_meio = 1.0
 	quadros = []
 	quadros.resize(12)
 	brilho = []
@@ -250,9 +396,12 @@ func novo_jogo() -> void:
 	estado = "loja"
 	selec = []
 	vender = false
-	trocas_gratis = 1
+	trocas_gratis = 1 + nivel_melhoria("sorte")
 	mortes = 0
-	aviso("Compre um poder e toque num quadro", 6.0)
+	if capitulo == 1:
+		aviso("Compre um poder e toque num quadro", 6.0)
+	else:
+		aviso("Capítulo %d · %s" % [capitulo, CAPITULOS[capitulo - 1]], 3.0)
 	sortear_loja()
 
 
@@ -277,13 +426,13 @@ func pos_kravenox() -> Vector2:
 # ------------------------------------------------------------ loja
 func sortear_loja() -> void:
 	loja = []
-	var ids := ITENS.keys()
+	var ids := ITENS.keys().filter(func(k): return ITEM_DESDE[k] <= capitulo)
 	for _i in 3:
 		loja.append(ids.pick_random())
 
 
 func preco(iid: String) -> int:
-	return ITENS[iid]["custo"] + onda / 3
+	return ITENS[iid]["custo"] + (capitulo - 1) / 6
 
 
 func valor_venda(q: Dictionary) -> int:
@@ -318,26 +467,34 @@ func iniciar_onda() -> void:
 	estado = "onda"
 	selec = []
 	vender = false
-	var tipos := ["larva", "larva", "larva", "larva", "larva"]
-	if onda >= 2:
+	var tipos := ["larva", "larva", "larva", "larva"]
+	if capitulo >= MONSTRO_DESDE["esfera"]:
 		tipos += ["esfera", "esfera", "esfera"]
-	if onda >= 3:
+	if capitulo >= MONSTRO_DESDE["verme"]:
 		tipos += ["verme", "verme"]
-	if onda >= 5:
+	if capitulo >= MONSTRO_DESDE["sentinela"]:
 		tipos += ["sentinela", "sentinela"]
-	if onda >= 8:
-		tipos += ["verme", "sentinela", "sentinela"]
+	if capitulo >= 12:
+		tipos += ["verme", "sentinela"]
 	fila = []
-	for _i in 6 + onda * 2:
+	for _i in 4 + onda * 2 + mini(8, (capitulo - 1) / 3):
 		fila.append(tipos.pick_random())
-	if CHEFES.has(onda):
-		fila.insert(3, CHEFES[onda])
-		aviso("Chefe: %s!" % MONSTROS[CHEFES[onda]]["nome"], 3.0)
+	if onda == FASES:
+		var c := chefe_do_capitulo()
+		fila.insert(3, c)
+		aviso("Chefe: %s!" % MONSTROS[c]["nome"], 3.0)
 	else:
-		aviso("Onda %d" % onda, 1.5)
+		aviso("Fase %d de %d" % [onda, FASES], 1.5)
 	t_spawn = 0.8
 	t_onda = 0.0
-	gap = maxf(0.35, 1.3 - onda * 0.06)
+	gap = maxf(0.35, 1.3 - onda * 0.1 - capitulo * 0.01)
+
+
+# Nos dois primeiros capítulos de cada mundo, a Larva-Mãe; no terceiro, a
+# Sentinela sem Rosto; no último, o Thornox.
+func chefe_do_capitulo() -> String:
+	var j := (capitulo - 1) % CAPS_POR_MUNDO
+	return "thornox" if j == 3 else ("semrosto" if j == 2 else "larvamae")
 
 
 func criar_monstro(tipo: String, p = null) -> void:
@@ -353,10 +510,15 @@ func criar_monstro(tipo: String, p = null) -> void:
 	var chefe: bool = m.get("chefe", false)
 	if chefe:
 		som("thornox" if tipo == "thornox" else "chefe")
-	var esc := 1.0 + 0.18 * (onda - 1)
-	var vida: float = m["hp"] * (esc if not chefe else 1.0 + 0.1 * (onda - 1))
+	prog["vistos"][tipo] = true
+	var cresce := 0.10 * (capitulo - 1) - 0.035 * maxi(0, capitulo - 40)   # cresce mais devagar no Livro II
+	var esc := (1.0 + cresce) * (1.0 + 0.12 * (onda - 1))
+	var vida: float = m["hp"] * esc
+	if chefe:
+		vida = 170.0 * (1.0 + 1.3 * cresce) * {"larvamae": 1.0, "semrosto": 1.4, "thornox": 1.8}[tipo]
 	monstros.append({"tipo": tipo, "pos": p, "hp": vida, "hp_max": vida, "vel": m["vel"],
-		"dano": m["dano"] * 0.7 * (1.0 + 0.05 * onda), "premio": m["premio"], "t_ataque": 0.0,
+		"dano": m["dano"] * 0.7 * (1.0 + 0.03 * (capitulo - 1) + 0.05 * onda),
+		"premio": m["premio"] if not chefe else 10 + capitulo, "t_ataque": 0.0,
 		"flash": 0.0, "anim": randf() * 2.0, "chefe": chefe, "t_poder": 4.0})
 
 
@@ -372,7 +534,7 @@ func ativar(i: int) -> void:
 	if q == null:
 		return
 	var nv: int = q["nv"]
-	var mult := 1.0 + 0.8 * (nv - 1)
+	var mult := (1.0 + 0.8 * (nv - 1)) * (1.0 + 0.1 * nivel_melhoria("forca"))
 	var k := pos_kravenox()
 	match q["id"]:
 		"garras":
@@ -471,16 +633,17 @@ func ferir(m: Dictionary, dano: float) -> void:
 # ------------------------------------------------------------ laço
 func _process(delta: float) -> void:
 	if robo:
-		for _i in 30:
-			passo_robo()
-			atualizar(1.0 / 60.0)
-			if estado == "derrota" or estado == "vitoria":
-				print("ROBO fim: %s na onda %d, %d monstros" % [estado, onda, mortes])
-				get_tree().quit()
+		for _i in 300:
+			if not passo_robo():
 				return
-	else:
+			atualizar(1.0 / 60.0)
+		return
+	t_tela += delta
+	if tela == "jogo":
 		atualizar(minf(delta, 0.05))
-		tocar_musica(musica_certa())
+	else:
+		tempo += delta
+	tocar_musica(musica_certa())
 	queue_redraw()
 
 
@@ -502,6 +665,8 @@ func atualizar(dt: float) -> void:
 		t["p"].y -= 40 * dt
 		t["vida"] -= dt
 	textos = textos.filter(func(t): return t["vida"] > 0)
+	# entre as ondas ele vai para o meio do anel e espera
+	k_meio = move_toward(k_meio, 0.0 if estado == "onda" else 1.0, dt * 2.5)
 	if estado != "onda":
 		return
 
@@ -575,15 +740,17 @@ func atualizar(dt: float) -> void:
 	if hp <= 0:
 		hp = 0.0
 		estado = "derrota"
+		fim_capitulo(false)
 	elif fila.is_empty() and monstros.is_empty():
-		if onda >= TOTAL_ONDAS:
+		if onda >= FASES:
 			estado = "vitoria"
+			fim_capitulo(true)
 		else:
 			estado = "loja"
-			var premio := 5 + onda
+			var premio := 5 + onda + capitulo / 3
 			essencia += premio
 			hp = minf(hp_max, hp + 30)
-			trocas_gratis = 1
+			trocas_gratis = 1 + nivel_melhoria("sorte")
 			sortear_loja()
 			tiros.clear()
 			aviso("Onda vencida! +%d de essência, +30 vida" % premio, 3.0)
@@ -599,14 +766,38 @@ func botoes() -> Dictionary:
 	b["onda"] = Rect2(246, ALT - 62, 210, 46)
 	b["vel"] = Rect2(LARG - 70, 92, 54, 36)
 	b["som"] = Rect2(LARG - 116, 92, 40, 36)
-	b["denovo"] = Rect2(LARG / 2 - 110, ALT / 2 + 40, 220, 56)
+	b["voltar"] = Rect2(10, 10, 36, 32)
+	b["denovo"] = Rect2(LARG / 2 - 120, ALT / 2 + 30, 240, 54)
+	b["mundos"] = Rect2(LARG / 2 - 120, ALT / 2 + 96, 240, 48)
 	return b
 
 
 func _unhandled_input(ev: InputEvent) -> void:
-	if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
-		clique(make_input_local(ev).position)
-	elif ev is InputEventKey and ev.pressed and ev.keycode == KEY_SPACE and estado == "loja":
+	if ev is InputEventMouseButton:
+		var p: Vector2 = make_input_local(ev).position
+		if tela == "mundos" and ev.pressed and ev.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			rolagem = clampf(rolagem + (60.0 if ev.button_index == MOUSE_BUTTON_WHEEL_DOWN else -60.0), 0.0, rolagem_max())
+			return
+		if ev.button_index != MOUSE_BUTTON_LEFT:
+			return
+		if tela == "jogo":
+			if ev.pressed:
+				clique(p)
+			return
+		# nos menus o toque vale ao soltar, para o mapa poder rolar com o dedo
+		if ev.pressed:
+			toque_ini = p
+			toque_rola = rolagem
+			arrastou = false
+		elif not arrastou:
+			clique_menu(p)
+	elif ev is InputEventMouseMotion and tela == "mundos" and (ev.button_mask & MOUSE_BUTTON_MASK_LEFT):
+		var p: Vector2 = make_input_local(ev).position
+		if p.distance_to(toque_ini) > 10:
+			arrastou = true
+		if arrastou:
+			rolagem = clampf(toque_rola - (p.y - toque_ini.y), 0.0, rolagem_max())
+	elif ev is InputEventKey and ev.pressed and ev.keycode == KEY_SPACE and tela == "jogo" and estado == "loja":
 		iniciar_onda()
 
 
@@ -614,7 +805,15 @@ func clique(p: Vector2) -> void:
 	var b := botoes()
 	if estado == "derrota" or estado == "vitoria":
 		if b["denovo"].has_point(p):
-			novo_jogo()
+			if estado == "vitoria" and capitulo >= TOTAL_CAPITULOS:
+				ir_para("inicio")
+			else:
+				comecar_capitulo(capitulo + (1 if estado == "vitoria" else 0))
+		elif b["mundos"].has_point(p):
+			ir_para("mundos")
+		return
+	if b["voltar"].has_point(p):
+		ir_para("mundos")
 		return
 	if b["vel"].has_point(p):
 		vel_jogo = 2 if vel_jogo == 1 else 1
@@ -699,9 +898,39 @@ func clique_quadro(i: int) -> void:
 
 
 # Modo --robo: compra sozinho entre as ondas (prefere fundir) e inicia a próxima.
-func passo_robo() -> void:
+func passo_robo() -> bool:
+	if estado == "vitoria" or estado == "derrota":
+		var venceu := estado == "vitoria"
+		var gastou := true
+		while gastou:
+			gastou = false
+			var melhor := -1
+			for i in MELHORIAS.size():
+				var m: Dictionary = MELHORIAS[i]
+				if nivel_melhoria(m["id"]) < int(m["max"]) and int(prog["fragmentos"]) >= custo_melhoria(m):
+					if melhor < 0 or custo_melhoria(m) < custo_melhoria(MELHORIAS[melhor]):
+						melhor = i
+			if melhor >= 0:
+				gastou = comprar_melhoria(melhor)
+		print("ROBO cap %d: %s na fase %d (tentativa %d) · fragmentos %d · melhorias %s" % [capitulo,
+			"venceu" if venceu else "perdeu", onda, robo_tentativas + 1, int(prog["fragmentos"]), str(prog["melhorias"])])
+		if venceu:
+			robo_tentativas = 0
+			if capitulo >= TOTAL_CAPITULOS:
+				print("ROBO fim: venceu os %d capítulos" % TOTAL_CAPITULOS)
+				get_tree().quit()
+				return false
+			comecar_capitulo(capitulo + 1)
+		else:
+			robo_tentativas += 1
+			if robo_tentativas >= 8:
+				print("ROBO fim: parou no capítulo %d" % capitulo)
+				get_tree().quit()
+				return false
+			comecar_capitulo(capitulo)
+		return true
 	if estado != "loja":
-		return
+		return true
 	var b := botoes()
 	for i in 3:
 		if loja[i] != null and essencia >= preco(loja[i]):
@@ -719,9 +948,9 @@ func passo_robo() -> void:
 				selec = []
 	if essencia >= 14 and quadros.any(func(q): return q == null or q["nv"] < 3):
 		clique(b["trocar"].get_center())
-		return
-	print("ROBO onda %d: vida %d, essência %d" % [onda + 1, int(hp), essencia])
+		return true
 	clique(b["onda"].get_center())
+	return true
 
 
 
@@ -817,15 +1046,35 @@ func sombra_chao(c: Vector2, rx: float, a := 0.55) -> void:
 	draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
 
 
-func _draw() -> void:
-	# fundo: a pintura da Cratera do Cisma, escurecida para o tabuleiro aparecer
+func desenhar_fundo(veu := 0.38) -> void:
+	# a pintura da Cratera do Cisma, escurecida para o que vem por cima aparecer
 	draw_texture_rect(fundo, Rect2(0, 0, LARG, ALT), false)
-	draw_rect(Rect2(0, 0, LARG, ALT), Color(0.03, 0.02, 0.06, 0.38))
+	draw_rect(Rect2(0, 0, LARG, ALT), Color(0.03, 0.02, 0.06, veu))
 	draw_texture_rect(vinheta, Rect2(0, 0, LARG, ALT), false)
 	# névoa roxa lenta sobre a cratera
 	for k in 3:
 		var p := Vector2(LARG / 2 + sin(tempo * 0.2 + k * 2.1) * 120, 390 + cos(tempo * 0.17 + k) * 80)
 		brilho_suave(p, 170, ROXO_ESC, 0.5)
+
+
+func _draw() -> void:
+	match tela:
+		"abertura":
+			desenhar_abertura()
+		"inicio":
+			desenhar_inicio()
+		"mundos":
+			desenhar_mundos()
+		"melhorias":
+			desenhar_melhorias()
+		"bestiario":
+			desenhar_bestiario()
+		_:
+			desenhar_jogo()
+
+
+func desenhar_jogo() -> void:
+	desenhar_fundo()
 	for i in 12:
 		desenhar_quadro(i)
 	desenhar_mundo()
@@ -837,39 +1086,47 @@ func _draw() -> void:
 		caixa(Rect2(LARG / 2 - w / 2 - 14, 158, w + 28, 28), Color(0.05, 0.04, 0.07, 0.9 * a), 14, 1, Color(OURO, 0.7 * a))
 		escrever(msg, Vector2(LARG / 2, 172), 18, Color(BRANCO, a), false)
 	if estado == "derrota" or estado == "vitoria":
-		draw_rect(Rect2(0, 0, LARG, ALT), Color(0.02, 0.01, 0.03, 0.82))
+		draw_rect(Rect2(0, 0, LARG, ALT), Color(0.02, 0.01, 0.03, 0.84))
 		var venceu := estado == "vitoria"
-		if venceu:
-			brilho_suave(Vector2(LARG / 2, ALT / 2 - 170), 120, OURO, 0.8)
-			desenhar_arte("kravenox", Vector2(LARG / 2, ALT / 2 - 100), 140, false)
-		else:
-			brilho_suave(Vector2(LARG / 2, ALT / 2 - 170), 120, VERMELHO, 0.6)
-			desenhar_arte("kravenox", Vector2(LARG / 2, ALT / 2 - 100), 140, false, Color(0.45, 0.4, 0.5))
-		escrever("O REINO É DO KRAVENOX" if venceu else "O KRAVENOX CAIU", Vector2(LARG / 2, ALT / 2 - 55), 28,
-			OURO if venceu else VERMELHO, true, fonte_titulo)
-		var t2 := "As 15 ondas foram vencidas" if venceu else "Chegou à onda %d de %d" % [onda, TOTAL_ONDAS]
-		escrever(t2 + "  ·  %d monstros" % mortes, Vector2(LARG / 2, ALT / 2 - 15), 18, CINZA)
-		botao(botoes()["denovo"], "Jogar de novo", OURO, true, true)
+		var final := venceu and capitulo >= TOTAL_CAPITULOS
+		var base := Vector2(LARG / 2, ALT / 2 - 110)
+		brilho_suave(base + Vector2(0, -70), 120, OURO if venceu else VERMELHO, 0.7)
+		desenhar_arte("kravenox", base, 140, false, Color.WHITE if venceu else Color(0.45, 0.4, 0.5))
+		var titulo := "O REINO É DO KRAVENOX" if final else ("CAPÍTULO CONCLUÍDO" if venceu else "O KRAVENOX CAIU")
+		escrever(titulo, Vector2(LARG / 2, ALT / 2 - 76), 26, OURO if venceu else VERMELHO, true, fonte_titulo)
+		var t2 := "Capítulo %d · %s" % [capitulo, CAPITULOS[capitulo - 1]] if venceu else "Chegou à fase %d de %d" % [onda, FASES]
+		escrever(t2, Vector2(LARG / 2, ALT / 2 - 42), 17, BRANCO)
+		cristal(Vector2(LARG / 2 - 58, ALT / 2 - 8), 9, VERMELHO)
+		escrever_esq("+%d fragmentos" % premio_fim, Vector2(LARG / 2 - 42, ALT / 2), 19, Color8(255, 170, 160))
+		var t_botao := "Início" if final else ("Próximo capítulo" if venceu else "Tentar de novo")
+		botao(botoes()["denovo"], t_botao, OURO, true, true)
+		botao(botoes()["mundos"], "Mundos", AZUL)
 
 
 func desenhar_topo() -> void:
 	degrade(Rect2(0, 0, LARG, 150), Color(0.02, 0.01, 0.03, 0.85), Color(0.02, 0.01, 0.03, 0.0))
-	escrever_esq("CAPÍTULO I · REINO QUEBRADO", Vector2(16, 28), 14, OURO, fonte_titulo)
-	var t := "ONDA %d/%d" % [onda, TOTAL_ONDAS]
+	var bv: Rect2 = botoes()["voltar"]
+	botao(bv, "", OURO)
+	draw_polyline(PackedVector2Array([bv.get_center() + Vector2(4, -8), bv.get_center() + Vector2(-4, 0), bv.get_center() + Vector2(4, 8)]), OURO, 2.5, true)
+	var t := "FASE %d/%d" % [maxi(onda, 1) if estado == "onda" else mini(onda + 1, FASES), FASES]
 	var w := fonte_titulo.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
-	escrever_esq(t, Vector2(LARG - 16 - w, 28), 14, BRANCO, fonte_titulo)
-	# trilha das ondas
-	var y := 54.0
-	draw_line(Vector2(30, y), Vector2(LARG - 30, y), Color(0, 0, 0, 0.7), 5)
-	var feito_x := 30 + (LARG - 60) * clampf((onda - 1) / float(TOTAL_ONDAS - 1), 0, 1)
+	escrever_esq(t, Vector2(LARG - 16 - w, 31), 14, BRANCO, fonte_titulo)
+	var tit := encurtar("CAP. %d · %s" % [capitulo, CAPITULOS[capitulo - 1].to_upper()], fonte_titulo, 13, LARG - 80 - w)
+	escrever_esq(tit, Vector2(56, 31), 13, OURO, fonte_titulo)
+	# trilha das fases
+	var y := 60.0
+	var x0 := 70.0
+	var x1 := LARG - 70.0
+	draw_line(Vector2(x0, y), Vector2(x1, y), Color(0, 0, 0, 0.7), 5)
+	var feito_x := x0 + (x1 - x0) * clampf((onda - 1) / float(FASES - 1), 0, 1)
 	if onda > 1:
-		draw_line(Vector2(30, y), Vector2(feito_x, y), SANGUE, 3)
-	for o in range(1, TOTAL_ONDAS + 1):
-		var x := 30 + (LARG - 60) * (o - 1) / (TOTAL_ONDAS - 1)
+		draw_line(Vector2(x0, y), Vector2(feito_x, y), SANGUE, 3)
+	for o in range(1, FASES + 1):
+		var x := x0 + (x1 - x0) * (o - 1) / (FASES - 1)
 		var p := Vector2(x, y)
 		var feita := o < onda or (o == onda and estado != "onda")
 		var atual := o == onda and estado == "onda"
-		if CHEFES.has(o):
+		if o == FASES:
 			var r := 10.0
 			var cor := ROXO if not feita else SANGUE
 			if atual:
@@ -883,8 +1140,8 @@ func desenhar_topo() -> void:
 		else:
 			if atual:
 				brilho_suave(p, 20, VERMELHO, 1.5)
-			draw_circle(p, 6.5, TINTA)
-			draw_circle(p, 5, VERMELHO if atual else (SANGUE if feita else PEDRA_CLARA))
+			draw_circle(p, 8.5, TINTA)
+			draw_circle(p, 7, VERMELHO if atual else (SANGUE if feita else PEDRA_CLARA))
 	# essência
 	caixa(Rect2(16, 84, 122, 40), Color(0.05, 0.04, 0.07, 0.85), 8, 1, Color(ROXO, 0.5))
 	cristal(Vector2(38, 104), 11)
@@ -1024,7 +1281,8 @@ func icone(iid: String, c: Vector2, e: float) -> void:
 
 
 func desenhar_mundo() -> void:
-	var k := pos_kravenox()
+	var meio := ease(k_meio, -2.0)
+	var k := pos_kravenox().lerp(CENTRO + Vector2(0, -18), meio)
 	var itens := []
 	for m in monstros:
 		itens.append([m["pos"].y, m])
@@ -1085,7 +1343,7 @@ func desenhar_mundo() -> void:
 
 func desenhar_kravenox(k: Vector2) -> void:
 	# Mesmo andar da primeira versão: troca de quadro de passo, sem balanço.
-	var n := (int(k_anim) % 4) if estado == "onda" else 0
+	var n := (int(k_anim) % 4) if estado == "onda" and k_meio < 0.05 else 0
 	var nome := "kravenox-passo-%d" % n
 	var base := k + Vector2(0, 30)
 	sombra_chao(base, 30)
@@ -1187,3 +1445,283 @@ func desenhar_loja() -> void:
 	elif not selec.is_empty() and selec[0] == "loja":
 		dica = "Agora toque num quadro"
 	escrever(dica, Vector2(LARG / 2, LOJA_Y + 32), 14, CINZA, false)
+
+
+# ============================================================ telas de menu
+const MSG_ABERTURA := ["Despertando no Reino Quebrado...", "Ouvindo os ecos do Cisma...", "Juntando a Essência...", "Toque para começar"]
+const DURA_ABERTURA := 1.8
+const ORDEM_BESTIARIO := ["larva", "esfera", "verme", "sentinela", "larvamae", "semrosto", "thornox"]
+const CARD_MUNDO := 168.0
+const TOPO_MUNDOS := 118.0
+
+
+func encurtar(t: String, f: Font, tam: int, largura: float) -> String:
+	if f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x <= largura:
+		return t
+	while t.length() > 4 and f.get_string_size(t + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x > largura:
+		t = t.substr(0, t.length() - 1)
+	return t.strip_edges() + "…"
+
+
+func total_mundos() -> int:
+	return (TOTAL_CAPITULOS + CAPS_POR_MUNDO - 1) / CAPS_POR_MUNDO
+
+
+func rolagem_max() -> float:
+	return maxf(0.0, TOPO_MUNDOS + total_mundos() * CARD_MUNDO + 20 - ALT)
+
+
+func no_capitulo(c: int) -> Vector2:
+	var w := mundo_de(c) - 1
+	var j := (c - 1) % CAPS_POR_MUNDO
+	return Vector2(84 + j * 104, TOPO_MUNDOS + w * CARD_MUNDO - rolagem + 86)
+
+
+func botoes_menu() -> Dictionary:
+	var b := {}
+	b["voltar"] = Rect2(12, 16, 40, 36)
+	b["jogar"] = Rect2(90, 560, 300, 62)
+	for i in 3:
+		b["icone%d" % i] = Rect2(44 + i * 140, 650, 112, 100)
+	for i in MELHORIAS.size():
+		b["melhoria%d" % i] = Rect2(338, 150 + i * 104 + 24, 112, 44)
+	return b
+
+
+func clique_menu(p: Vector2) -> void:
+	var b := botoes_menu()
+	match tela:
+		"abertura":
+			if t_tela >= DURA_ABERTURA:
+				som("gema")
+				ir_para("inicio")
+		"inicio":
+			if b["jogar"].has_point(p):
+				som("gema")
+				ir_para("mundos")
+			elif b["icone0"].has_point(p):
+				ir_para("melhorias")
+			elif b["icone1"].has_point(p):
+				ir_para("bestiario")
+			elif b["icone2"].has_point(p):
+				ligar_som(not som_ligado)
+		"mundos":
+			if b["voltar"].has_point(p):
+				ir_para("inicio")
+				return
+			if p.y < TOPO_MUNDOS:
+				return
+			for c in range(1, TOTAL_CAPITULOS + 1):
+				if no_capitulo(c).distance_to(p) < 34:
+					if c <= int(prog["liberado"]):
+						som("gema")
+						comecar_capitulo(c)
+					else:
+						som("dano")
+					return
+		"melhorias":
+			if b["voltar"].has_point(p):
+				ir_para("inicio")
+				return
+			for i in MELHORIAS.size():
+				if b["melhoria%d" % i].has_point(p):
+					if not comprar_melhoria(i):
+						som("dano")
+					return
+		"bestiario":
+			if b["voltar"].has_point(p):
+				ir_para("inicio")
+
+
+func logo(centro: Vector2, tam := 56) -> void:
+	brilho_suave(centro + Vector2(0, -6), 170, VERMELHO, 0.55 + 0.1 * sin(tempo * 2))
+	escrever("KRAVENOX", centro, tam, Color8(236, 60, 54), true, fonte_titulo)
+	escrever("QUADROS DO CISMA", centro + Vector2(0, tam * 0.72), int(tam * 0.36), OURO, true, fonte_titulo)
+
+
+func pilula_fragmentos(direita: float, y: float) -> void:
+	var t := str(int(prog["fragmentos"]))
+	var w := fonte.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x + 52
+	var r := Rect2(direita - w, y, w, 36)
+	caixa(r, Color(0.05, 0.04, 0.07, 0.88), 18, 1, Color(VERMELHO, 0.6))
+	cristal(r.position + Vector2(20, 18), 9, VERMELHO)
+	escrever_esq(t, r.position + Vector2(36, 26), 22, BRANCO)
+
+
+func cabecalho(titulo: String) -> void:
+	draw_rect(Rect2(0, 0, LARG, TOPO_MUNDOS - 8), Color(0.03, 0.02, 0.05, 0.96))
+	draw_line(Vector2(0, TOPO_MUNDOS - 8), Vector2(LARG, TOPO_MUNDOS - 8), Color(OURO, 0.4), 1)
+	var bv: Rect2 = botoes_menu()["voltar"]
+	botao(bv, "", OURO)
+	draw_polyline(PackedVector2Array([bv.get_center() + Vector2(4, -8), bv.get_center() + Vector2(-4, 0), bv.get_center() + Vector2(4, 8)]), OURO, 2.5, true)
+	escrever_esq(titulo, Vector2(66, 44), 22, OURO, fonte_titulo)
+	pilula_fragmentos(LARG - 14, 16)
+
+
+func desenhar_abertura() -> void:
+	desenhar_fundo(0.55)
+	logo(Vector2(LARG / 2, 190), 58)
+	var base := Vector2(LARG / 2, 560)
+	brilho_suave(base + Vector2(0, -110), 150, VERMELHO, 0.5)
+	sombra_chao(base, 70)
+	desenhar_arte("kravenox", base, 250, false)
+	var fr := clampf(t_tela / DURA_ABERTURA, 0, 1)
+	var barra := Rect2(LARG / 2 - 150, 640, 300, 14)
+	caixa(barra.grow(3), Color(0.04, 0.03, 0.06, 0.9), 9, 1, Color(OURO, 0.5))
+	if fr > 0:
+		degrade(Rect2(barra.position, Vector2(barra.size.x * fr, barra.size.y)), Color8(236, 80, 60), Color8(140, 20, 26))
+	var i := mini(int(fr * 3), 2) if fr < 1 else 3
+	var a := 1.0 if fr < 1 else 0.55 + 0.45 * sin(tempo * 4)
+	escrever(MSG_ABERTURA[i], Vector2(LARG / 2, 684), 19, Color(BRANCO, a))
+
+
+func icone_menu(i: int, r: Rect2, rotulo: String) -> void:
+	caixa(r, Color(0.06, 0.05, 0.08, 0.9), 12, 2, Color(OURO, 0.7), true, 6)
+	var c := r.get_center() + Vector2(0, -12)
+	match i:
+		0:   # melhorias: seta para cima dentro de um cristal
+			brilho_suave(c, 36, VERMELHO, 0.8)
+			poli([c + Vector2(0, -20), c + Vector2(16, -2), c + Vector2(6, -2), c + Vector2(6, 18), c + Vector2(-6, 18), c + Vector2(-6, -2), c + Vector2(-16, -2)], Color8(230, 70, 60), 1.5)
+			if pode_melhorar():
+				var d := r.position + Vector2(r.size.x - 14, 14)
+				draw_circle(d, 9 + sin(tempo * 5), VERMELHO)
+				escrever("!", d, 14, BRANCO, false)
+		1:   # bestiário: livro
+			brilho_suave(c, 36, ROXO, 0.8)
+			poli([c + Vector2(-20, -16), c + Vector2(-2, -12), c + Vector2(-2, 18), c + Vector2(-20, 14)], Color8(70, 44, 110), 1.5)
+			poli([c + Vector2(20, -16), c + Vector2(2, -12), c + Vector2(2, 18), c + Vector2(20, 14)], Color8(90, 58, 140), 1.5)
+			draw_line(c + Vector2(0, -12), c + Vector2(0, 18), OURO, 2)
+			cristal(c + Vector2(11, 2), 5)
+		2:   # som
+			var cor := OURO if som_ligado else CINZA
+			draw_colored_polygon(PackedVector2Array([c + Vector2(-14, -6), c + Vector2(-6, -6), c + Vector2(4, -16),
+				c + Vector2(4, 16), c + Vector2(-6, 6), c + Vector2(-14, 6)]), cor)
+			if som_ligado:
+				draw_arc(c + Vector2(6, 0), 9, -0.9, 0.9, 8, cor, 2.5, true)
+				draw_arc(c + Vector2(6, 0), 16, -0.9, 0.9, 10, cor, 2.5, true)
+			else:
+				draw_line(c + Vector2(10, -7), c + Vector2(22, 7), cor, 2.5, true)
+				draw_line(c + Vector2(22, -7), c + Vector2(10, 7), cor, 2.5, true)
+	escrever(rotulo, Vector2(r.get_center().x, r.end.y - 16), 16, BRANCO, false)
+
+
+func desenhar_inicio() -> void:
+	desenhar_fundo(0.5)
+	pilula_fragmentos(LARG - 14, 16)
+	logo(Vector2(LARG / 2, 112), 54)
+	var base := Vector2(LARG / 2, 470)
+	brilho_suave(base + Vector2(0, -100), 150, VERMELHO, 0.45 + 0.1 * sin(tempo * 1.5))
+	sombra_chao(base, 64)
+	desenhar_arte("kravenox", base + Vector2(0, -sin(tempo * 1.4) * 3), 240, false)
+	var c := int(prog["liberado"])
+	escrever("Mundo %d · Capítulo %d de %d" % [mundo_de(c), c, TOTAL_CAPITULOS], Vector2(LARG / 2, 506), 17, CINZA)
+	escrever(CAPITULOS[c - 1], Vector2(LARG / 2, 530), 18, BRANCO)
+	var b := botoes_menu()
+	botao(b["jogar"], "", VERMELHO, true, true)
+	escrever("JOGAR", b["jogar"].get_center(), 26, BRANCO, false, fonte_titulo)
+	icone_menu(0, b["icone0"], "Melhorias")
+	icone_menu(1, b["icone1"], "Bestiário")
+	icone_menu(2, b["icone2"], "Som")
+	escrever("Livro I e Livro II · %d mundos" % total_mundos(), Vector2(LARG / 2, 784), 14, Color(CINZA, 0.7))
+
+
+func desenhar_mundos() -> void:
+	desenhar_fundo(0.62)
+	var lib := int(prog["liberado"])
+	for w in total_mundos():
+		var y := TOPO_MUNDOS + w * CARD_MUNDO - rolagem
+		if y > ALT or y + CARD_MUNDO < TOPO_MUNDOS - 10:
+			continue
+		var c0 := w * CAPS_POR_MUNDO + 1
+		var c1 := mini(c0 + CAPS_POR_MUNDO - 1, TOTAL_CAPITULOS)
+		var aberto := c0 <= lib
+		var atual := lib >= c0 and lib <= c1
+		var r := Rect2(16, y, LARG - 32, CARD_MUNDO - 16)
+		caixa(r, Color(0.06, 0.05, 0.08, 0.93 if aberto else 0.75), 10, 2 if atual else 1,
+			OURO if atual else Color(PEDRA_BORDA, 0.9), true, 6)
+		escrever_esq("MUNDO %d" % (w + 1), r.position + Vector2(16, 28), 18, OURO if aberto else CINZA, fonte_titulo)
+		var livro := "Livro I" if c1 <= 35 else ("Livro II" if c0 > 35 else "Livro I e II")
+		var info := "%s · capítulos %d a %d" % [livro, c0, c1]
+		var wi := fonte.get_string_size(info, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+		escrever_esq(info, Vector2(r.end.x - 16 - wi, r.position.y + 27), 14, CINZA)
+		# os 4 capítulos ligados por uma trilha
+		var a := no_capitulo(c0)
+		var z := no_capitulo(c1)
+		draw_line(a, z, Color(0, 0, 0, 0.7), 6)
+		for c in range(c0, c1 + 1):
+			var p := no_capitulo(c)
+			if c < c1 and feito(c):
+				draw_line(p, no_capitulo(c + 1), SANGUE, 3)
+			if feito(c):
+				draw_circle(p, 25, TINTA)
+				draw_circle(p, 22, Color8(120, 94, 52))
+				draw_arc(p, 22, 0, TAU, 32, OURO, 2, true)
+				escrever(str(c), p, 18, BRANCO, false)
+			elif c <= lib:
+				brilho_suave(p, 46, VERMELHO, 1.0 + 0.4 * sin(tempo * 4))
+				draw_circle(p, 25, TINTA)
+				draw_circle(p, 22, Color8(150, 26, 30))
+				draw_arc(p, 22, 0, TAU, 32, Color8(255, 120, 100), 2, true)
+				escrever(str(c), p, 18, BRANCO, false)
+			else:
+				draw_circle(p, 25, TINTA)
+				draw_circle(p, 22, PEDRA_ESC)
+				draw_arc(p, 22, 0, TAU, 32, PEDRA_BORDA, 1.5, true)
+				draw_rect(Rect2(p + Vector2(-7, -2), Vector2(14, 11)), CINZA)
+				draw_arc(p + Vector2(0, -3), 5, PI, TAU, 10, CINZA, 2)
+		var texto := ""
+		if atual:
+			texto = "Próximo: %d · %s" % [lib, CAPITULOS[lib - 1]]
+		elif aberto:
+			texto = CAPITULOS[c0 - 1]
+		if texto != "":
+			escrever(encurtar(texto, fonte, 15, r.size.x - 30), Vector2(LARG / 2, r.end.y - 18), 15, BRANCO if atual else CINZA, false)
+	cabecalho("MUNDOS")
+
+
+func desenhar_melhorias() -> void:
+	desenhar_fundo(0.62)
+	cabecalho("MELHORIAS")
+	escrever("Cada capítulo dá fragmentos. Gaste aqui para ficar mais forte.", Vector2(LARG / 2, 132), 14, CINZA)
+	var b := botoes_menu()
+	for i in MELHORIAS.size():
+		var m: Dictionary = MELHORIAS[i]
+		var r := Rect2(16, 150 + i * 104, LARG - 32, 92)
+		caixa(r, Color(0.06, 0.05, 0.08, 0.93), 10, 1, Color(PEDRA_BORDA, 0.9), true, 6)
+		var lv := nivel_melhoria(m["id"])
+		var mx := int(m["max"])
+		escrever_esq(m["nome"], r.position + Vector2(16, 30), 16, OURO, fonte_titulo)
+		escrever_esq(m["desc"], r.position + Vector2(16, 54), 15, CINZA)
+		for k in mx:
+			var p := r.position + Vector2(22 + k * (15 if mx <= 10 else 14), 74)
+			var d := PackedVector2Array([p + Vector2(0, -5), p + Vector2(4.5, 0), p + Vector2(0, 5), p + Vector2(-4.5, 0)])
+			draw_colored_polygon(d, VERMELHO if k < lv else PEDRA_CLARA)
+		var bb: Rect2 = b["melhoria%d" % i]
+		if lv >= mx:
+			botao(bb, "MÁXIMO", CINZA, false)
+		else:
+			var custo := custo_melhoria(m)
+			var pode := int(prog["fragmentos"]) >= custo
+			botao(bb, "", OURO if pode else CINZA, pode, pode)
+			cristal(bb.position + Vector2(36, 22), 8, VERMELHO)
+			escrever_esq(str(custo), bb.position + Vector2(50, 30), 20, BRANCO if pode else CINZA)
+
+
+func desenhar_bestiario() -> void:
+	desenhar_fundo(0.62)
+	for i in ORDEM_BESTIARIO.size():
+		var tipo: String = ORDEM_BESTIARIO[i]
+		var info: Dictionary = MONSTROS[tipo]
+		var r := Rect2(16 + (i % 2) * 228, TOPO_MUNDOS + 4 + (i / 2) * 172, 220, 160)
+		var visto: bool = prog["vistos"].has(tipo)
+		var chefe: bool = info.get("chefe", false)
+		caixa(r, Color(0.06, 0.05, 0.08, 0.93), 10, 1, Color(ROXO if chefe else PEDRA_BORDA, 0.8), true, 6)
+		var base := r.position + Vector2(r.size.x / 2, 112)
+		brilho_suave(base + Vector2(0, -40), 60, AZUL if tipo == "thornox" else ROXO, 0.5 if visto else 0.15)
+		sombra_chao(base, 36)
+		var mod: Color = info.get("tinta", Color.WHITE) if visto else Color(0, 0, 0, 0.92)
+		desenhar_arte(info["img"], base, 92, false, mod)
+		escrever(info["nome"] if visto else "???", r.position + Vector2(r.size.x / 2, 132), 16, BRANCO if visto else CINZA, false)
+		var nota := "Chefe" if chefe else "Desde o capítulo %d" % MONSTRO_DESDE[tipo]
+		escrever(nota, r.position + Vector2(r.size.x / 2, 150), 13, Color8(200, 160, 255) if chefe else CINZA, false)
+	cabecalho("BESTIÁRIO")
