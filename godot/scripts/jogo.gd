@@ -108,6 +108,16 @@ var msg := ""
 var msg_t := 0.0
 var loja := []
 
+# som: trilhas do RPG 2D (kravenox-jogar/rpg/music) e efeitos do Cratera do Cisma
+const TRILHAS_EM_LACO := ["abismo", "batalha", "chefe", "espinhos"]
+const EFEITOS := ["acerto", "corte", "raio", "esmagamento", "dano", "gema", "chefe", "nivel", "thornox"]
+var musica: AudioStreamPlayer
+var faixa := ""
+var som_ligado := true
+var efeitos_som := {}
+var vozes := []
+var ultimo_som := {}
+
 
 func _ready() -> void:
 	randomize()
@@ -121,7 +131,70 @@ func _ready() -> void:
 		carregar(nome)
 	fundo = load("res://assets/arte/cratera.png")
 	vinheta = gerar_vinheta()
+	preparar_som()
 	novo_jogo()
+
+
+func preparar_som() -> void:
+	musica = AudioStreamPlayer.new()
+	musica.volume_db = -7.0
+	add_child(musica)
+	for n in EFEITOS:
+		efeitos_som[n] = load("res://sons/%s.wav" % n)
+	for _i in 8:
+		var v := AudioStreamPlayer.new()
+		v.volume_db = -9.0
+		add_child(v)
+		vozes.append(v)
+
+
+func tocar_musica(nome: String) -> void:
+	if nome == faixa or robo:
+		return
+	faixa = nome
+	var st: AudioStreamOggVorbis = load("res://musica/%s.ogg" % nome)
+	st.loop = nome in TRILHAS_EM_LACO
+	st.loop_offset = 0.5   # o mesmo ponto de volta que o RPG usa (music/index.json)
+	musica.stream = st
+	if som_ligado:
+		musica.play()
+
+
+func som(nome: String) -> void:
+	if robo or not som_ligado:
+		return
+	var agora := Time.get_ticks_msec()
+	if agora - int(ultimo_som.get(nome, -1000)) < 70:
+		return
+	ultimo_som[nome] = agora
+	for v in vozes:
+		if not v.playing:
+			v.stream = efeitos_som[nome]
+			v.pitch_scale = randf_range(0.94, 1.06)
+			v.play()
+			return
+
+
+func musica_certa() -> String:
+	match estado:
+		"onda":
+			if onda == TOTAL_ONDAS:
+				return "espinhos"
+			return "chefe" if CHEFES.has(onda) else "batalha"
+		"vitoria":
+			return "vitoria"
+		"derrota":
+			return "gameover"
+	return "abismo"
+
+
+func ligar_som(sim: bool) -> void:
+	som_ligado = sim
+	if sim:
+		faixa = ""
+		tocar_musica(musica_certa())
+	else:
+		musica.stop()
 
 
 # As artes são grandes e aparecem pequenas: mipmaps deixam o contorno liso.
@@ -221,6 +294,7 @@ func colocar(i: int, item: Dictionary) -> bool:
 		return true
 	if q["id"] == item["id"] and q["nv"] == item["nv"] and q["nv"] < NIVEL_MAX:
 		q["nv"] += 1
+		som("nivel")
 		anel(centro_quadro(i), 10, 60, 0.4, OURO)
 		aviso("Fundiu! %s nível %d" % [ITENS[q["id"]]["nome"], q["nv"]])
 		return true
@@ -274,6 +348,8 @@ func criar_monstro(tipo: String, p = null) -> void:
 			_:
 				p = Vector2(randf_range(0, LARG), -40)
 	var chefe: bool = m.get("chefe", false)
+	if chefe:
+		som("thornox" if tipo == "thornox" else "chefe")
 	var esc := 1.0 + 0.18 * (onda - 1)
 	var vida: float = m["hp"] * (esc if not chefe else 1.0 + 0.1 * (onda - 1))
 	monstros.append({"tipo": tipo, "pos": p, "hp": vida, "hp_max": vida, "vel": m["vel"],
@@ -297,18 +373,21 @@ func ativar(i: int) -> void:
 	var k := pos_kravenox()
 	match q["id"]:
 		"garras":
+			som("corte")
 			var r := 95.0 + nv * 8
 			efeitos.append({"t": "garra", "p": k, "r": r, "vida": 0.25})
 			for m in monstros:
 				if m["pos"].distance_to(k) < r:
 					ferir(m, 12 * mult)
 		"espinhos":
+			som("corte")
 			var n := 8 + (nv - 1) * 2
 			for j in n:
 				var a := float(j) / n * TAU
 				tiros.append({"p": k, "v": Vector2.from_angle(a) * 330, "dano": 9 * mult, "fura": 0,
 					"vida": 1.0, "cor": Color8(30, 30, 40), "r": 5.0, "acertos": []})
 		"raio":
+			som("raio")
 			var alvos := monstros.duplicate()
 			alvos.sort_custom(func(x, y): return x["pos"].distance_to(k) < y["pos"].distance_to(k))
 			var de := k
@@ -317,12 +396,14 @@ func ativar(i: int) -> void:
 				ferir(m, 15 * mult)
 				de = m["pos"]
 		"esmagamento":
+			som("esmagamento")
 			var r := 150.0 + nv * 12
 			anel(k + Vector2(0, 18), 20, r, 0.35, Color8(200, 150, 90))
 			for m in monstros:
 				if m["pos"].distance_to(k) < r:
 					ferir(m, 16 * mult)
 		"rasgo":
+			som("corte")
 			var alvo = mais_perto(k)
 			var a: float = (alvo["pos"] - k).angle() if alvo != null else randf() * TAU
 			var desvios := [0.0]
@@ -334,6 +415,7 @@ func ativar(i: int) -> void:
 				tiros.append({"p": k, "v": Vector2.from_angle(a + d) * 480, "dano": 24 * mult, "fura": 99,
 					"vida": 1.4, "cor": Color8(220, 30, 90), "r": 9.0, "acertos": []})
 		"cristal":
+			som("gema")
 			var cura := 4 + 3 * nv
 			hp = minf(hp_max, hp + cura)
 			texto_voa(k + Vector2(0, -40), "+%d" % cura, Color8(90, 220, 160))
@@ -342,6 +424,7 @@ func ativar(i: int) -> void:
 			k_rapido = 1.6 + 0.5 * nv
 			anel(k + Vector2(0, 18), 10, 40, 0.25, VERDE)
 		"fonte":
+			som("gema")
 			essencia += nv
 			texto_voa(k + Vector2(0, -40), "+%d" % nv, OURO)
 	anel(centro_quadro(i), 20, 50, 0.25, ITENS[q["id"]]["cor"])
@@ -373,6 +456,7 @@ func ferir(m: Dictionary, dano: float) -> void:
 	m["flash"] = 0.1
 	texto_voa(m["pos"] + Vector2(randf_range(-8, 8), -30), str(int(dano)), BRANCO)
 	if m["hp"] <= 0:
+		som("acerto")
 		mortes += 1
 		essencia += m["premio"]
 		for _i in (40 if m["chefe"] else 10):
@@ -393,6 +477,7 @@ func _process(delta: float) -> void:
 				return
 	else:
 		atualizar(minf(delta, 0.05))
+		tocar_musica(musica_certa())
 	queue_redraw()
 
 
@@ -454,6 +539,7 @@ func atualizar(dt: float) -> void:
 			if m["t_ataque"] <= 0:
 				m["t_ataque"] = 1.0
 				hp -= m["dano"]
+				som("dano")
 				k_flash = 0.15
 				texto_voa(k + Vector2(0, -50), "-%d" % int(m["dano"]), VERMELHO)
 		if m["chefe"]:
@@ -508,7 +594,8 @@ func botoes() -> Dictionary:
 	b["trocar"] = Rect2(24, ALT - 62, 130, 46)
 	b["lixo"] = Rect2(170, ALT - 62, 60, 46)
 	b["onda"] = Rect2(246, ALT - 62, 210, 46)
-	b["vel"] = Rect2(LARG - 78, 92, 62, 36)
+	b["vel"] = Rect2(LARG - 70, 92, 54, 36)
+	b["som"] = Rect2(LARG - 116, 92, 40, 36)
 	b["denovo"] = Rect2(LARG / 2 - 110, ALT / 2 + 40, 220, 56)
 	return b
 
@@ -528,6 +615,9 @@ func clique(p: Vector2) -> void:
 		return
 	if b["vel"].has_point(p):
 		vel_jogo = 2 if vel_jogo == 1 else 1
+		return
+	if b["som"].has_point(p):
+		ligar_som(not som_ligado)
 		return
 	if estado != "loja":
 		return
@@ -580,6 +670,7 @@ func clique_quadro(i: int) -> void:
 		var custo := preco(iid)
 		if essencia >= custo and colocar(i, {"id": iid, "nv": 1}):
 			essencia -= custo
+			som("gema")
 			loja[li] = null
 		elif essencia >= custo:
 			aviso("Quadro ocupado (só funde item igual e de mesmo nível)")
@@ -796,8 +887,8 @@ func desenhar_topo() -> void:
 	cristal(Vector2(38, 104), 11)
 	escrever_esq(str(essencia), Vector2(58, 113), 24, BRANCO)
 	# vida
-	var bw := 200.0
-	var bx := 152.0
+	var bw := 196.0
+	var bx := 148.0
 	caixa(Rect2(bx, 88, bw, 30), Color(0.05, 0.04, 0.07, 0.9), 8, 1, Color(VERMELHO, 0.5))
 	var fr := clampf(hp / hp_max, 0, 1)
 	if fr > 0:
@@ -806,6 +897,18 @@ func desenhar_topo() -> void:
 		draw_line(r.position + Vector2(2, 3), Vector2(r.end.x - 2, r.position.y + 3), Color(1, 1, 1, 0.18), 2)
 	escrever("%d / %d" % [int(maxf(0, hp)), int(hp_max)], Vector2(bx + bw / 2, 103), 16, BRANCO)
 	botao(botoes()["vel"], "x%d" % vel_jogo, OURO)
+	var bs: Rect2 = botoes()["som"]
+	botao(bs, "", OURO if som_ligado else CINZA)
+	var c := bs.get_center() + Vector2(-4, 0)
+	var cor := OURO if som_ligado else CINZA
+	draw_colored_polygon(PackedVector2Array([c + Vector2(-8, -4), c + Vector2(-3, -4), c + Vector2(3, -10),
+		c + Vector2(3, 10), c + Vector2(-3, 4), c + Vector2(-8, 4)]), cor)
+	if som_ligado:
+		draw_arc(c + Vector2(4, 0), 6, -0.9, 0.9, 8, cor, 2, true)
+		draw_arc(c + Vector2(4, 0), 11, -0.9, 0.9, 10, cor, 2, true)
+	else:
+		draw_line(c + Vector2(7, -5), c + Vector2(15, 5), cor, 2, true)
+		draw_line(c + Vector2(15, -5), c + Vector2(7, 5), cor, 2, true)
 
 
 func desenhar_quadro(i: int) -> void:

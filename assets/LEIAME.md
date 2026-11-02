@@ -15,6 +15,13 @@ pintura. Os originais continuam onde estavam.
 | verme.png | `arte/conceitos/kravenox-e-os-vermes.jpg` | Verme de Dentes |
 | cratera.png | `arte/conceitos/cratera-do-cisma.jpg` (sem o título) | fundo |
 
+## Música (`musica/`) e efeitos (`sons/`)
+
+| Pasta | Origem |
+|---|---|
+| musica/abismo, batalha, chefe, espinhos, vitoria, gameover (.ogg) | `The3dig/kravenox-jogar` → `rpg/music/` (os mesmos arquivos do RPG 2D) |
+| sons/*.wav | `The3dig/kravenox` → `jogos/cratera-do-cisma/sons/` |
+
 ## Letras (`fontes/`)
 
 Cinzel e Alegreya Sans Bold, do Google Fonts, licença SIL Open Font

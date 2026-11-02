@@ -14,6 +14,7 @@ Controles (mouse ou toque):
     - Toque num quadro com item para pegá-lo e levar para outro quadro.
     - Lixeira: toque nela e depois num quadro para vender o item.
     - "Iniciar onda" começa a onda. "x1/x2" muda a velocidade.
+    - Tecla M liga e desliga a música e os efeitos.
 """
 import math
 import os
@@ -129,7 +130,62 @@ class Jogo:
             cor = (120, 160, 205, 190) if tipo == "thornox" else ((160, 100, 255, 190) if m.get("chefe") else (160, 100, 255, 130))
             self.arte(tipo, m["alt"], m["img"], m.get("tinta"), cor, m.get("esq", False))
         self.chao = self.gerar_chao()
+        self.preparar_som()
         self.novo_jogo()
+
+    # ------------------------------------------------------------ som
+    # Trilhas do RPG 2D (kravenox-jogar/rpg/music) e efeitos do Cratera do Cisma.
+    def preparar_som(self):
+        self.som_ligado = True
+        self.faixa = ""
+        self.efeitos_som = {}
+        self.ultimo_som = {}
+        try:
+            for n in ["acerto", "corte", "raio", "esmagamento", "dano", "gema", "chefe", "nivel", "thornox"]:
+                self.efeitos_som[n] = pygame.mixer.Sound(os.path.join(PASTA, "sons", n + ".wav"))
+                self.efeitos_som[n].set_volume(0.35)
+            pygame.mixer.music.set_volume(0.45)
+            self.tem_som = True
+        except (pygame.error, FileNotFoundError):
+            self.tem_som = False
+
+    def musica_certa(self):
+        if self.estado == "onda":
+            if self.onda == TOTAL_ONDAS:
+                return "espinhos"
+            return "chefe" if self.onda in CHEFES else "batalha"
+        return {"vitoria": "vitoria", "derrota": "gameover"}.get(self.estado, "abismo")
+
+    def tocar_musica(self, nome):
+        if not self.tem_som or nome == self.faixa:
+            return
+        self.faixa = nome
+        if not self.som_ligado:
+            return
+        try:
+            pygame.mixer.music.load(os.path.join(PASTA, "musica", nome + ".ogg"))
+            pygame.mixer.music.play(-1 if nome in ("abismo", "batalha", "chefe", "espinhos") else 0)
+        except pygame.error:
+            pass
+
+    def ligar_som(self, sim):
+        self.som_ligado = sim
+        if not self.tem_som:
+            return
+        if sim:
+            self.faixa = ""
+            self.tocar_musica(self.musica_certa())
+        else:
+            pygame.mixer.music.stop()
+
+    def som(self, nome):
+        if not self.tem_som or not self.som_ligado:
+            return
+        agora = pygame.time.get_ticks()
+        if agora - self.ultimo_som.get(nome, -1000) < 70:
+            return
+        self.ultimo_som[nome] = agora
+        self.efeitos_som[nome].play()
 
     def arte(self, chave, alt, nome=None, tinta=None, tinta_borda=(160, 100, 255, 130), olha_esq=False):
         """Guarda (normal, virada, branca, contorno) de uma arte já na altura da tela.
@@ -217,6 +273,7 @@ class Jogo:
             return True
         if q["id"] == item["id"] and q["nv"] == item["nv"] and q["nv"] < NIVEL_MAX:
             q["nv"] += 1
+            self.som("nivel")
             self.efeitos.append(["anel", *centro_quadro(i), 10, 60, 0.4, OURO])
             self.aviso("Fundiu! " + ITENS[q["id"]]["nome"] + " nível " + str(q["nv"]))
             return True
@@ -267,6 +324,8 @@ class Jogo:
                 x, y = random.uniform(0, LARG), -40
         esc = 1 + 0.18 * (self.onda - 1)
         hp = m["hp"] * (esc if not m.get("chefe") else 1 + 0.1 * (self.onda - 1))
+        if m.get("chefe"):
+            self.som("thornox" if tipo == "thornox" else "chefe")
         self.monstros.append({"tipo": tipo, "x": x, "y": y, "hp": hp, "hp_max": hp,
                               "vel": m["vel"], "dano": m["dano"] * 0.7 * (1 + 0.05 * self.onda),
                               "premio": m["premio"], "t_ataque": 0, "flash": 0, "anim": random.random() * 2,
@@ -297,18 +356,21 @@ class Jogo:
         cor = ITENS[q["id"]]["cor"]
         iid = q["id"]
         if iid == "garras":
+            self.som("corte")
             r = 95 + nv * 8
             self.efeitos.append(["garra", kx, ky, r, 0.25])
             for m in self.monstros:
                 if math.hypot(m["x"] - kx, m["y"] - ky) < r:
                     self.ferir(m, 12 * mult)
         elif iid == "espinhos":
+            self.som("corte")
             n = 8 + (nv - 1) * 2
             for k in range(n):
                 a = k / n * math.tau
                 self.tiros.append({"x": kx, "y": ky, "vx": math.cos(a) * 330, "vy": math.sin(a) * 330,
                                    "dano": 9 * mult, "fura": 0, "vida": 1.0, "cor": (30, 30, 40), "r": 5, "acertos": set()})
         elif iid == "raio":
+            self.som("raio")
             alvos = sorted(self.monstros, key=lambda m: math.hypot(m["x"] - kx, m["y"] - ky))[:2 + nv]
             px, py = kx, ky
             for m in alvos:
@@ -316,18 +378,21 @@ class Jogo:
                 self.ferir(m, 15 * mult)
                 px, py = m["x"], m["y"]
         elif iid == "esmagamento":
+            self.som("esmagamento")
             r = 150 + nv * 12
             self.efeitos.append(["anel", kx, ky + 18, 20, r, 0.35, (200, 150, 90)])
             for m in self.monstros:
                 if math.hypot(m["x"] - kx, m["y"] - ky) < r:
                     self.ferir(m, 16 * mult)
         elif iid == "rasgo":
+            self.som("corte")
             alvo = self.mais_perto(kx, ky)
             a = math.atan2(alvo["y"] - ky, alvo["x"] - kx) if alvo else random.uniform(0, math.tau)
             for d in ([0] if nv < 3 else [-0.2, 0.2]) if nv < 5 else [-0.3, 0, 0.3]:
                 self.tiros.append({"x": kx, "y": ky, "vx": math.cos(a + d) * 480, "vy": math.sin(a + d) * 480,
                                    "dano": 24 * mult, "fura": 99, "vida": 1.4, "cor": (220, 30, 90), "r": 9, "acertos": set()})
         elif iid == "cristal":
+            self.som("gema")
             cura = 4 + 3 * nv
             self.hp = min(self.hp_max, self.hp + cura)
             self.texto(kx, ky - 40, "+" + str(cura), (90, 220, 160))
@@ -336,6 +401,7 @@ class Jogo:
             self.k_rapido = 1.6 + 0.5 * nv
             self.efeitos.append(["anel", kx, ky + 18, 10, 40, 0.25, VERDE])
         elif iid == "fonte":
+            self.som("gema")
             ganho = nv
             self.essencia += ganho
             self.texto(kx, ky - 40, "+" + str(ganho), OURO)
@@ -356,6 +422,7 @@ class Jogo:
         m["flash"] = 0.1
         self.texto(m["x"] + random.uniform(-8, 8), m["y"] - 30, str(int(dano)), BRANCO)
         if m["hp"] <= 0:
+            self.som("acerto")
             self.mortes += 1
             self.essencia += m["premio"]
             for _ in range(10 if not m["chefe"] else 40):
@@ -418,6 +485,7 @@ class Jogo:
                 if m["t_ataque"] <= 0:
                     m["t_ataque"] = 1.0
                     self.hp -= m["dano"]
+                    self.som("dano")
                     self.k_flash = 0.15
                     self.texto(kx, ky - 50, "-" + str(int(m["dano"])), VERMELHO)
             if m["chefe"]:
@@ -825,7 +893,10 @@ def main():
                 jogo.clique(ev.pos)
             if ev.type == pygame.KEYDOWN and ev.key == pygame.K_SPACE and jogo.estado == "loja":
                 jogo.iniciar_onda()
+            if ev.type == pygame.KEYDOWN and ev.key == pygame.K_m:
+                jogo.ligar_som(not jogo.som_ligado)
         jogo.atualizar(dt)
+        jogo.tocar_musica(jogo.musica_certa())
         jogo.desenhar(tela)
         pygame.display.flip()
 

@@ -48,6 +48,14 @@ conceituais (`kravenox/arte/conceitos/`), e o fundo é a pintura da Cratera do
 Cisma. Letras: Cinzel nos títulos e Alegreya Sans no texto (licença OFL, em
 `assets/fontes/`). Origem de cada arquivo em `assets/LEIAME.md`.
 
+## Som
+
+As músicas são as do RPG 2D (`kravenox-jogar/rpg/music`): **Abismo** na loja,
+**Batalha** nas ondas, **Chefe** nas ondas 5 e 10, **Espinhos** contra o
+Thornox na onda 15, e **Vitória** e **Game over** no fim. Os efeitos (golpe,
+raio, esmagamento, dano, essência, chefe) são os do Cratera do Cisma. O botão
+de alto-falante no alto (ou a tecla M na versão Python) liga e desliga o som.
+
 ## Monstros (do livro e do gibi)
 
 Larva da Essência, Sentinela Esférica, Verme de Dentes e Sentinela do Vazio.
