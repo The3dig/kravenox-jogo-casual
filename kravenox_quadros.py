@@ -26,19 +26,20 @@ LARG, ALT = 480, 820
 PASTA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
 # Cores (vermelho é do Kravenox, roxo é do Vazio)
-FUNDO = (92, 40, 38)
-FUNDO_ESC = (70, 28, 28)
-PEDRA = (96, 96, 102)
-PEDRA_CLARA = (130, 130, 138)
-PEDRA_ESC = (46, 44, 50)
-TINTA = (20, 14, 18)
-BRANCO = (240, 232, 220)
-OURO = (255, 210, 90)
-ROXO = (170, 100, 255)
-VERMELHO = (220, 50, 50)
-VERDE = (80, 190, 90)
-MADEIRA = (90, 62, 40)
-PAPEL = (214, 196, 160)
+FUNDO = (12, 10, 18)
+FUNDO_ESC = (8, 6, 12)
+PEDRA = (44, 40, 54)
+PEDRA_CLARA = (70, 62, 86)
+PEDRA_ESC = (22, 20, 28)
+TINTA = (8, 6, 10)
+BRANCO = (232, 226, 236)
+CINZA = (150, 142, 160)
+OURO = (214, 178, 106)
+ROXO = (160, 100, 255)
+VERMELHO = (214, 40, 44)
+VERDE = (90, 200, 120)
+MADEIRA = (30, 24, 38)
+PAPEL = (14, 11, 18)
 
 # ------------------------------------------------------------------ poderes
 # Os nomes vêm dos poderes do Kravenox no jogo Cratera do Cisma.
@@ -56,19 +57,21 @@ NIVEL_MAX = 5
 
 # ---------------------------------------------------------------- monstros
 # Os monstros são os do livro e do gibi (universo/inimigos, biblia/personagens).
+# As artes são recortes das pinturas conceituais e das estátuas 3D.
+# "alt" é a altura na tela; "esq" diz que a pintura olha para a esquerda.
 MONSTROS = {
-    "larva":      {"nome": "Larva da Essência",  "hp": 22,  "vel": 34, "dano": 5,  "premio": 2,  "img": ["larva-0", "larva-1"], "esc": 1.7},
-    "olho":       {"nome": "Sentinela Esférica", "hp": 14,  "vel": 70, "dano": 4,  "premio": 2,  "img": ["olho-0", "olho-1"],   "esc": 1.5},
-    "sentinela":  {"nome": "Sentinela do Vazio", "hp": 55,  "vel": 30, "dano": 10, "premio": 4,  "img": ["sentinela-0", "sentinela-1"], "esc": 1.5},
-    "sombra":     {"nome": "Sombra",             "hp": 34,  "vel": 58, "dano": 7,  "premio": 3,  "img": ["sombra"], "esc": 0.85},
-    "devmenor":   {"nome": "Devorador Menor",    "hp": 80,  "vel": 40, "dano": 12, "premio": 6,  "img": ["devorador-menor"], "esc": 0.45},
+    "larva":     {"nome": "Larva da Essência",   "hp": 22,   "vel": 34, "dano": 5,  "premio": 2,  "img": "larva", "alt": 44, "esq": True},
+    "esfera":    {"nome": "Sentinela Esférica",  "hp": 14,   "vel": 70, "dano": 4,  "premio": 2,  "img": "esfera", "alt": 46},
+    "verme":     {"nome": "Verme de Dentes",     "hp": 34,   "vel": 58, "dano": 7,  "premio": 3,  "img": "verme", "alt": 50, "esq": True},
+    "sentinela": {"nome": "Sentinela do Vazio",  "hp": 55,   "vel": 30, "dano": 10, "premio": 4,  "img": "sentinela", "alt": 82},
     # chefes
-    "larvamae":   {"nome": "Larva-Mãe",          "hp": 420, "vel": 18, "dano": 20, "premio": 40, "img": ["larva-0", "larva-1"], "esc": 4.0, "chefe": True},
-    "coisa":      {"nome": "A Coisa que Dormia", "hp": 1100, "vel": 14, "dano": 28, "premio": 80, "img": ["coisa-que-dormia"], "esc": 1.0, "chefe": True},
-    "devorador":  {"nome": "O Devorador",        "hp": 2300, "vel": 16, "dano": 35, "premio": 0,  "img": ["devorador"], "esc": 1.15, "chefe": True},
+    "larvamae":  {"nome": "Larva-Mãe",           "hp": 420,  "vel": 18, "dano": 20, "premio": 40, "img": "larva", "alt": 118, "esq": True, "chefe": True, "tinta": (255, 185, 240)},
+    "semrosto":  {"nome": "Sentinela sem Rosto", "hp": 1100, "vel": 14, "dano": 28, "premio": 80, "img": "sentinela", "alt": 150, "chefe": True, "tinta": (205, 180, 255)},
+    "thornox":   {"nome": "Thornox",             "hp": 2300, "vel": 16, "dano": 35, "premio": 0,  "img": "thornox", "alt": 130, "chefe": True},
 }
+FILHOTES = {"larvamae": "larva", "semrosto": "esfera", "thornox": "verme"}
 TOTAL_ONDAS = 15
-CHEFES = {5: "larvamae", 10: "coisa", 15: "devorador"}
+CHEFES = {5: "larvamae", 10: "semrosto", 15: "thornox"}
 
 # ------------------------------------------------------------------ tabuleiro
 TAM = 84
@@ -92,7 +95,7 @@ def ret_quadro(i):
 
 # ------------------------------------------------------------------ imagens
 def carregar(nome):
-    caminho = os.path.join(PASTA, nome + ".png")
+    caminho = os.path.join(PASTA, "arte", nome + ".png")
     try:
         return pygame.image.load(caminho).convert_alpha()
     except (pygame.error, FileNotFoundError):
@@ -114,34 +117,56 @@ def silhueta_branca(img):
 # ------------------------------------------------------------------ jogo
 class Jogo:
     def __init__(self):
-        self.fonte = pygame.font.Font(None, 26)
-        self.fonte_p = pygame.font.Font(None, 20)
-        self.fonte_g = pygame.font.Font(None, 44)
-        self.fonte_n = pygame.font.Font(None, 22)
+        texto = os.path.join(PASTA, "fontes", "alegreya-sans-bold.ttf")
+        titulo = os.path.join(PASTA, "fontes", "cinzel.ttf")
+        self.fonte = pygame.font.Font(texto, 21)
+        self.fonte_p = pygame.font.Font(texto, 16)
+        self.fonte_g = pygame.font.Font(titulo, 30)
+        self.fonte_n = pygame.font.Font(texto, 18)
         self.img = {}
-        for k in ["kravenox-passo-0", "kravenox-passo-1", "kravenox-passo-2", "kravenox-passo-3"]:
-            self.img[k] = escalar(carregar(k), 0.62)
+        self.arte("kravenox", 94, tinta_borda=(214, 40, 44, 140))
         for tipo, m in MONSTROS.items():
-            quadros = []
-            for nome in m["img"]:
-                im = escalar(carregar(nome), m["esc"])
-                if tipo == "larvamae":
-                    im = im.copy()
-                    im.fill((255, 150, 210, 255), special_flags=pygame.BLEND_RGBA_MULT)
-                quadros.append((im, pygame.transform.flip(im, True, False), silhueta_branca(im)))
-            self.img["m_" + tipo] = quadros
+            cor = (120, 160, 205, 190) if tipo == "thornox" else ((160, 100, 255, 190) if m.get("chefe") else (160, 100, 255, 130))
+            self.arte(tipo, m["alt"], m["img"], m.get("tinta"), cor, m.get("esq", False))
         self.chao = self.gerar_chao()
         self.novo_jogo()
 
+    def arte(self, chave, alt, nome=None, tinta=None, tinta_borda=(160, 100, 255, 130), olha_esq=False):
+        """Guarda (normal, virada, branca, contorno) de uma arte já na altura da tela.
+        A versão normal sempre olha para a direita."""
+        im = carregar(nome or chave)
+        im = pygame.transform.smoothscale(im, (max(1, int(im.get_width() * alt / im.get_height())), int(alt)))
+        if tinta:
+            im = im.copy()
+            im.fill((*tinta, 255), special_flags=pygame.BLEND_RGBA_MULT)
+        if olha_esq:
+            im = pygame.transform.flip(im, True, False)
+        borda = pygame.mask.from_surface(im).to_surface(setcolor=tinta_borda, unsetcolor=(0, 0, 0, 0))
+        self.img[chave] = (im, pygame.transform.flip(im, True, False), silhueta_branca(im), borda)
+
     def gerar_chao(self):
-        s = pygame.Surface((LARG, ALT))
-        s.fill(FUNDO)
-        rnd = random.Random(7)
-        for _ in range(2600):
-            x, y = rnd.randrange(LARG), rnd.randrange(ALT)
-            c = rnd.choice([FUNDO_ESC, (110, 50, 46), (80, 34, 34)])
-            pygame.draw.line(s, c, (x, y), (x + rnd.randint(-6, 6), y + rnd.randint(2, 8)), 1)
-        return s
+        try:
+            fundo = pygame.image.load(os.path.join(PASTA, "arte", "cratera.png")).convert()
+            fundo = pygame.transform.smoothscale(fundo, (LARG, ALT))
+        except (pygame.error, FileNotFoundError):
+            fundo = pygame.Surface((LARG, ALT))
+            fundo.fill(FUNDO)
+        veu = pygame.Surface((LARG, ALT), pygame.SRCALPHA)
+        veu.fill((6, 4, 12, 110))
+        fundo.blit(veu, (0, 0))
+        return fundo
+
+    def blit_arte(self, tela, chave, midbottom, virar, branco=False):
+        im, im_v, br, borda = self.img[chave]
+        img = im_v if virar else im
+        if branco:
+            img = pygame.transform.flip(br, True, False) if virar else br
+        b = pygame.transform.flip(borda, True, False) if virar else borda
+        r = img.get_rect(midbottom=midbottom)
+        for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)):
+            tela.blit(b, r.move(dx, dy))
+        tela.blit(img, r)
+        return r
 
     def novo_jogo(self):
         self.onda = 0
@@ -212,13 +237,13 @@ class Jogo:
         w = self.onda
         tipos = ["larva"] * 5
         if w >= 2:
-            tipos += ["olho"] * 3
-        if w >= 4:
+            tipos += ["esfera"] * 3
+        if w >= 3:
+            tipos += ["verme"] * 2
+        if w >= 5:
             tipos += ["sentinela"] * 2
-        if w >= 6:
-            tipos += ["sombra"] * 3
-        if w >= 9:
-            tipos += ["devmenor"] * 2
+        if w >= 8:
+            tipos += ["verme", "sentinela", "sentinela"]
         n = 6 + w * 2
         self.fila = [random.choice(tipos) for _ in range(n)]
         if w in CHEFES:
@@ -399,7 +424,7 @@ class Jogo:
                 m["t_poder"] -= dt
                 if m["t_poder"] <= 0:
                     m["t_poder"] = 5.0
-                    filhote = {"larvamae": "larva", "coisa": "sombra", "devorador": "devmenor"}[m["tipo"]]
+                    filhote = FILHOTES[m["tipo"]]
                     for _ in range(2):
                         self.criar_monstro(filhote, m["x"] + random.uniform(-40, 40), m["y"] + random.uniform(-40, 40))
 
@@ -673,25 +698,20 @@ class Jogo:
         itens.sort(key=lambda t: t[0])
         for _, tipo, m in itens:
             if tipo == "k":
-                quadro = self.img["kravenox-passo-%d" % (int(self.k_anim) % 4 if self.estado == "onda" else 0)]
-                if self.k_dir < 0:
-                    quadro = pygame.transform.flip(quadro, True, False)
+                pulo = abs(math.sin(self.k_anim * 1.6)) * 4 if self.estado == "onda" else 0
                 if self.k_rapido > 0:
-                    pygame.draw.ellipse(tela, VERDE, (kx - 30, ky + 20, 60, 14), 2)
-                pygame.draw.ellipse(tela, (40, 16, 16), (kx - 28, ky + 22, 56, 12))
-                tela.blit(quadro, quadro.get_rect(midbottom=(kx, ky + 30)))
+                    pygame.draw.ellipse(tela, VERDE, (kx - 32, ky + 20, 64, 16), 2)
+                pygame.draw.ellipse(tela, (0, 0, 0), (kx - 28, ky + 23, 56, 12))
+                self.blit_arte(tela, "kravenox", (kx, ky + 30 - pulo), self.k_dir < 0)
                 if self.k_flash > 0:
                     pygame.draw.circle(tela, VERMELHO, (int(kx), int(ky)), 36, 3)
             else:
-                lista = self.img["m_" + m["tipo"]]
-                im, im_f, branco = lista[int(m["anim"] * 4) % len(lista)]
-                virar = m["x"] > kx   # os sprites olham para a direita
-                img = im_f if virar else im
-                if m["flash"] > 0:
-                    img = pygame.transform.flip(branco, True, False) if virar else branco
-                rr = img.get_rect(midbottom=(m["x"], m["y"] + img.get_height() * 0.4))
-                pygame.draw.ellipse(tela, (40, 16, 16), (m["x"] - rr.w * 0.35, m["y"] + img.get_height() * 0.33, rr.w * 0.7, 10))
-                tela.blit(img, rr)
+                alt = MONSTROS[m["tipo"]]["alt"]
+                virar = m["x"] > kx   # todas as artes guardadas olham para a direita
+                sobe = abs(math.sin(m["anim"] * 4)) * 3
+                largura = self.img[m["tipo"]][0].get_width()
+                pygame.draw.ellipse(tela, (0, 0, 0), (m["x"] - largura * 0.35, m["y"] + alt * 0.33, largura * 0.7, 10))
+                rr = self.blit_arte(tela, m["tipo"], (m["x"], m["y"] + alt * 0.4 - sobe), virar, m["flash"] > 0)
                 if m["hp"] < m["hp_max"] and not m["chefe"]:
                     w = 34
                     pygame.draw.rect(tela, TINTA, (m["x"] - w / 2 - 1, rr.top - 8, w + 2, 6))
@@ -779,13 +799,13 @@ class Jogo:
         txt = "Iniciar onda %d" % (self.onda + 1) if loja_ativa else "Onda em andamento"
         self.botao(tela, b["onda"], txt, (230, 190, 60), TINTA, loja_ativa)
         if self.estado == "onda":
-            s = self.fonte_p.render("Monstros: %d  ·  na fila: %d" % (len(self.monstros), len(self.fila)), True, TINTA)
+            s = self.fonte_p.render("Monstros: %d  ·  na fila: %d" % (len(self.monstros), len(self.fila)), True, CINZA)
             tela.blit(s, s.get_rect(center=(LARG // 2, LOJA_Y + 30)))
         elif self.selec and self.selec[0] == "loja":
-            s = self.fonte_p.render("Agora toque num quadro", True, TINTA)
+            s = self.fonte_p.render("Agora toque num quadro", True, CINZA)
             tela.blit(s, s.get_rect(center=(LARG // 2, LOJA_Y + 30)))
         else:
-            s = self.fonte_p.render("Toque no item, depois no quadro", True, TINTA)
+            s = self.fonte_p.render("Toque no item, depois no quadro", True, CINZA)
             tela.blit(s, s.get_rect(center=(LARG // 2, LOJA_Y + 30)))
 
 

@@ -40,12 +40,18 @@ python kravenox_quadros.py
 | Passo Predador | ele anda mais rápido por um tempo |
 | Fonte de Essência | dá essência |
 
+## Visual
+
+As artes são as oficiais do Kravenox, recortadas do fundo: o Kravenox e o
+Thornox vêm das estátuas 3D (`kravenox/3d/`), os monstros vêm das pinturas
+conceituais (`kravenox/arte/conceitos/`), e o fundo é a pintura da Cratera do
+Cisma. Letras: Cinzel nos títulos e Alegreya Sans no texto (licença OFL, em
+`assets/fontes/`). Origem de cada arquivo em `assets/LEIAME.md`.
+
 ## Monstros (do livro e do gibi)
 
-Larva da Essência, Sentinela Esférica, Sentinela do Vazio, Sombra e
-Devorador Menor. Chefes: **Larva-Mãe** (onda 5), **A Coisa que Dormia**
-(onda 10) e **O Devorador** (onda 15).
-
-Os sprites estão em `assets/` (origem em `assets/LEIAME.md`).
+Larva da Essência, Sentinela Esférica, Verme de Dentes e Sentinela do Vazio.
+Chefes: **Larva-Mãe** (onda 5), **Sentinela sem Rosto** (onda 10) e
+**Thornox** (onda 15).
 
 A primeira versão (fogueira em HTML) está guardada em `versoes-antigas/`.

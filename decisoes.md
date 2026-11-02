@@ -24,3 +24,18 @@
 - **Mudança nas duas versões:** o Kravenox ganhou uma mordida básica, e os
   monstros aceleram depois de 20 s de onda. Sem isso, um tabuleiro só com
   cura e velocidade deixava a onda sem fim.
+
+## 2026-11-02: visual com as artes detalhadas
+
+- **Era:** sprites de pixel art (do Cratera do Cisma e do RPG), fundo
+  vermelho liso e interface de cores claras.
+- **Passou a ser:** recortes das estátuas 3D e das pinturas conceituais,
+  fundo com a pintura da Cratera do Cisma, interface escura de fantasia
+  sombria (pedra, roxo do Vazio, ouro velho).
+- **Por quê:** o Rone achou os desenhos infantis e pediu o nível de detalhe
+  das artes 3D.
+- **Monstros:** saíram a Sombra, os Devoradores e A Coisa que Dormia (não têm
+  arte detalhada ainda). Entraram o Verme de Dentes (nome provisório: no
+  livro ele ainda não tem nome) e, como chefes, a Sentinela sem Rosto
+  (onda 10) e o Thornox (onda 15, como no Cratera do Cisma).
+- Os sprites antigos continuam em `assets/` e `godot/assets/`.
