@@ -15,4 +15,7 @@ rm -rf build/web && mkdir -p build/web
 mkdir -p "$DESTINO"
 find "$DESTINO" -maxdepth 1 -name 'index*' -delete
 cp build/web/* "$DESTINO"/
+# Celulares que abriram uma versão antiga têm um service worker guardando o
+# jogo; este arquivo o desliga (veja ferramentas/desliga-cache.js).
+cp ferramentas/desliga-cache.js "$DESTINO"/index.service.worker.js
 echo "Pronto. Faça o commit e o push no kravenox-jogar."
