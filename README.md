@@ -1,19 +1,17 @@
 # Kravenox: Quadros do Cisma
 
-Jogo casual do universo Kravenox. Tem duas versões iguais: **Python (pygame)**,
-no `kravenox_quadros.py`, e **Godot 4.5**, na pasta `godot/` (veja `godot/LEIAME.md`).
+Jogo casual do universo Kravenox, em **Godot 4.5**, na pasta `godot/` (veja
+`godot/LEIAME.md`). Jogar: https://the3dig.github.io/kravenox-jogar/quadros/
 
 O Kravenox anda sem parar por um anel de 12 quadros. Na loja de baixo você
 compra poderes e coloca nos quadros; quando ele pisa num quadro, o poder dali
 dispara. Ao iniciar a onda, os monstros do Reino Quebrado vêm de todos os
 lados. São 15 ondas, com chefe nas ondas 5, 10 e 15.
 
-## Como rodar
+## Como abrir
 
-```
-pip install pygame-ce
-python kravenox_quadros.py
-```
+No Godot 4.5, importe a pasta `godot/` e aperte F5. Para publicar a versão Web,
+rode `godot/ferramentas/publicar.sh`.
 
 ## Como se joga
 
@@ -46,7 +44,8 @@ As artes são as oficiais do Kravenox, recortadas do fundo: o Kravenox e o
 Thornox vêm das estátuas 3D (`kravenox/3d/`), os monstros vêm das pinturas
 conceituais (`kravenox/arte/conceitos/`), e o fundo é a pintura da Cratera do
 Cisma. Letras: Cinzel nos títulos e Alegreya Sans no texto (licença OFL, em
-`assets/fontes/`). Origem de cada arquivo em `assets/LEIAME.md`.
+`godot/fontes/`). Origem de cada arquivo em
+`versoes-antigas/python/assets/LEIAME.md` (as mesmas artes de `godot/assets/`).
 
 ## Som
 
@@ -54,7 +53,7 @@ As músicas são as do RPG 2D (`kravenox-jogar/rpg/music`): **Abismo** na loja,
 **Batalha** nas ondas, **Chefe** nas ondas 5 e 10, **Espinhos** contra o
 Thornox na onda 15, e **Vitória** e **Game over** no fim. Os efeitos (golpe,
 raio, esmagamento, dano, essência, chefe) são os do Cratera do Cisma. O botão
-de alto-falante no alto (ou a tecla M na versão Python) liga e desliga o som.
+de alto-falante no alto liga e desliga o som.
 
 ## Monstros (do livro e do gibi)
 
@@ -62,4 +61,5 @@ Larva da Essência, Sentinela Esférica, Verme de Dentes e Sentinela do Vazio.
 Chefes: **Larva-Mãe** (onda 5), **Sentinela sem Rosto** (onda 10) e
 **Thornox** (onda 15).
 
-A primeira versão (fogueira em HTML) está guardada em `versoes-antigas/`.
+Versões anteriores guardadas em `versoes-antigas/`: a fogueira em HTML e a
+versão em Python (pygame), que deixou de ser atualizada.

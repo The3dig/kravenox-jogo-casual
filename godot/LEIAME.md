@@ -1,6 +1,6 @@
 # Kravenox: Quadros do Cisma (Godot 4.5)
 
-A mesma versão do `kravenox_quadros.py`, agora em Godot 4.5, com o
+A versão oficial do jogo, em Godot 4.5, com o
 renderizador Compatibility (o que roda no navegador do iPhone), em pé
 (480 × 820).
 
@@ -26,5 +26,5 @@ terminal como foi cada onda e onde a partida terminou.
 |---|---|
 | `scripts/jogo.gd` | o jogo inteiro: tabuleiro, loja, ondas, poderes e desenho |
 | `cenas/principal.tscn` | a cena que carrega o script |
-| `assets/` | os mesmos sprites da pasta `assets/` da raiz (origem em `assets/LEIAME.md`) |
+| `assets/`, `musica/`, `sons/`, `fontes/` | artes, trilhas, efeitos e letras (origem em `../versoes-antigas/python/assets/LEIAME.md`) |
 | `export_presets.cfg` | exportação Web, igual à do Cratera do Cisma |

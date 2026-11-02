@@ -48,3 +48,11 @@
   detalhadas. O recorte da estátua (`assets/arte/kravenox.png`) segue em uso
   na tela de fim de jogo.
 - **Por quê:** o Rone achou o andar novo horrível e preferiu o anterior.
+
+## 2026-11-02: fica só a versão Godot
+
+- **Era:** duas versões iguais, Python (pygame) e Godot 4.5.
+- **Passou a ser:** só a versão Godot é atualizada. A versão Python foi para
+  `versoes-antigas/python/` (com a pasta `assets/` que ela usava).
+- **Por quê:** a do Godot é a que vai para o celular, e manter as duas
+  dobrava o trabalho a cada mudança.
