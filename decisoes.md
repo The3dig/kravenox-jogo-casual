@@ -39,3 +39,12 @@
   livro ele ainda não tem nome) e, como chefes, a Sentinela sem Rosto
   (onda 10) e o Thornox (onda 15, como no Cratera do Cisma).
 - Os sprites antigos continuam em `assets/` e `godot/assets/`.
+
+## 2026-11-02: o andar do Kravenox volta a ser o de antes
+
+- **Era:** o Kravenox da estátua 3D, uma imagem só que balançava ao andar.
+- **Passou a ser:** os 4 quadros de passo do Cratera do Cisma (pixel art),
+  como na primeira versão. Monstros, fundo e interface continuam com as artes
+  detalhadas. O recorte da estátua (`assets/arte/kravenox.png`) segue em uso
+  na tela de fim de jogo.
+- **Por quê:** o Rone achou o andar novo horrível e preferiu o anterior.

@@ -125,7 +125,15 @@ class Jogo:
         self.fonte_g = pygame.font.Font(titulo, 30)
         self.fonte_n = pygame.font.Font(texto, 18)
         self.img = {}
-        self.arte("kravenox", 94, tinta_borda=(214, 40, 44, 140))
+        # o andar do Kravenox: os 4 quadros de passo do Cratera do Cisma
+        self.passos = []
+        for n in range(4):
+            try:
+                im = pygame.image.load(os.path.join(PASTA, "kravenox-passo-%d.png" % n)).convert_alpha()
+            except (pygame.error, FileNotFoundError):
+                im = carregar("kravenox")
+            im = pygame.transform.smoothscale(im, (int(im.get_width() * 68 / im.get_height()), 68))
+            self.passos.append((im, pygame.transform.flip(im, True, False)))
         for tipo, m in MONSTROS.items():
             cor = (120, 160, 205, 190) if tipo == "thornox" else ((160, 100, 255, 190) if m.get("chefe") else (160, 100, 255, 130))
             self.arte(tipo, m["alt"], m["img"], m.get("tinta"), cor, m.get("esq", False))
@@ -766,11 +774,13 @@ class Jogo:
         itens.sort(key=lambda t: t[0])
         for _, tipo, m in itens:
             if tipo == "k":
-                pulo = abs(math.sin(self.k_anim * 1.6)) * 4 if self.estado == "onda" else 0
+                n = int(self.k_anim) % 4 if self.estado == "onda" else 0
+                im, im_v = self.passos[n]
                 if self.k_rapido > 0:
                     pygame.draw.ellipse(tela, VERDE, (kx - 32, ky + 20, 64, 16), 2)
                 pygame.draw.ellipse(tela, (0, 0, 0), (kx - 28, ky + 23, 56, 12))
-                self.blit_arte(tela, "kravenox", (kx, ky + 30 - pulo), self.k_dir < 0)
+                img = im_v if self.k_dir < 0 else im
+                tela.blit(img, img.get_rect(midbottom=(kx, ky + 30)))
                 if self.k_flash > 0:
                     pygame.draw.circle(tela, VERMELHO, (int(kx), int(ky)), 36, 3)
             else:

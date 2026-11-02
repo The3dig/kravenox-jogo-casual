@@ -129,6 +129,9 @@ func _ready() -> void:
 	fonte_titulo = cinzel
 	for nome in ["kravenox", "thornox", "larva", "esfera", "verme", "sentinela"]:
 		carregar(nome)
+	# o andar do Kravenox: os 4 quadros de passo do Cratera do Cisma
+	for n in 4:
+		carregar("kravenox-passo-%d" % n, "")
 	fundo = load("res://assets/arte/cratera.png")
 	vinheta = gerar_vinheta()
 	preparar_som()
@@ -198,8 +201,8 @@ func ligar_som(sim: bool) -> void:
 
 
 # As artes são grandes e aparecem pequenas: mipmaps deixam o contorno liso.
-func carregar(nome: String) -> void:
-	var t: Texture2D = load("res://assets/arte/%s.png" % nome)
+func carregar(nome: String, pasta := "arte") -> void:
+	var t: Texture2D = load("res://assets/%s/%s.png" % [pasta, nome]) if pasta != "" else load("res://assets/%s.png" % nome)
 	var img := t.get_image()
 	if img.is_compressed():
 		img.decompress()
@@ -1081,23 +1084,19 @@ func desenhar_mundo() -> void:
 
 
 func desenhar_kravenox(k: Vector2) -> void:
-	var andando := estado == "onda"
-	var passo := sin(k_anim * 1.6) if andando else sin(tempo * 2) * 0.3
+	# Mesmo andar da primeira versão: troca de quadro de passo, sem balanço.
+	var n := (int(k_anim) % 4) if estado == "onda" else 0
+	var nome := "kravenox-passo-%d" % n
 	var base := k + Vector2(0, 30)
 	sombra_chao(base, 30)
 	if k_rapido > 0:
 		draw_set_transform(base, 0, Vector2(1, 0.3))
 		draw_arc(Vector2.ZERO, 34, 0, TAU, 32, Color(VERDE, 0.6), 3, true)
 		draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
-	# aura vermelha da Essência Corrompida
-	brilho_suave(k + Vector2(0, -6), 52, VERMELHO, 0.45 + 0.15 * sin(tempo * 3))
-	var esmaga := Vector2(1.0 - 0.03 * absf(passo), 1.0 + 0.04 * absf(passo))
-	contorno("kravenox", base + Vector2(0, -absf(passo) * 4), 94, k_dir < 0, Color(VERMELHO, 0.55), passo * 0.06, esmaga)
-	desenhar_arte("kravenox", base + Vector2(0, -absf(passo) * 4), 94, k_dir < 0, Color.WHITE,
-		false, passo * 0.06, esmaga)
+	brilho_suave(k + Vector2(0, -4), 48, VERMELHO, 0.35)
+	desenhar_arte(nome, base, 68, k_dir < 0)
 	if k_flash > 0:
-		desenhar_arte("kravenox", base + Vector2(0, -absf(passo) * 4), 94, k_dir < 0, Color(1, 0.3, 0.3, k_flash * 4),
-			true, passo * 0.06, esmaga)
+		desenhar_arte(nome, base, 68, k_dir < 0, Color(1, 0.3, 0.3, k_flash * 4), true)
 
 
 func desenhar_monstro(m: Dictionary, k: Vector2) -> void:
