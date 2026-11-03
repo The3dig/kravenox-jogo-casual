@@ -76,14 +76,14 @@ var AZUL := Color8(120, 160, 205)
 
 # Poderes do Kravenox (os cinco primeiros vêm do Cratera do Cisma)
 var ITENS := {
-	"garras": {"nome": "Garras", "custo": 8, "cor": Color8(230, 60, 50)},
-	"espinhos": {"nome": "Espinhos Vorazes", "custo": 10, "cor": Color8(200, 40, 60)},
-	"raio": {"nome": "Raio da Essência", "custo": 12, "cor": Color8(170, 110, 255)},
-	"esmagamento": {"nome": "Esmagamento", "custo": 14, "cor": Color8(200, 140, 80)},
-	"rasgo": {"nome": "Rasgo do Abismo", "custo": 12, "cor": Color8(230, 30, 90)},
-	"cristal": {"nome": "Cristal de Vida", "custo": 9, "cor": Color8(90, 220, 170)},
-	"passo": {"nome": "Passo Predador", "custo": 7, "cor": Color8(110, 210, 120)},
-	"fonte": {"nome": "Fonte de Essência", "custo": 10, "cor": Color8(190, 130, 255)},
+	"garras": {"nome": "Garras", "custo": 8, "cor": Color8(230, 60, 50), "curta": "Golpe em volta", "desc": "golpeia todos os monstros colados no Kravenox"},
+	"espinhos": {"nome": "Espinhos Vorazes", "custo": 10, "cor": Color8(200, 40, 60), "curta": "Espinhos em roda", "desc": "solta espinhos para todos os lados"},
+	"raio": {"nome": "Raio da Essência", "custo": 12, "cor": Color8(170, 110, 255), "curta": "Raio em cadeia", "desc": "um raio pula de um monstro para o outro"},
+	"esmagamento": {"nome": "Esmagamento", "custo": 14, "cor": Color8(200, 140, 80), "curta": "Dano em área", "desc": "esmaga o chão e fere tudo numa área grande"},
+	"rasgo": {"nome": "Rasgo do Abismo", "custo": 12, "cor": Color8(230, 30, 90), "curta": "Corte que atravessa", "desc": "um corte que vai até o monstro mais perto e atravessa a fila"},
+	"cristal": {"nome": "Cristal de Vida", "custo": 9, "cor": Color8(90, 220, 170), "curta": "Cura a vida", "desc": "devolve vida ao Kravenox"},
+	"passo": {"nome": "Passo Predador", "custo": 7, "cor": Color8(110, 210, 120), "curta": "Corre mais rápido", "desc": "o Kravenox anda mais rápido por alguns segundos e pisa em mais quadros"},
+	"fonte": {"nome": "Fonte de Essência", "custo": 10, "cor": Color8(190, 130, 255), "curta": "Dá essência", "desc": "rende essência para gastar na loja"},
 }
 
 # Monstros do livro e do gibi (universo/inimigos, biblia/personagens).
@@ -1425,10 +1425,11 @@ func desenhar_loja() -> void:
 		if selec == ["loja", i]:
 			caixa(r.grow(2), Color(0, 0, 0, 0), 9, 3, OURO, false)
 		var cx := r.get_center().x
-		var area := Rect2(cx - 40, r.position.y + 22, 80, 54)
+		var area := Rect2(cx - 40, r.position.y + 21, 80, 42)
 		degrade(area, Color(0.12, 0.09, 0.16), Color(0.05, 0.04, 0.07))
-		icone(iid, area.get_center(), 0.78)
+		icone(iid, area.get_center(), 0.62)
 		escrever(ITENS[iid]["nome"], Vector2(cx, r.position.y + 12), 14, BRANCO, false)
+		escrever(ITENS[iid]["curta"], Vector2(cx, r.position.y + 71), 12, Color8(200, 190, 210), false)
 		cristal(Vector2(cx - 16, r.end.y - 14), 7)
 		escrever_esq(str(custo), Vector2(cx - 5, r.end.y - 6), 20, BRANCO if pode else Color8(200, 80, 80))
 		if not ativa:
@@ -1443,8 +1444,12 @@ func desenhar_loja() -> void:
 	elif vender:
 		dica = "Toque num quadro para vender o item"
 	elif not selec.is_empty() and selec[0] == "loja":
-		dica = "Agora toque num quadro"
-	escrever(dica, Vector2(LARG / 2, LOJA_Y + 32), 14, CINZA, false)
+		var it: Dictionary = ITENS[loja[selec[1]]]
+		dica = "%s: %s. Toque num quadro." % [it["nome"], it["desc"]]
+	elif not selec.is_empty() and selec[0] == "quadro" and quadros[selec[1]] != null:
+		var q: Dictionary = quadros[selec[1]]
+		dica = "%s nível %d: %s. Toque em outro quadro para mover." % [ITENS[q["id"]]["nome"], q["nv"], ITENS[q["id"]]["desc"]]
+	desenhar_dica(dica, Vector2(LARG / 2, LOJA_Y + 32), LARG - 36)
 
 
 # ============================================================ telas de menu
@@ -1725,3 +1730,19 @@ func desenhar_bestiario() -> void:
 		var nota := "Chefe" if chefe else "Desde o capítulo %d" % MONSTRO_DESDE[tipo]
 		escrever(nota, r.position + Vector2(r.size.x / 2, 150), 13, Color8(200, 160, 255) if chefe else CINZA, false)
 	cabecalho("BESTIÁRIO")
+
+
+# Dica da loja: cabe em até duas linhas pequenas.
+func desenhar_dica(t: String, c: Vector2, largura: float) -> void:
+	if fonte.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x <= largura:
+		escrever(t, c, 14, CINZA, false)
+		return
+	var palavras := t.split(" ")
+	var l1 := ""
+	var i := 0
+	while i < palavras.size() and fonte.get_string_size((l1 + " " + palavras[i]).strip_edges(), HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x <= largura:
+		l1 = (l1 + " " + palavras[i]).strip_edges()
+		i += 1
+	var l2 := " ".join(palavras.slice(i))
+	escrever(l1, c + Vector2(0, -6), 13, Color8(220, 210, 230), false)
+	escrever(encurtar(l2, fonte, 13, largura), c + Vector2(0, 9), 13, Color8(220, 210, 230), false)

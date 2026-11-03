@@ -19,6 +19,8 @@ dispara. Entre as ondas ele espera no meio do anel.
   aparece a Larva. Os outros poderes e monstros entram aos poucos (Raio no 2,
   Passo no 3, Esmagamento no 5, Fonte no 7, Rasgo no 9; Sentinela Esférica no
   2, Verme no 4, Sentinela do Vazio no 6).
+- **Descrições:** cada item da loja tem uma frase curta; ao tocar no item (ou
+  num quadro ocupado) aparece a explicação completa.
 - **Melhorias:** cada capítulo dá fragmentos (mais na primeira vitória). Na
   tela de Melhorias eles viram vida, essência inicial, dano, velocidade e
   trocas grátis, que valem para todos os capítulos.
