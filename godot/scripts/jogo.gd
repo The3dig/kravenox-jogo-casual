@@ -24,21 +24,21 @@ const CAPS_POR_MUNDO := 4
 var CENTRO := Vector2(240, 383)   # meio do anel: onde o Kravenox espera entre as ondas
 var ANEL: Array = []   # o caminho do mundo atual (montado em montar_caminho)
 
-# Caminhos dos mundos: cada um é uma volta fechada na grade (x, y), na ordem
-# em que o Kravenox anda. Os mundos alternam entre eles, às vezes espelhados.
-const CAMINHOS := [
-	# anel 4x4 (12 quadros)
-	[[0, 0], [1, 0], [2, 0], [3, 0], [3, 1], [3, 2], [3, 3], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
-	# anel largo 5x4 (14)
-	[[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [3, 3], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
-	# cruz (14)
-	[[1, 0], [2, 0], [3, 0], [3, 1], [4, 1], [4, 2], [3, 2], [3, 3], [2, 3], [1, 3], [1, 2], [0, 2], [0, 1], [1, 1]],
-	# anel alto 3x5 (12)
-	[[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [2, 3], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
-	# degrau no alto (14)
-	[[0, 0], [1, 0], [2, 0], [2, 1], [3, 1], [4, 1], [4, 2], [4, 3], [3, 3], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
-	# dente embaixo (16)
-	[[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [3, 3], [3, 2], [2, 2], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
+# Caminhos dos mundos: voltas fechadas na grade (x, y), na ordem em que o
+# Kravenox anda. Começam pequenos e crescem ao longo dos mundos.
+const FORMAS := {
+	"cruz": [[1, 0], [2, 0], [3, 0], [3, 1], [4, 1], [4, 2], [3, 2], [3, 3], [2, 3], [1, 3], [1, 2], [0, 2], [0, 1], [1, 1]],
+	"degrau": [[0, 0], [1, 0], [2, 0], [2, 1], [3, 1], [4, 1], [4, 2], [4, 3], [3, 3], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
+	"dente": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [3, 3], [3, 2], [2, 2], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
+	"cruz grande": [[1, 0], [2, 0], [3, 0], [3, 1], [4, 1], [4, 2], [4, 3], [3, 3], [3, 4], [2, 4], [1, 4], [1, 3], [0, 3], [0, 2], [0, 1], [1, 1]],
+	"dois dentes": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [5, 1], [5, 2], [5, 3], [4, 3], [4, 2], [3, 2], [3, 3], [2, 3], [2, 2], [1, 2], [1, 3], [0, 3], [0, 2], [0, 1]],
+}
+# Um caminho por mundo (19): "anel LxA" é um anel retangular. Espelhado = true vira de lado.
+const CAMINHO_DO_MUNDO := [
+	["anel 3x3", false], ["anel 4x3", false], ["anel 4x4", false], ["anel 3x5", false], ["cruz", false],
+	["anel 5x4", false], ["degrau", false], ["dente", false], ["cruz grande", false], ["anel 5x5", false],
+	["anel 6x4", false], ["anel 6x5", false], ["dois dentes", false], ["degrau", true], ["dente", true],
+	["cruz grande", false], ["dois dentes", true], ["anel 6x5", false], ["dois dentes", false],
 ]
 # Os 76 capítulos do livro (títulos do RPG em kravenox-jogar/rpg/js)
 const CAPITULOS := [
@@ -60,7 +60,7 @@ const CAPITULOS := [
 	"O que Fica Depois do Fim",
 ]
 # Começa simples: cada poder e cada monstro aparece a partir de um capítulo.
-const ITEM_DESDE := {"garras": 1, "espinhos": 1, "cristal": 1, "raio": 2, "passo": 3, "esmagamento": 5, "fonte": 7, "rasgo": 9}
+const ITEM_DESDE := {"garras": 1, "espinhos": 1, "cristal": 1, "raio": 2, "passo": 3, "esmagamento": 5, "fonte": 7, "rasgo": 9, "escudo": 4}
 const MONSTRO_DESDE := {"larva": 1, "esfera": 2, "verme": 4, "sentinela": 6}
 # Melhorias permanentes, compradas com fragmentos ganhos a cada missão.
 const MELHORIAS := [
@@ -99,6 +99,7 @@ var ITENS := {
 	"rasgo": {"nome": "Rasgo do Abismo", "custo": 12, "cor": Color8(230, 30, 90), "curta": "Corte que atravessa", "desc": "um corte que vai até o monstro mais perto e atravessa a fila"},
 	"cristal": {"nome": "Cristal de Vida", "custo": 9, "cor": Color8(90, 220, 170), "curta": "Cura a vida", "desc": "devolve vida ao Kravenox"},
 	"passo": {"nome": "Passo Predador", "custo": 7, "cor": Color8(110, 210, 120), "curta": "Corre mais rápido", "desc": "o Kravenox anda mais rápido por alguns segundos e pisa em mais quadros"},
+	"escudo": {"nome": "Escudo de Espinhos", "custo": 10, "cor": Color8(110, 170, 255), "curta": "Escudo extra", "desc": "cria um escudo por cima da vida; quanto maior o nível, mais escudo ele guarda"},
 	"fonte": {"nome": "Fonte de Essência", "custo": 10, "cor": Color8(190, 130, 255), "curta": "Dá essência", "desc": "rende essência para gastar na loja"},
 }
 
@@ -164,6 +165,15 @@ var premio_fim := 0
 var k_vis := Vector2.ZERO  # onde o Kravenox está de fato (entre as ondas ele anda até o meio)
 var k_no_anel := false     # já chegou ao quadro e está dando a volta
 var k_andando := false
+var k_pausa := 0.0       # pausa curta ao sair do caminho, antes de ir ao meio
+var escudo := 0.0        # escudo por cima da vida (item Escudo)
+var escudo_flash := 0.0
+var bonus_pendente := false   # venceu a fase 4: falta a fase bônus
+var bonus_res := ""           # "" / "ok" / "caiu"
+var premio_bonus := 0
+var torre_hp := 0.0
+var torre_max := 0.0
+var torre_flash := 0.0
 var rolagem := 0.0       # rolagem do mapa dos mundos
 var toque_ini := Vector2.ZERO
 var toque_rola := 0.0
@@ -393,10 +403,28 @@ func nivel_melhoria(id: String) -> int:
 
 # Monta o caminho do mundo do capítulo e calcula o tamanho dos quadros para
 # caber na área do tabuleiro (entre o placar e a loja).
+func forma_por_nome(nome: String) -> Array:
+	if not nome.begins_with("anel "):
+		return FORMAS[nome]
+	var t := nome.substr(5).split("x")
+	var c := int(t[0])
+	var l := int(t[1])
+	var v := []
+	for x in c:
+		v.append([x, 0])
+	for y in range(1, l):
+		v.append([c - 1, y])
+	for x in range(c - 2, -1, -1):
+		v.append([x, l - 1])
+	for y in range(l - 2, 0, -1):
+		v.append([0, y])
+	return v
+
+
 func montar_caminho() -> void:
-	var w := mundo_de(capitulo) - 1
-	var forma: Array = CAMINHOS[w % CAMINHOS.size()]
-	var espelho := (w / CAMINHOS.size()) % 2 == 1
+	var w := clampi(mundo_de(capitulo) - 1, 0, CAMINHO_DO_MUNDO.size() - 1)
+	var forma := forma_por_nome(CAMINHO_DO_MUNDO[w][0])
+	var espelho: bool = CAMINHO_DO_MUNDO[w][1]
 	var cols := 0
 	var lins := 0
 	for c in forma:
@@ -432,10 +460,17 @@ func novo_jogo() -> void:
 	essencia = 25 + 6 * nivel_melhoria("essencia") + 3 * (capitulo - 1)
 	hp_max = 150.0 + 20 * nivel_melhoria("vida")
 	hp = hp_max
-	k_vel = 1.4 * (1.0 + 0.06 * nivel_melhoria("passo"))
+	# em caminhos maiores ele anda um pouco mais rápido, para a volta não demorar demais
+	k_vel = 1.4 * (1.0 + 0.06 * nivel_melhoria("passo")) * sqrt(ANEL.size() / 12.0)
 	k_vis = CENTRO + Vector2(0, -18)
 	k_no_anel = false
 	k_andando = false
+	k_pausa = 0.0
+	escudo = 0.0
+	bonus_pendente = false
+	bonus_res = ""
+	premio_bonus = 0
+	torre_hp = 0.0
 	quadros = []
 	quadros.resize(ANEL.size())
 	brilho = []
@@ -536,6 +571,19 @@ func iniciar_onda() -> void:
 	fila = []
 	for _i in 4 + onda * 2 + mini(8, (capitulo - 1) / 3):
 		fila.append(tipos.pick_random())
+	if onda > FASES:
+		# fase bônus: muitos monstros, rápidos, indo para a torre do centro
+		bonus_pendente = false
+		fila = []
+		for _i in mini(30, 10 + capitulo / 2):
+			fila.append(tipos.pick_random())
+		torre_max = 200.0 + 40.0 * capitulo
+		torre_hp = torre_max
+		aviso("Fase bônus: os monstros vão atrás da torre!", 3.0)
+		t_spawn = 0.8
+		t_onda = 0.0
+		gap = 0.45
+		return
 	if onda == FASES:
 		var c := chefe_do_capitulo()
 		fila.insert(3, c)
@@ -549,6 +597,10 @@ func iniciar_onda() -> void:
 
 # Nos dois primeiros capítulos de cada mundo, a Larva-Mãe; no terceiro, a
 # Sentinela sem Rosto; no último, o Thornox.
+func bonus_ativo() -> bool:
+	return onda > FASES and estado == "onda"
+
+
 func chefe_do_capitulo() -> String:
 	var j := (capitulo - 1) % CAPS_POR_MUNDO
 	return "thornox" if j == 3 else ("semrosto" if j == 2 else "larvamae")
@@ -649,6 +701,14 @@ func ativar(i: int) -> void:
 		"passo":
 			k_rapido = 1.6 + 0.5 * nv
 			anel(k + Vector2(0, 18), 10, 40, 0.25, VERDE)
+		"escudo":
+			var teto := 20.0 + 20.0 * nv
+			if escudo < teto:
+				som("nivel")
+				var ganho := minf(4.0 + 4.0 * nv, teto - escudo)
+				escudo += ganho
+				texto_voa(k + Vector2(0, -44), "+%d escudo" % int(ganho), AZUL)
+				anel(k, 20, 46, 0.3, AZUL)
 		"fonte":
 			som("gema")
 			essencia += nv
@@ -747,10 +807,30 @@ func atualizar(dt: float) -> void:
 	# Fora do anel ele anda a pé, no passo normal: para o meio quando a onda
 	# acaba e de volta ao seu quadro quando a próxima começa.
 	k_flash = maxf(0.0, k_flash - dt)
-	if not (estado == "onda" and k_no_anel):
+	escudo_flash = maxf(0.0, escudo_flash - dt)
+	torre_flash = maxf(0.0, torre_flash - dt)
+	if k_no_anel and estado != "onda":
+		# a onda acabou: termina o passo até o próximo quadro, sem virar no meio
+		var antes := k_vis.x
+		var alvo_k := floorf(k_pos) + 1.0
+		k_pos += k_vel * 0.8 * dt
+		k_anim += dt * k_vel * 6
+		if k_pos >= alvo_k:
+			k_pos = fmod(alvo_k, float(ANEL.size()))
+			k_no_anel = false
+			k_pausa = 0.35
+		k_vis = pos_kravenox()
+		k_andando = true
+		if absf(k_vis.x - antes) > 0.01:
+			k_dir = 1 if k_vis.x > antes else -1
+	elif k_pausa > 0 and estado != "onda":
+		k_pausa -= dt
+		k_andando = false
+	elif not (estado == "onda" and k_no_anel):
 		var alvo := pos_kravenox() if estado == "onda" else CENTRO + Vector2(0, -18)
 		var d := alvo - k_vis
-		var passo_px := k_vel * PASSO_GRADE * dt
+		# desacelera nos últimos passos, para chegar sem tranco
+		var passo_px := k_vel * PASSO_GRADE * dt * clampf(d.length() / 45.0, 0.35, 1.0)
 		k_andando = d.length() > 0.5
 		if d.length() <= passo_px:
 			k_vis = alvo
@@ -764,7 +844,6 @@ func atualizar(dt: float) -> void:
 			if absf(d.x) > 1:
 				k_dir = 1 if d.x > 0 else -1
 	if estado != "onda":
-		k_no_anel = false
 		return
 
 	# o Kravenox anda sem parar (depois de chegar ao anel)
@@ -784,18 +863,31 @@ func atualizar(dt: float) -> void:
 	for m in monstros:
 		m["anim"] += dt
 		m["flash"] -= dt
-		var para: Vector2 = k - m["pos"]
-		var alcance := 70.0 if m["chefe"] else 34.0
+		var alvo_m: Vector2 = CENTRO + Vector2(0, -10) if bonus_ativo() else k
+		var para: Vector2 = alvo_m - m["pos"]
+		var alcance := 70.0 if m["chefe"] else (44.0 if bonus_ativo() else 34.0)
 		if para.length() > alcance:
 			m["pos"] += para.normalized() * m["vel"] * pressa * dt
 		else:
 			m["t_ataque"] -= dt
 			if m["t_ataque"] <= 0:
 				m["t_ataque"] = 1.0
-				hp -= m["dano"]
-				som("dano")
-				k_flash = 0.15
-				texto_voa(k + Vector2(0, -50), "-%d" % int(m["dano"]), VERMELHO)
+				if bonus_ativo():
+					torre_hp -= m["dano"]
+					torre_flash = 0.15
+					som("esmagamento")
+					texto_voa(CENTRO + Vector2(0, -70), "-%d" % int(m["dano"]), VERMELHO)
+				else:
+					var dano: float = m["dano"]
+					if escudo > 0:
+						var tira := minf(escudo, dano)
+						escudo -= tira
+						dano -= tira
+						escudo_flash = 0.2
+					hp -= dano
+					som("dano")
+					k_flash = 0.15
+					texto_voa(k + Vector2(0, -50), "-%d" % int(m["dano"]), AZUL if dano <= 0 else VERMELHO)
 		if m["chefe"]:
 			m["t_poder"] -= dt
 			if m["t_poder"] <= 0:
@@ -827,10 +919,32 @@ func atualizar(dt: float) -> void:
 		hp = 0.0
 		estado = "derrota"
 		fim_capitulo(false)
+	elif bonus_ativo() and torre_hp <= 0:
+		# a torre caiu: acaba o bônus, o capítulo já estava vencido
+		torre_hp = 0.0
+		bonus_res = "caiu"
+		monstros.clear()
+		fila.clear()
+		tiros.clear()
+		estado = "vitoria"
 	elif fila.is_empty() and monstros.is_empty():
-		if onda >= FASES:
+		if bonus_ativo():
+			bonus_res = "ok"
+			premio_bonus = 2 + mundo_de(capitulo)
+			premio_fim += premio_bonus
+			prog["fragmentos"] = int(prog["fragmentos"]) + premio_bonus
+			salvar()
 			estado = "vitoria"
+		elif onda >= FASES:
 			fim_capitulo(true)
+			bonus_pendente = true
+			estado = "loja"
+			essencia += 8 + capitulo / 3
+			hp = minf(hp_max, hp + 30)
+			trocas_gratis = 1 + nivel_melhoria("sorte")
+			sortear_loja()
+			tiros.clear()
+			aviso("Capítulo vencido! Agora a fase bônus: defenda a torre", 4.0)
 		else:
 			estado = "loja"
 			var premio := 5 + onda + capitulo / 3
@@ -1006,8 +1120,8 @@ func passo_robo() -> bool:
 						melhor = i
 			if melhor >= 0:
 				gastou = comprar_melhoria(melhor)
-		print("ROBO cap %d: %s na fase %d (tentativa %d) · fragmentos %d · melhorias %s" % [capitulo,
-			"venceu" if venceu else "perdeu", onda, robo_tentativas + 1, int(prog["fragmentos"]), str(prog["melhorias"])])
+		print("ROBO cap %d: %s na fase %d (tentativa %d) · bônus %s · fragmentos %d · melhorias %s" % [capitulo,
+			"venceu" if venceu else "perdeu", onda, robo_tentativas + 1, bonus_res, int(prog["fragmentos"]), str(prog["melhorias"])])
 		if venceu:
 			robo_tentativas = 0
 			if capitulo >= TOTAL_CAPITULOS:
@@ -1193,6 +1307,10 @@ func desenhar_jogo() -> void:
 		escrever(t2, Vector2(LARG / 2, ALT / 2 - 42), 17, BRANCO)
 		cristal(Vector2(LARG / 2 - 58, ALT / 2 - 8), 9, VERMELHO)
 		escrever_esq("+%d fragmentos" % premio_fim, Vector2(LARG / 2 - 42, ALT / 2), 19, Color8(255, 170, 160))
+		if bonus_res == "ok":
+			escrever("Bônus: a torre ficou de pé! (+%d)" % premio_bonus, Vector2(LARG / 2, ALT / 2 + 18), 15, OURO, false)
+		elif bonus_res == "caiu":
+			escrever("Bônus: a torre caiu", Vector2(LARG / 2, ALT / 2 + 18), 15, CINZA, false)
 		var t_botao := "Início" if final else ("Próximo capítulo" if venceu else "Tentar de novo")
 		botao(botoes()["denovo"], t_botao, OURO, true, true)
 		botao(botoes()["mundos"], "Mundos", AZUL)
@@ -1204,6 +1322,8 @@ func desenhar_topo() -> void:
 	botao(bv, "", OURO)
 	draw_polyline(PackedVector2Array([bv.get_center() + Vector2(4, -8), bv.get_center() + Vector2(-4, 0), bv.get_center() + Vector2(4, 8)]), OURO, 2.5, true)
 	var t := "FASE %d/%d" % [maxi(onda, 1) if estado == "onda" else mini(onda + 1, FASES), FASES]
+	if onda > FASES or bonus_pendente:
+		t = "BÔNUS"
 	var w := fonte_titulo.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 	escrever_esq(t, Vector2(LARG - 16 - w, 31), 14, BRANCO, fonte_titulo)
 	var tit := encurtar("CAP. %d · %s" % [capitulo, CAPITULOS[capitulo - 1].to_upper()], fonte_titulo, 13, LARG - 80 - w)
@@ -1216,6 +1336,16 @@ func desenhar_topo() -> void:
 	var feito_x := x0 + (x1 - x0) * clampf((onda - 1) / float(FASES - 1), 0, 1)
 	if onda > 1:
 		draw_line(Vector2(x0, y), Vector2(feito_x, y), SANGUE, 3)
+	# a estrela do bônus, depois da fase do chefe
+	var pe := Vector2(x1 + 34, y)
+	var no_bonus := onda > FASES or bonus_pendente
+	draw_line(Vector2(x1, y), pe, Color(0, 0, 0, 0.7), 3)
+	if onda > FASES and estado == "onda":
+		brilho_suave(pe, 24, OURO, 1.4)
+	var est := []
+	for k in 10:
+		est.append(pe + Vector2.from_angle(-PI / 2 + k * TAU / 10) * (9.0 if k % 2 == 0 else 4.0))
+	poli(est, OURO if no_bonus else PEDRA_CLARA, 1.2)
 	for o in range(1, FASES + 1):
 		var x := x0 + (x1 - x0) * (o - 1) / (FASES - 1)
 		var p := Vector2(x, y)
@@ -1250,7 +1380,13 @@ func desenhar_topo() -> void:
 		var r := Rect2(bx + 4, 92, (bw - 8) * fr, 22)
 		degrade(r, Color8(200, 40, 44), Color8(110, 14, 20))
 		draw_line(r.position + Vector2(2, 3), Vector2(r.end.x - 2, r.position.y + 3), Color(1, 1, 1, 0.18), 2)
-	escrever("%d / %d" % [int(maxf(0, hp)), int(hp_max)], Vector2(bx + bw / 2, 103), 16, BRANCO)
+	if escudo > 0:
+		var re := Rect2(bx + 4, 110, (bw - 8) * clampf(escudo / hp_max, 0, 1), 5)
+		degrade(re, Color8(150, 200, 255), Color8(60, 110, 220))
+	var tv := "%d / %d" % [int(maxf(0, hp)), int(hp_max)]
+	if escudo > 0:
+		tv += "  +%d" % int(escudo)
+	escrever(tv, Vector2(bx + bw / 2, 103), 16, BRANCO)
 	botao(botoes()["vel"], "x%d" % vel_jogo, OURO)
 	var bs: Rect2 = botoes()["som"]
 	botao(bs, "", OURO if som_ligado else CINZA)
@@ -1368,6 +1504,12 @@ func icone(iid: String, c: Vector2, e: float) -> void:
 			for k in [-9.0, 5.0]:
 				poli([P.call(k - 9, -15), P.call(k + 7, 0), P.call(k - 9, 15), P.call(k - 3, 0)], cor.darkened(0.2), 1.5)
 			draw_line(P.call(-24, 0), P.call(-14, 0), Color(cor, 0.5), 2)
+		"escudo":
+			var pts := [P.call(0, -24), P.call(18, -16), P.call(16, 6), P.call(0, 24), P.call(-16, 6), P.call(-18, -16)]
+			poli(pts, cor.darkened(0.35), 1.5)
+			poli([P.call(0, -18), P.call(12, -12), P.call(10, 4), P.call(0, 16)], Color(cor.lightened(0.3), 0.9))
+			for k in [-1.0, 1.0]:
+				poli([P.call(k * 18, -16), P.call(k * 26, -24), P.call(k * 14, -20)], Color8(20, 16, 24))
 		"fonte":
 			cristal(c, 22 * e, cor)
 			for k in 3:
@@ -1381,11 +1523,15 @@ func desenhar_mundo() -> void:
 	for m in monstros:
 		itens.append([m["pos"].y, m])
 	itens.append([k.y, null])
+	if bonus_ativo() or (estado == "vitoria" and bonus_res != ""):
+		itens.append([CENTRO.y + 20, "torre"])
 	itens.sort_custom(func(a, b): return a[0] < b[0])
 	for it in itens:
 		var m = it[1]
 		if m == null:
 			desenhar_kravenox(k)
+		elif m is String:
+			desenhar_torre()
 		else:
 			desenhar_monstro(m, k)
 	# tiros: orbes com brilho
@@ -1464,6 +1610,12 @@ func desenhar_kravenox(k: Vector2) -> void:
 	desenhar_arte(nome, base, 68, k_dir < 0)
 	if k_flash > 0:
 		desenhar_arte(nome, base, 68, k_dir < 0, Color(1, 0.3, 0.3, k_flash * 4), true)
+	if escudo > 0:
+		# bolha de escudo: mais forte quanto mais escudo
+		var a := clampf(escudo / 60.0, 0.25, 0.8) + escudo_flash * 2
+		draw_circle(k + Vector2(0, -6), 42, Color(AZUL, 0.08 * a))
+		draw_arc(k + Vector2(0, -6), 42, 0, TAU, 40, Color(Color8(150, 200, 255), a), 2, true)
+		draw_arc(k + Vector2(0, -6), 42, -2.4, -1.6, 10, Color(1, 1, 1, a), 2, true)
 
 
 func desenhar_monstro(m: Dictionary, k: Vector2) -> void:
@@ -1546,7 +1698,8 @@ func desenhar_loja() -> void:
 	var t_trocar := "Trocar grátis" if trocas_gratis > 0 else "Trocar (2)"
 	botao(b["trocar"], t_trocar if ativa else "Trocar", AZUL, ativa)
 	botao(b["lixo"], "Vender", VERMELHO, ativa, vender)
-	botao(b["onda"], "Iniciar onda %d" % (onda + 1) if ativa else "Onda em andamento", OURO, ativa, ativa)
+	var t_onda_b := ("Fase bônus" if bonus_pendente else "Iniciar onda %d" % (onda + 1)) if ativa else "Onda em andamento"
+	botao(b["onda"], t_onda_b, OURO, ativa, ativa)
 	var dica := "Arraste o item até um quadro"
 	if estado == "onda":
 		dica = "Monstros: %d  ·  na fila: %d" % [monstros.size(), fila.size()]
@@ -1926,3 +2079,28 @@ func desenhar_arrasto() -> void:
 	var c: Vector2 = arrasto["p"] + Vector2(0, -36)   # um pouco acima do dedo, para dar para ver
 	caixa(Rect2(c - Vector2(40, 40), Vector2(80, 80)), Color(0.08, 0.06, 0.1, 0.85), 10, 2, OURO, true, 8)
 	icone(item["id"], c, 0.95)
+
+
+# A torre da fase bônus, no meio do caminho: pedra escura com o cristal roxo.
+func desenhar_torre() -> void:
+	var base := CENTRO + Vector2(0, 30)
+	var caiu := torre_hp <= 0
+	sombra_chao(base, 40)
+	var alt := 30.0 if caiu else 92.0
+	var w := 46.0
+	var corpo := [base + Vector2(-w / 2, 0), base + Vector2(w / 2, 0), base + Vector2(w / 2 - 6, -alt), base + Vector2(-w / 2 + 6, -alt)]
+	poli(corpo, Color8(52, 46, 62) if torre_flash <= 0 else Color8(140, 60, 70), 2)
+	for k in int(alt / 14):
+		var y := base.y - 10 - k * 14
+		draw_line(Vector2(base.x - w / 2 + 4, y), Vector2(base.x + w / 2 - 4, y), Color(0, 0, 0, 0.45), 1)
+	if caiu:
+		return
+	var topo := base + Vector2(0, -alt)
+	for k in 3:
+		draw_rect(Rect2(topo + Vector2(-20 + k * 15, -10), Vector2(10, 10)), Color8(52, 46, 62))
+	brilho_suave(topo + Vector2(0, -24), 40, ROXO, 1.0 + 0.3 * sin(tempo * 3))
+	cristal(topo + Vector2(0, -24), 13)
+	var wb := 60.0
+	var y0 := topo.y - 52
+	draw_rect(Rect2(base.x - wb / 2 - 1, y0 - 1, wb + 2, 7), Color(0, 0, 0, 0.8))
+	draw_rect(Rect2(base.x - wb / 2, y0, wb * clampf(torre_hp / maxf(1.0, torre_max), 0, 1), 5), ROXO)

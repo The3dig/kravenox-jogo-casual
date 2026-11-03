@@ -68,3 +68,13 @@
   meio do anel.
 - **Por quê:** pedido do Rone: começar simples, ter evolução a cada missão e
   cobrir os 76 capítulos.
+
+## 2026-11-03: caminhos que crescem, Escudo e fase bônus
+
+- **Era:** caminhos de 12 a 16 quadros desde o mundo 1; 4 fases por capítulo.
+- **Passou a ser:** o caminho cresce com os mundos (8 quadros no mundo 1, até
+  20 no fim). Novo item Escudo de Espinhos. Depois das 4 fases vem uma fase
+  bônus em que os monstros atacam uma torre no meio. No fim da onda o
+  Kravenox termina o passo, para um instante e anda devagar até o meio.
+- **Por quê:** pedido do Rone (o começo já vinha grande demais, a parada
+  estava brusca e ele quis o escudo e a fase da torre).

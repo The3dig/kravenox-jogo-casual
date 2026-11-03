@@ -11,10 +11,15 @@ dispara. Entre as ondas ele espera no meio do anel.
 
 - **76 capítulos**, um para cada capítulo do livro (35 do Livro I e 41 do
   Livro II), com os títulos do RPG.
-- **Cada mundo tem um caminho diferente:** anel, anel largo, cruz, anel alto,
-  degrau e dente (12 a 16 quadros), alguns espelhados.
+- **Cada mundo tem um caminho diferente, e eles crescem:** o mundo 1 começa
+  com 8 quadros e os últimos têm 20 (anéis, cruz, degrau, dente, cruz grande,
+  dois dentes; alguns espelhados). Em caminhos maiores o Kravenox anda um
+  pouco mais rápido.
 - **19 mundos** de 4 capítulos cada. O mapa dos mundos mostra o que já foi
   vencido, o próximo capítulo e o que ainda está trancado.
+- **Fase bônus:** depois das 4 fases, os monstros vão atrás de uma torre no
+  meio do caminho em vez do Kravenox. Se a torre ficar de pé, rende
+  fragmentos extras; se cair, o capítulo continua vencido.
 - **4 fases por capítulo**; a 4ª tem chefe: Larva-Mãe nos dois primeiros
   capítulos de cada mundo, Sentinela sem Rosto no terceiro e Thornox no último.
 - **Começa simples:** no capítulo 1 só existem Garras, Espinhos e Cristal e só
@@ -52,6 +57,10 @@ rode `godot/ferramentas/publicar.sh`.
 - Matar monstros dá essência roxa, que paga a loja. Vencer a onda dá essência e cura.
 
 ## Poderes (dos poderes do Kravenox)
+
+O **Escudo de Espinhos** (a partir do capítulo 4) cria um escudo azul por cima
+da vida, que leva o dano primeiro; quanto maior o nível, mais escudo ele
+guarda.
 
 | Poder | O que faz quando ele pisa |
 |---|---|
