@@ -1,6 +1,6 @@
 # Kravenox: Quadros do Cisma. Todo o jogo num nó só.
 #
-# O Kravenox anda sem parar por um anel de 12 quadros. Cada quadro guarda um
+# O Kravenox anda sem parar por um caminho de quadros. Cada quadro guarda um
 # poder comprado na loja; quando ele pisa no quadro, o poder dispara. Os
 # monstros do livro chegam em ondas: 15 ondas, chefe na 5, na 10 e na 15.
 #
@@ -12,18 +12,34 @@ extends Node2D
 
 const LARG := 480.0
 const ALT := 820.0
-const TAM := 84.0
-const PASSO_GRADE := 94.0
-const OX := 57.0
-const OY := 200.0
+var TAM := 84.0
+var PASSO_GRADE := 94.0
+var OX := 57.0
+var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
-const CENTRO := Vector2(240, 383)   # meio do anel: onde o Kravenox espera entre as ondas
-const ANEL := [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0), Vector2i(3, 1), Vector2i(3, 2),
-	Vector2i(3, 3), Vector2i(2, 3), Vector2i(1, 3), Vector2i(0, 3), Vector2i(0, 2), Vector2i(0, 1)]
+var CENTRO := Vector2(240, 383)   # meio do anel: onde o Kravenox espera entre as ondas
+var ANEL: Array = []   # o caminho do mundo atual (montado em montar_caminho)
+
+# Caminhos dos mundos: cada um é uma volta fechada na grade (x, y), na ordem
+# em que o Kravenox anda. Os mundos alternam entre eles, às vezes espelhados.
+const CAMINHOS := [
+	# anel 4x4 (12 quadros)
+	[[0, 0], [1, 0], [2, 0], [3, 0], [3, 1], [3, 2], [3, 3], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
+	# anel largo 5x4 (14)
+	[[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [3, 3], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
+	# cruz (14)
+	[[1, 0], [2, 0], [3, 0], [3, 1], [4, 1], [4, 2], [3, 2], [3, 3], [2, 3], [1, 3], [1, 2], [0, 2], [0, 1], [1, 1]],
+	# anel alto 3x5 (12)
+	[[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [2, 3], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
+	# degrau no alto (14)
+	[[0, 0], [1, 0], [2, 0], [2, 1], [3, 1], [4, 1], [4, 2], [4, 3], [3, 3], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
+	# dente embaixo (16)
+	[[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [3, 3], [3, 2], [2, 2], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
+]
 # Os 76 capítulos do livro (títulos do RPG em kravenox-jogar/rpg/js)
 const CAPITULOS := [
 	"O Despertar no Reino Quebrado", "Ecos do Cisma", "As Sentinelas", "A Vila Sem Nome", "A Primeira Raiz",
@@ -76,7 +92,7 @@ var AZUL := Color8(120, 160, 205)
 
 # Poderes do Kravenox (os cinco primeiros vêm do Cratera do Cisma)
 var ITENS := {
-	"garras": {"nome": "Garras", "custo": 8, "cor": Color8(230, 60, 50), "curta": "Golpe em volta", "desc": "golpeia todos os monstros colados no Kravenox"},
+	"garras": {"nome": "Garras", "custo": 8, "cor": Color8(230, 60, 50), "curta": "Golpe em volta", "desc": "arranha e empurra todos os monstros em volta do Kravenox"},
 	"espinhos": {"nome": "Espinhos Vorazes", "custo": 10, "cor": Color8(200, 40, 60), "curta": "Espinhos em roda", "desc": "solta espinhos para todos os lados"},
 	"raio": {"nome": "Raio da Essência", "custo": 12, "cor": Color8(170, 110, 255), "curta": "Raio em cadeia", "desc": "um raio pula de um monstro para o outro"},
 	"esmagamento": {"nome": "Esmagamento", "custo": 14, "cor": Color8(200, 140, 80), "curta": "Dano em área", "desc": "esmaga o chão e fere tudo numa área grande"},
@@ -375,7 +391,43 @@ func nivel_melhoria(id: String) -> int:
 	return int(prog["melhorias"].get(id, 0))
 
 
+# Monta o caminho do mundo do capítulo e calcula o tamanho dos quadros para
+# caber na área do tabuleiro (entre o placar e a loja).
+func montar_caminho() -> void:
+	var w := mundo_de(capitulo) - 1
+	var forma: Array = CAMINHOS[w % CAMINHOS.size()]
+	var espelho := (w / CAMINHOS.size()) % 2 == 1
+	var cols := 0
+	var lins := 0
+	for c in forma:
+		cols = maxi(cols, c[0] + 1)
+		lins = maxi(lins, c[1] + 1)
+	ANEL = []
+	for c in forma:
+		ANEL.append(Vector2i(cols - 1 - c[0] if espelho else c[0], c[1]))
+	if espelho:
+		ANEL.reverse()   # continua andando no sentido horário
+	PASSO_GRADE = minf(94.0, minf(460.0 / cols, 390.0 / lins))
+	TAM = PASSO_GRADE - 10.0
+	OX = (LARG - (cols - 1) * PASSO_GRADE - TAM) / 2.0
+	OY = 196.0 + (390.0 - ((lins - 1) * PASSO_GRADE + TAM)) / 2.0
+	# ponto de espera: o meio das casas vazias de dentro do caminho
+	var soma := Vector2.ZERO
+	var n := 0
+	for y in range(1, lins - 1):
+		for x in range(1, cols - 1):
+			if not ANEL.has(Vector2i(x, y)):
+				soma += Vector2(OX + x * PASSO_GRADE + TAM / 2, OY + y * PASSO_GRADE + TAM / 2)
+				n += 1
+	if n == 0:
+		for i in ANEL.size():
+			soma += centro_quadro(i)
+		n = ANEL.size()
+	CENTRO = soma / n
+
+
 func novo_jogo() -> void:
+	montar_caminho()
 	onda = 0
 	essencia = 25 + 6 * nivel_melhoria("essencia") + 3 * (capitulo - 1)
 	hp_max = 150.0 + 20 * nivel_melhoria("vida")
@@ -385,9 +437,9 @@ func novo_jogo() -> void:
 	k_no_anel = false
 	k_andando = false
 	quadros = []
-	quadros.resize(12)
+	quadros.resize(ANEL.size())
 	brilho = []
-	brilho.resize(12)
+	brilho.resize(ANEL.size())
 	brilho.fill(0.0)
 	k_pos = 0.0
 	k_rapido = 0.0
@@ -422,8 +474,8 @@ func ret_quadro(i: int) -> Rect2:
 
 
 func pos_kravenox() -> Vector2:
-	var a := int(k_pos) % 12
-	var b := (a + 1) % 12
+	var a := int(k_pos) % ANEL.size()
+	var b := (a + 1) % ANEL.size()
 	var f := k_pos - floorf(k_pos)
 	return centro_quadro(a).lerp(centro_quadro(b), f) + Vector2(0, -18)
 
@@ -544,11 +596,15 @@ func ativar(i: int) -> void:
 	match q["id"]:
 		"garras":
 			som("corte")
-			var r := 95.0 + nv * 8
-			efeitos.append({"t": "garra", "p": k, "r": r, "vida": 0.25})
+			var r := 105.0 + nv * 10
+			efeitos.append({"t": "garra", "p": k, "r": r, "vida": 0.3})
 			for m in monstros:
-				if m["pos"].distance_to(k) < r:
-					ferir(m, 12 * mult)
+				var d: Vector2 = m["pos"] - k
+				if d.length() < r:
+					ferir(m, 17 * mult)
+					if not m["chefe"]:
+						m["pos"] += d.normalized() * 16   # o golpe empurra
+					efeitos.append({"t": "arranhao", "p": m["pos"] + Vector2(0, -12), "vida": 0.28, "a": randf_range(-1.1, -0.6)})
 		"espinhos":
 			som("corte")
 			var n := 8 + (nv - 1) * 2
@@ -656,12 +712,12 @@ func andar_no_anel(dt: float) -> void:
 	var vel := k_vel * (1.7 if k_rapido > 0 else 1.0)
 	k_rapido = maxf(0.0, k_rapido - dt)
 	var antes := pos_kravenox().x
-	k_pos = fmod(k_pos + vel * dt, 12.0)
+	k_pos = fmod(k_pos + vel * dt, float(ANEL.size()))
 	k_anim += dt * vel * 6
 	var depois := pos_kravenox().x
 	if absf(depois - antes) > 0.01:
 		k_dir = 1 if depois > antes else -1
-	var atual := int(k_pos + 0.5) % 12   # o quadro em que ele está pisando
+	var atual := int(k_pos + 0.5) % ANEL.size()   # o quadro em que ele está pisando
 	if atual != k_ultimo:
 		k_ultimo = atual
 		ativar(atual)
@@ -674,7 +730,7 @@ func atualizar(dt: float) -> void:
 	dt *= vel_jogo
 	tempo += dt
 	msg_t -= dt
-	for i in 12:
+	for i in ANEL.size():
 		brilho[i] = maxf(0.0, brilho[i] - dt)
 	var vivos := []
 	for e in efeitos:
@@ -701,7 +757,7 @@ func atualizar(dt: float) -> void:
 			k_andando = false
 			if estado == "onda":
 				k_no_anel = true
-				k_ultimo = int(k_pos + 0.5) % 12
+				k_ultimo = int(k_pos + 0.5) % ANEL.size()
 		else:
 			k_vis += d.normalized() * passo_px
 			k_anim += dt * k_vel * 6
@@ -887,7 +943,7 @@ func clique(p: Vector2) -> void:
 	if b["onda"].has_point(p):
 		iniciar_onda()
 		return
-	for i in 12:
+	for i in ANEL.size():
 		if ret_quadro(i).has_point(p):
 			clique_quadro(i)
 			return
@@ -974,7 +1030,7 @@ func passo_robo() -> bool:
 		if loja[i] != null and essencia >= preco(loja[i]):
 			clique(b["loja%d" % i].get_center())
 			var alvo := -1
-			for k in 12:
+			for k in ANEL.size():
 				if quadros[k] != null and quadros[k]["id"] == loja[i] and quadros[k]["nv"] == 1:
 					alvo = k
 					break
@@ -1113,7 +1169,7 @@ func _draw() -> void:
 
 func desenhar_jogo() -> void:
 	desenhar_fundo()
-	for i in 12:
+	for i in ANEL.size():
 		desenhar_quadro(i)
 	desenhar_mundo()
 	desenhar_topo()   # por cima dos monstros que entram pelo alto
@@ -1349,11 +1405,26 @@ func desenhar_mundo() -> void:
 				draw_arc(e["p"], rr, 0, TAU, 48, Color(e["cor"], (1.0 - f) * 0.35), 9, true)
 				draw_arc(e["p"], rr, 0, TAU, 48, Color(e["cor"], 1.0 - f), 2.5, true)
 			"garra":
-				var f: float = 1.0 - e["vida"] / 0.25
-				for d in [-0.45, 0.0, 0.45]:
-					var a0: float = f * TAU + d
-					draw_arc(e["p"], e["r"], a0, a0 + 1.0, 14, Color(1, 0.3, 0.25, 0.35), 8, true)
-					draw_arc(e["p"], e["r"], a0, a0 + 1.0, 14, Color(1, 0.75, 0.7, 0.9), 2, true)
+				# uma varrida rápida em volta dele, que some no fim
+				var f: float = 1.0 - e["vida"] / 0.3
+				var a0 := -PI / 2 + f * TAU * 0.9
+				var alfa := 1.0 - f * f
+				var rr: float = e["r"] * (0.75 + 0.25 * f)
+				draw_arc(e["p"], rr, a0 - 1.6, a0, 24, Color(0.9, 0.1, 0.1, 0.25 * alfa), 16, true)
+				draw_arc(e["p"], rr, a0 - 1.2, a0, 20, Color(1, 0.35, 0.3, 0.7 * alfa), 5, true)
+				draw_arc(e["p"], rr, a0 - 0.7, a0, 14, Color(1, 0.9, 0.85, alfa), 2, true)
+			"arranhao":
+				# três riscos de garra em cima do monstro
+				var f: float = clampf(1.0 - e["vida"] / 0.28, 0, 1)
+				var dir := Vector2.from_angle(e["a"])
+				var lado := dir.orthogonal()
+				var alfa := 1.0 if f < 0.6 else (1.0 - f) / 0.4
+				var cresce := minf(1.0, f * 3.0)
+				for j in 3:
+					var o: Vector2 = e["p"] + lado * (j - 1) * 8 - dir * 16
+					var fim := o + dir * 32 * cresce
+					draw_line(o, fim, Color(0.7, 0.05, 0.08, 0.6 * alfa), 6, true)
+					draw_line(o, fim, Color(1, 0.85, 0.8, alfa), 2, true)
 			"raio":
 				var a: Vector2 = e["a"]
 				var b: Vector2 = e["b"]
@@ -1799,7 +1870,7 @@ func comecar_arrasto(p: Vector2) -> bool:
 			arrasto = {"de": "loja", "i": i, "p": p, "moveu": false}
 			toque_ini = p
 			return true
-	for i in 12:
+	for i in ANEL.size():
 		if ret_quadro(i).has_point(p) and quadros[i] != null:
 			arrasto = {"de": "quadro", "i": i, "p": p, "moveu": false}
 			toque_ini = p
@@ -1822,7 +1893,7 @@ func soltar_arrasto(p: Vector2) -> void:
 
 
 func quadro_em(p: Vector2) -> int:
-	for i in 12:
+	for i in ANEL.size():
 		if ret_quadro(i).grow(6).has_point(p):
 			return i
 	return -1

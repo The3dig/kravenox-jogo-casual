@@ -3,7 +3,7 @@
 Jogo casual do universo Kravenox, em **Godot 4.5**, na pasta `godot/` (veja
 `godot/LEIAME.md`). Jogar: https://the3dig.github.io/kravenox-jogar/quadros/
 
-O Kravenox anda sem parar por um anel de 12 quadros. Na loja de baixo você
+O Kravenox anda sem parar por um caminho de quadros. Na loja de baixo você
 compra poderes e coloca nos quadros; quando ele pisa num quadro, o poder dali
 dispara. Entre as ondas ele espera no meio do anel.
 
@@ -11,6 +11,8 @@ dispara. Entre as ondas ele espera no meio do anel.
 
 - **76 capítulos**, um para cada capítulo do livro (35 do Livro I e 41 do
   Livro II), com os títulos do RPG.
+- **Cada mundo tem um caminho diferente:** anel, anel largo, cruz, anel alto,
+  degrau e dente (12 a 16 quadros), alguns espelhados.
 - **19 mundos** de 4 capítulos cada. O mapa dos mundos mostra o que já foi
   vencido, o próximo capítulo e o que ainda está trancado.
 - **4 fases por capítulo**; a 4ª tem chefe: Larva-Mãe nos dois primeiros
