@@ -145,7 +145,9 @@ var tela := "abertura"   # abertura / inicio / mundos / melhorias / bestiario / 
 var t_tela := 0.0
 var capitulo := 1
 var premio_fim := 0
-var k_meio := 1.0        # 1 = parado no meio do anel (entre as ondas)
+var k_vis := Vector2.ZERO  # onde o Kravenox está de fato (entre as ondas ele anda até o meio)
+var k_no_anel := false     # já chegou ao quadro e está dando a volta
+var k_andando := false
 var rolagem := 0.0       # rolagem do mapa dos mundos
 var toque_ini := Vector2.ZERO
 var toque_rola := 0.0
@@ -378,7 +380,9 @@ func novo_jogo() -> void:
 	hp_max = 150.0 + 20 * nivel_melhoria("vida")
 	hp = hp_max
 	k_vel = 1.4 * (1.0 + 0.06 * nivel_melhoria("passo"))
-	k_meio = 1.0
+	k_vis = CENTRO + Vector2(0, -18)
+	k_no_anel = false
+	k_andando = false
 	quadros = []
 	quadros.resize(12)
 	brilho = []
@@ -647,6 +651,24 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+func andar_no_anel(dt: float) -> void:
+	var vel := k_vel * (1.7 if k_rapido > 0 else 1.0)
+	k_rapido = maxf(0.0, k_rapido - dt)
+	var antes := pos_kravenox().x
+	k_pos = fmod(k_pos + vel * dt, 12.0)
+	k_anim += dt * vel * 6
+	var depois := pos_kravenox().x
+	if absf(depois - antes) > 0.01:
+		k_dir = 1 if depois > antes else -1
+	var atual := int(k_pos + 0.5) % 12   # o quadro em que ele está pisando
+	if atual != k_ultimo:
+		k_ultimo = atual
+		ativar(atual)
+
+	k_vis = pos_kravenox()
+	k_andando = true
+
+
 func atualizar(dt: float) -> void:
 	dt *= vel_jogo
 	tempo += dt
@@ -665,25 +687,32 @@ func atualizar(dt: float) -> void:
 		t["p"].y -= 40 * dt
 		t["vida"] -= dt
 	textos = textos.filter(func(t): return t["vida"] > 0)
-	# entre as ondas ele vai para o meio do anel e espera
-	k_meio = move_toward(k_meio, 0.0 if estado == "onda" else 1.0, dt * 2.5)
+	# Fora do anel ele anda a pé, no passo normal: para o meio quando a onda
+	# acaba e de volta ao seu quadro quando a próxima começa.
+	k_flash = maxf(0.0, k_flash - dt)
+	if not (estado == "onda" and k_no_anel):
+		var alvo := pos_kravenox() if estado == "onda" else CENTRO + Vector2(0, -18)
+		var d := alvo - k_vis
+		var passo_px := k_vel * PASSO_GRADE * dt
+		k_andando = d.length() > 0.5
+		if d.length() <= passo_px:
+			k_vis = alvo
+			k_andando = false
+			if estado == "onda":
+				k_no_anel = true
+				k_ultimo = int(k_pos + 0.5) % 12
+		else:
+			k_vis += d.normalized() * passo_px
+			k_anim += dt * k_vel * 6
+			if absf(d.x) > 1:
+				k_dir = 1 if d.x > 0 else -1
 	if estado != "onda":
+		k_no_anel = false
 		return
 
-	# o Kravenox anda sem parar
-	var vel := k_vel * (1.7 if k_rapido > 0 else 1.0)
-	k_rapido = maxf(0.0, k_rapido - dt)
-	var antes := pos_kravenox().x
-	k_pos = fmod(k_pos + vel * dt, 12.0)
-	k_anim += dt * vel * 6
-	k_flash = maxf(0.0, k_flash - dt)
-	var depois := pos_kravenox().x
-	if absf(depois - antes) > 0.01:
-		k_dir = 1 if depois > antes else -1
-	var atual := int(k_pos + 0.5) % 12   # o quadro em que ele está pisando
-	if atual != k_ultimo:
-		k_ultimo = atual
-		ativar(atual)
+	# o Kravenox anda sem parar (depois de chegar ao anel)
+	if k_no_anel:
+		andar_no_anel(dt)
 
 	if not fila.is_empty():
 		t_spawn -= dt
@@ -693,7 +722,7 @@ func atualizar(dt: float) -> void:
 
 	t_onda += dt
 	var pressa := 1.0 + maxf(0.0, t_onda - 20.0) * 0.05
-	var k := pos_kravenox()
+	var k := k_vis
 	var novos := []
 	for m in monstros:
 		m["anim"] += dt
@@ -1281,8 +1310,7 @@ func icone(iid: String, c: Vector2, e: float) -> void:
 
 
 func desenhar_mundo() -> void:
-	var meio := ease(k_meio, -2.0)
-	var k := pos_kravenox().lerp(CENTRO + Vector2(0, -18), meio)
+	var k := k_vis
 	var itens := []
 	for m in monstros:
 		itens.append([m["pos"].y, m])
@@ -1343,7 +1371,7 @@ func desenhar_mundo() -> void:
 
 func desenhar_kravenox(k: Vector2) -> void:
 	# Mesmo andar da primeira versão: troca de quadro de passo, sem balanço.
-	var n := (int(k_anim) % 4) if estado == "onda" and k_meio < 0.05 else 0
+	var n := (int(k_anim) % 4) if k_andando else 0
 	var nome := "kravenox-passo-%d" % n
 	var base := k + Vector2(0, 30)
 	sombra_chao(base, 30)
