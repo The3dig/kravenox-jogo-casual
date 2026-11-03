@@ -9,6 +9,10 @@ config/description="O Kravenox percorre os quadros e ativa os poderes. Sobreviva
 run/main_scene="res://cenas/principal.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icone.png"
+boot_splash/bg_color=Color(0.03, 0.02, 0.04, 1)
+boot_splash/image="res://splash.png"
+boot_splash/fullsize=true
+boot_splash/use_filter=true
 
 [display]
 
