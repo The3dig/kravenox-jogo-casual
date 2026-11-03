@@ -38,9 +38,10 @@ rode `godot/ferramentas/publicar.sh`.
 
 ## Como se joga
 
-- Toque num item da loja e depois num quadro para colocar (o custo aparece no item).
+- Arraste um item da loja até um quadro para colocar (ou toque no item e depois
+  no quadro). O custo aparece no item.
 - Item igual e do mesmo nível no mesmo quadro: os dois se fundem (nível +1, máximo 5).
-- Toque num quadro com item para pegá-lo e levar para outro quadro (ou trocar de lugar).
+- Arraste um item de um quadro para outro para mover, fundir ou trocar de lugar.
 - **Lixo:** toque nele e depois num quadro para vender o item pela metade.
 - **Trocar:** sorteia outros 3 itens (a primeira troca de cada onda é grátis, depois custa 2).
 - **Iniciar onda** (ou espaço) começa a onda. **x1/x2** acelera.

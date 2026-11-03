@@ -152,6 +152,7 @@ var rolagem := 0.0       # rolagem do mapa dos mundos
 var toque_ini := Vector2.ZERO
 var toque_rola := 0.0
 var arrastou := false
+var arrasto := {}        # item sendo arrastado com o dedo: {"de": "loja"/"quadro", "i", "p", "moveu"}
 var prog := {}
 var robo_tentativas := 0
 
@@ -403,7 +404,7 @@ func novo_jogo() -> void:
 	trocas_gratis = 1 + nivel_melhoria("sorte")
 	mortes = 0
 	if capitulo == 1:
-		aviso("Compre um poder e toque num quadro", 6.0)
+		aviso("Arraste um poder da loja até um quadro", 6.0)
 	else:
 		aviso("Capítulo %d · %s" % [capitulo, CAPITULOS[capitulo - 1]], 3.0)
 	sortear_loja()
@@ -811,7 +812,10 @@ func _unhandled_input(ev: InputEvent) -> void:
 			return
 		if tela == "jogo":
 			if ev.pressed:
-				clique(p)
+				if not comecar_arrasto(p):
+					clique(p)
+			elif not arrasto.is_empty():
+				soltar_arrasto(p)
 			return
 		# nos menus o toque vale ao soltar, para o mapa poder rolar com o dedo
 		if ev.pressed:
@@ -820,6 +824,11 @@ func _unhandled_input(ev: InputEvent) -> void:
 			arrastou = false
 		elif not arrastou:
 			clique_menu(p)
+	elif ev is InputEventMouseMotion and tela == "jogo" and not arrasto.is_empty():
+		var p: Vector2 = make_input_local(ev).position
+		if p.distance_to(toque_ini) > 10:
+			arrasto["moveu"] = true
+		arrasto["p"] = p
 	elif ev is InputEventMouseMotion and tela == "mundos" and (ev.button_mask & MOUSE_BUTTON_MASK_LEFT):
 		var p: Vector2 = make_input_local(ev).position
 		if p.distance_to(toque_ini) > 10:
@@ -1109,6 +1118,7 @@ func desenhar_jogo() -> void:
 	desenhar_mundo()
 	desenhar_topo()   # por cima dos monstros que entram pelo alto
 	desenhar_loja()
+	desenhar_arrasto()
 	if msg_t > 0 and msg != "":
 		var w := fonte.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
 		var a := clampf(msg_t * 2, 0, 1)
@@ -1228,7 +1238,7 @@ func desenhar_quadro(i: int) -> void:
 		draw_line(c + Vector2(-10, 0), c + Vector2(10, 0), cc, 2, true)
 		draw_line(c + Vector2(0, -10), c + Vector2(0, 10), cc, 2, true)
 		draw_arc(c, 16, 0, TAU, 28, Color(cc, cc.a * 0.6), 1, true)
-	else:
+	elif not (not arrasto.is_empty() and arrasto["moveu"] and arrasto["de"] == "quadro" and arrasto["i"] == i):
 		icone(q["id"], c + Vector2(0, -4), 0.95)
 		# nível em marcas douradas
 		var n: int = q["nv"]
@@ -1466,7 +1476,7 @@ func desenhar_loja() -> void:
 	botao(b["trocar"], t_trocar if ativa else "Trocar", AZUL, ativa)
 	botao(b["lixo"], "Vender", VERMELHO, ativa, vender)
 	botao(b["onda"], "Iniciar onda %d" % (onda + 1) if ativa else "Onda em andamento", OURO, ativa, ativa)
-	var dica := "Toque no item, depois no quadro"
+	var dica := "Arraste o item até um quadro"
 	if estado == "onda":
 		dica = "Monstros: %d  ·  na fila: %d" % [monstros.size(), fila.size()]
 	elif vender:
@@ -1774,3 +1784,74 @@ func desenhar_dica(t: String, c: Vector2, largura: float) -> void:
 	var l2 := " ".join(palavras.slice(i))
 	escrever(l1, c + Vector2(0, -6), 13, Color8(220, 210, 230), false)
 	escrever(encurtar(l2, fonte, 13, largura), c + Vector2(0, 9), 13, Color8(220, 210, 230), false)
+
+
+# ------------------------------------------------------------ arrastar com o dedo
+# Segurar um item da loja (ou de um quadro) e soltar num quadro. Um toque
+# rápido, sem arrastar, continua valendo como antes: toca no item e depois no
+# quadro.
+func comecar_arrasto(p: Vector2) -> bool:
+	if estado != "loja" or vender:
+		return false
+	var b := botoes()
+	for i in 3:
+		if b["loja%d" % i].has_point(p) and loja[i] != null and essencia >= preco(loja[i]):
+			arrasto = {"de": "loja", "i": i, "p": p, "moveu": false}
+			toque_ini = p
+			return true
+	for i in 12:
+		if ret_quadro(i).has_point(p) and quadros[i] != null:
+			arrasto = {"de": "quadro", "i": i, "p": p, "moveu": false}
+			toque_ini = p
+			return true
+	return false
+
+
+func soltar_arrasto(p: Vector2) -> void:
+	var a := arrasto
+	arrasto = {}
+	if not a["moveu"]:
+		clique(toque_ini)   # foi só um toque
+		return
+	var alvo := quadro_em(p)
+	if alvo < 0:
+		selec = []
+		return
+	selec = [a["de"], a["i"]]
+	clique_quadro(alvo)
+
+
+func quadro_em(p: Vector2) -> int:
+	for i in 12:
+		if ret_quadro(i).grow(6).has_point(p):
+			return i
+	return -1
+
+
+func item_arrastado():
+	if arrasto.is_empty():
+		return null
+	if arrasto["de"] == "loja":
+		return {"id": loja[arrasto["i"]], "nv": 1}
+	return quadros[arrasto["i"]]
+
+
+func desenhar_arrasto() -> void:
+	if arrasto.is_empty() or not arrasto["moveu"]:
+		return
+	var item = item_arrastado()
+	if item == null:
+		return
+	var alvo := quadro_em(arrasto["p"])
+	if alvo >= 0 and not (arrasto["de"] == "quadro" and alvo == arrasto["i"]):
+		var q = quadros[alvo]
+		var funde: bool = q != null and q["id"] == item["id"] and q["nv"] == item["nv"] and q["nv"] < NIVEL_MAX
+		var ok: bool = q == null or funde or arrasto["de"] == "quadro"
+		var cor := OURO if ok else VERMELHO
+		caixa(ret_quadro(alvo).grow(4), Color(0, 0, 0, 0), 9, 3, cor, false)
+		brilho_suave(ret_quadro(alvo).get_center(), 60, cor, 0.8)
+		if funde:
+			escrever("Fundir!", ret_quadro(alvo).get_center() + Vector2(0, 30), 15, OURO)
+	var c: Vector2 = arrasto["p"] + Vector2(0, -36)   # um pouco acima do dedo, para dar para ver
+	caixa(Rect2(c - Vector2(40, 40), Vector2(80, 80)), Color(0.08, 0.06, 0.1, 0.85), 10, 2, OURO, true, 8)
+	icone(item["id"], c, 0.95)
