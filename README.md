@@ -24,7 +24,7 @@ dispara. Entre as ondas ele espera no meio do anel.
   capítulos de cada mundo, Sentinela sem Rosto no terceiro e Thornox no último.
 - **Começa simples:** no capítulo 1 só existem Garras, Espinhos e Cristal e só
   aparece a Larva. Os outros poderes e monstros entram aos poucos (Raio no 2,
-  Passo no 3, Esmagamento no 5, Fonte no 7, Rasgo no 9; Sentinela Esférica no
+  Passo no 3, Esmagamento no 5, Fonte no 7, Rasgo no 9, Escudo no 4, Corrida no 6; Sentinela Esférica no
   2, Verme no 4, Sentinela do Vazio no 6).
 - **Descrições:** cada item da loja tem uma frase curta; ao tocar no item (ou
   num quadro ocupado) aparece a explicação completa.
@@ -71,6 +71,7 @@ guarda.
 | Rasgo do Abismo | corte que atravessa os monstros |
 | Cristal de Vida | cura |
 | Passo Predador | salta para a frente: 2 quadros por nível (só o quadro onde cai dispara) |
+| Corrida do Cisma | corre mais rápido e dispara cada casa: 2x por 2 casas no nível 1, 4x por 4 no nível 2, 6x por 6 no nível 3... |
 | Fonte de Essência | dá essência |
 
 ## Visual

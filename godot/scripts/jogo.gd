@@ -60,7 +60,7 @@ const CAPITULOS := [
 	"O que Fica Depois do Fim",
 ]
 # Começa simples: cada poder e cada monstro aparece a partir de um capítulo.
-const ITEM_DESDE := {"garras": 1, "espinhos": 1, "cristal": 1, "raio": 2, "passo": 3, "esmagamento": 5, "fonte": 7, "rasgo": 9, "escudo": 4}
+const ITEM_DESDE := {"garras": 1, "espinhos": 1, "cristal": 1, "raio": 2, "passo": 3, "esmagamento": 5, "fonte": 7, "rasgo": 9, "escudo": 4, "corrida": 6}
 const MONSTRO_DESDE := {"larva": 1, "esfera": 2, "verme": 4, "sentinela": 6}
 # Melhorias permanentes, compradas com fragmentos ganhos a cada missão.
 const MELHORIAS := [
@@ -99,6 +99,7 @@ var ITENS := {
 	"rasgo": {"nome": "Rasgo do Abismo", "custo": 12, "cor": Color8(230, 30, 90), "curta": "Corte que atravessa", "desc": "um corte que vai até o monstro mais perto e atravessa a fila"},
 	"cristal": {"nome": "Cristal de Vida", "custo": 9, "cor": Color8(90, 220, 170), "curta": "Cura a vida", "desc": "devolve vida ao Kravenox"},
 	"passo": {"nome": "Passo Predador", "custo": 7, "cor": Color8(110, 210, 120), "curta": "Pula quadros", "desc": "o Kravenox dá um salto e pula quadros para a frente: 2 no nível 1, 4 no nível 2, 6 no nível 3, e assim por diante; só o quadro onde ele cai dispara"},
+	"corrida": {"nome": "Corrida do Cisma", "custo": 9, "cor": Color8(255, 150, 60), "curta": "Corre mais rápido", "desc": "o Kravenox dispara correndo e todas as casas por onde passa disparam: 2x por 2 casas no nível 1, 4x por 4 casas no nível 2, 6x por 6 casas no nível 3, e assim por diante"},
 	"escudo": {"nome": "Escudo de Espinhos", "custo": 10, "cor": Color8(110, 170, 255), "curta": "Escudo extra", "desc": "cria um escudo por cima da vida; quanto maior o nível, mais escudo ele guarda"},
 	"fonte": {"nome": "Fonte de Essência", "custo": 10, "cor": Color8(190, 130, 255), "curta": "Dá essência", "desc": "rende essência para gastar na loja"},
 }
@@ -133,7 +134,8 @@ var hp := 150.0
 var quadros := []
 var k_pos := 0.0
 var k_vel := 1.4
-var k_rapido := 0.0
+var k_rapido := 0.0       # casas que ainda faltam correndo (Corrida do Cisma)
+var k_mult := 1.0         # quantas vezes mais rápido ele corre
 var k_ultimo := 0
 var k_dir := 1
 var k_anim := 0.0
@@ -483,6 +485,7 @@ func novo_jogo() -> void:
 	brilho.fill(0.0)
 	k_pos = 0.0
 	k_rapido = 0.0
+	k_mult = 1.0
 	k_ultimo = 0
 	k_dir = 1
 	monstros = []
@@ -708,6 +711,11 @@ func ativar(i: int) -> void:
 			k_salto = float(mini(2 * nv, ANEL.size() - 1))
 			texto_voa(k + Vector2(0, -44), "+%d quadros" % int(k_salto), VERDE)
 			anel(k + Vector2(0, 18), 10, 40, 0.25, VERDE)
+		"corrida":
+			k_mult = 2.0 * nv
+			k_rapido = 2.0 * nv
+			texto_voa(k + Vector2(0, -44), "%dx" % int(k_mult), Color8(255, 170, 90))
+			anel(k + Vector2(0, 18), 10, 44, 0.25, Color8(255, 150, 60))
 		"escudo":
 			var teto := 20.0 + 20.0 * nv
 			if escudo < teto:
@@ -795,8 +803,13 @@ func andar_no_anel(dt: float) -> void:
 		k_vis = pos_kravenox()
 		k_andando = true
 		return
-	var vel := k_vel * (1.7 if k_rapido > 0 else 1.0)
-	k_rapido = maxf(0.0, k_rapido - dt)
+	# corrida: 2x por 2 casas no nível 1, 4x por 4 casas no nível 2...
+	var vel := k_vel * (k_mult if k_rapido > 0 else 1.0)
+	if k_rapido > 0:
+		k_rapido -= vel * dt
+		if k_rapido <= 0:
+			k_rapido = 0.0
+			k_mult = 1.0
 	var antes := pos_kravenox().x
 	k_pos = fmod(k_pos + vel * dt, float(ANEL.size()))
 	k_anim += dt * vel * 6
@@ -1532,9 +1545,17 @@ func icone(iid: String, c: Vector2, e: float) -> void:
 				poli(pts, cor.darkened(0.25), 1.2)
 				poli([P.call(x, y - s), P.call(x + s * 0.45, y), P.call(x, y + s * 0.1)], Color(cor.lightened(0.4), 0.9))
 		"passo":
+			# salto: um arco com a ponta de seta
+			draw_arc(P.call(0, 14), 20 * e, PI * 1.05, PI * 1.95, 18, Color(0, 0, 0, 0.8), 6, true)
+			draw_arc(P.call(0, 14), 20 * e, PI * 1.05, PI * 1.95, 18, cor, 3.5, true)
+			poli([P.call(14, 2), P.call(24, 4), P.call(19, 14)], cor, 1.2)
+			draw_circle(P.call(-19, 16), 3.5 * e, cor)
+			draw_circle(P.call(19, 16), 3.5 * e, Color(cor, 0.5))
+		"corrida":
 			for k in [-9.0, 5.0]:
 				poli([P.call(k - 9, -15), P.call(k + 7, 0), P.call(k - 9, 15), P.call(k - 3, 0)], cor.darkened(0.2), 1.5)
-			draw_line(P.call(-24, 0), P.call(-14, 0), Color(cor, 0.5), 2)
+			for y in [-8.0, 0.0, 8.0]:
+				draw_line(P.call(-26, y), P.call(-16, y), Color(cor, 0.55), 2)
 		"escudo":
 			var pts := [P.call(0, -24), P.call(18, -16), P.call(16, 6), P.call(0, 24), P.call(-16, 6), P.call(-18, -16)]
 			poli(pts, cor.darkened(0.35), 1.5)
@@ -1638,9 +1659,13 @@ func desenhar_kravenox(k: Vector2) -> void:
 		for j in 3:
 			draw_circle(k + Vector2(-k_dir * (12 + j * 12), -4), 14 - j * 3, Color(VERDE, 0.25 - j * 0.07))
 	if k_rapido > 0:
-		draw_set_transform(base, 0, Vector2(1, 0.3))
-		draw_arc(Vector2.ZERO, 34, 0, TAU, 32, Color(VERDE, 0.6), 3, true)
-		draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
+		# riscos de velocidade laranja atrás dele
+		var laranja := Color8(255, 150, 60)
+		for j in 4:
+			var y := -20.0 + j * 11
+			var tam := 18.0 + 6 * minf(k_mult, 6.0) + (j % 2) * 8
+			var ini := k + Vector2(-k_dir * 18, y)
+			draw_line(ini, ini + Vector2(-k_dir * tam, 0), Color(laranja, 0.55), 3, true)
 	brilho_suave(k + Vector2(0, -4), 48, VERMELHO, 0.35)
 	desenhar_arte(nome, base, 68, k_dir < 0)
 	if k_flash > 0:
