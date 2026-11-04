@@ -70,7 +70,7 @@ guarda.
 | Esmagamento | dano numa área grande |
 | Rasgo do Abismo | corte que atravessa os monstros |
 | Cristal de Vida | cura |
-| Passo Predador | ele anda mais rápido por um tempo |
+| Passo Predador | salta para a frente: 2 quadros por nível (só o quadro onde cai dispara) |
 | Fonte de Essência | dá essência |
 
 ## Visual

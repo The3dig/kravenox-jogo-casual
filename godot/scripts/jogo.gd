@@ -98,7 +98,7 @@ var ITENS := {
 	"esmagamento": {"nome": "Esmagamento", "custo": 14, "cor": Color8(200, 140, 80), "curta": "Dano em área", "desc": "esmaga o chão e fere tudo numa área grande"},
 	"rasgo": {"nome": "Rasgo do Abismo", "custo": 12, "cor": Color8(230, 30, 90), "curta": "Corte que atravessa", "desc": "um corte que vai até o monstro mais perto e atravessa a fila"},
 	"cristal": {"nome": "Cristal de Vida", "custo": 9, "cor": Color8(90, 220, 170), "curta": "Cura a vida", "desc": "devolve vida ao Kravenox"},
-	"passo": {"nome": "Passo Predador", "custo": 7, "cor": Color8(110, 210, 120), "curta": "Corre mais rápido", "desc": "o Kravenox anda mais rápido por alguns segundos e pisa em mais quadros"},
+	"passo": {"nome": "Passo Predador", "custo": 7, "cor": Color8(110, 210, 120), "curta": "Pula quadros", "desc": "o Kravenox dá um salto e pula quadros para a frente: 2 no nível 1, 4 no nível 2, 6 no nível 3, e assim por diante; só o quadro onde ele cai dispara"},
 	"escudo": {"nome": "Escudo de Espinhos", "custo": 10, "cor": Color8(110, 170, 255), "curta": "Escudo extra", "desc": "cria um escudo por cima da vida; quanto maior o nível, mais escudo ele guarda"},
 	"fonte": {"nome": "Fonte de Essência", "custo": 10, "cor": Color8(190, 130, 255), "curta": "Dá essência", "desc": "rende essência para gastar na loja"},
 }
@@ -165,7 +165,9 @@ var premio_fim := 0
 var k_vis := Vector2.ZERO  # onde o Kravenox está de fato (entre as ondas ele anda até o meio)
 var k_no_anel := false     # já chegou ao quadro e está dando a volta
 var k_andando := false
-var k_pausa := 0.0       # pausa curta ao sair do caminho, antes de ir ao meio
+var k_pausa := 0.0
+var k_salto := 0.0       # quadros que ainda faltam no salto do Passo Predador
+var destaque_cap := 0    # capítulo que acabou de ser vencido (brilha no mapa)       # pausa curta ao sair do caminho, antes de ir ao meio
 var escudo := 0.0        # escudo por cima da vida (item Escudo)
 var escudo_flash := 0.0
 var bonus_pendente := false   # venceu a fase 4: falta a fase bônus
@@ -318,7 +320,7 @@ const ARQUIVO := "user://progresso.json"
 
 
 func carregar_progresso() -> void:
-	prog = {"liberado": 1, "feitos": {}, "fragmentos": 0, "melhorias": {}, "vistos": {}}
+	prog = {"liberado": 1, "feitos": {}, "fragmentos": 0, "melhorias": {}, "vistos": {}, "bonus": {}}
 	if robo or not FileAccess.file_exists(ARQUIVO):
 		return
 	var f := FileAccess.open(ARQUIVO, FileAccess.READ)
@@ -394,7 +396,9 @@ func ir_para(t: String) -> void:
 	tela = t
 	t_tela = 0.0
 	if t == "mundos":
-		rolagem = clampf((mundo_de(int(prog["liberado"])) - 1) * 168.0 - 160.0, 0.0, rolagem_max())
+		# vindo de um capítulo, mostra o mundo dele; vindo do início, o próximo capítulo
+		var c := capitulo if destaque_cap > 0 else int(prog["liberado"])
+		rolagem = clampf((mundo_de(c) - 1) * 168.0 - 160.0, 0.0, rolagem_max())
 
 
 func nivel_melhoria(id: String) -> int:
@@ -466,6 +470,7 @@ func novo_jogo() -> void:
 	k_no_anel = false
 	k_andando = false
 	k_pausa = 0.0
+	k_salto = 0.0
 	escudo = 0.0
 	bonus_pendente = false
 	bonus_res = ""
@@ -699,7 +704,9 @@ func ativar(i: int) -> void:
 			texto_voa(k + Vector2(0, -40), "+%d" % cura, Color8(90, 220, 160))
 			anel(k, 10, 50, 0.3, Color8(90, 220, 160))
 		"passo":
-			k_rapido = 1.6 + 0.5 * nv
+			# salto: pula 2 quadros por nível sem ativar os do meio
+			k_salto = float(mini(2 * nv, ANEL.size() - 1))
+			texto_voa(k + Vector2(0, -44), "+%d quadros" % int(k_salto), VERDE)
 			anel(k + Vector2(0, 18), 10, 40, 0.25, VERDE)
 		"escudo":
 			var teto := 20.0 + 20.0 * nv
@@ -769,6 +776,25 @@ func _process(delta: float) -> void:
 
 
 func andar_no_anel(dt: float) -> void:
+	if k_salto > 0:
+		# no salto ele corre bem rápido e só o quadro onde cai dispara
+		var antes_s := pos_kravenox().x
+		var d := minf(k_salto, k_vel * 7.0 * dt)
+		k_pos = fmod(k_pos + d, float(ANEL.size()))
+		k_salto -= d
+		k_anim += dt * k_vel * 14
+		var depois_s := pos_kravenox().x
+		if absf(depois_s - antes_s) > 0.01:
+			k_dir = 1 if depois_s > antes_s else -1
+		if k_salto <= 0.001:
+			k_salto = 0.0
+			var cai := int(k_pos + 0.5) % ANEL.size()
+			k_ultimo = cai
+			anel(centro_quadro(cai), 10, 50, 0.3, VERDE)
+			ativar(cai)
+		k_vis = pos_kravenox()
+		k_andando = true
+		return
 	var vel := k_vel * (1.7 if k_rapido > 0 else 1.0)
 	k_rapido = maxf(0.0, k_rapido - dt)
 	var antes := pos_kravenox().x
@@ -930,6 +956,9 @@ func atualizar(dt: float) -> void:
 	elif fila.is_empty() and monstros.is_empty():
 		if bonus_ativo():
 			bonus_res = "ok"
+			if not prog.has("bonus"):
+				prog["bonus"] = {}
+			prog["bonus"][str(capitulo)] = true
 			premio_bonus = 2 + mundo_de(capitulo)
 			premio_fim += premio_bonus
 			prog["fragmentos"] = int(prog["fragmentos"]) + premio_bonus
@@ -1018,9 +1047,11 @@ func clique(p: Vector2) -> void:
 			else:
 				comecar_capitulo(capitulo + (1 if estado == "vitoria" else 0))
 		elif b["mundos"].has_point(p):
+			destaque_cap = capitulo if estado == "vitoria" else 0
 			ir_para("mundos")
 		return
 	if b["voltar"].has_point(p):
+		destaque_cap = capitulo   # volta para o mundo deste capítulo
 		ir_para("mundos")
 		return
 	if b["vel"].has_point(p):
@@ -1602,6 +1633,10 @@ func desenhar_kravenox(k: Vector2) -> void:
 	var nome := "kravenox-passo-%d" % n
 	var base := k + Vector2(0, 30)
 	sombra_chao(base, 30)
+	if k_salto > 0:
+		# rastro verde do salto
+		for j in 3:
+			draw_circle(k + Vector2(-k_dir * (12 + j * 12), -4), 14 - j * 3, Color(VERDE, 0.25 - j * 0.07))
 	if k_rapido > 0:
 		draw_set_transform(base, 0, Vector2(1, 0.3))
 		draw_arc(Vector2.ZERO, 34, 0, TAU, 32, Color(VERDE, 0.6), 3, true)
@@ -1765,6 +1800,7 @@ func clique_menu(p: Vector2) -> void:
 		"inicio":
 			if b["jogar"].has_point(p):
 				som("gema")
+				destaque_cap = 0
 				ir_para("mundos")
 			elif b["icone0"].has_point(p):
 				ir_para("melhorias")
@@ -1920,10 +1956,20 @@ func desenhar_mundos() -> void:
 			if c < c1 and feito(c):
 				draw_line(p, no_capitulo(c + 1), SANGUE, 3)
 			if feito(c):
+				if c == destaque_cap and t_tela < 3.0:
+					brilho_suave(p, 60, OURO, 1.6 * (1.0 - t_tela / 3.0) + 0.3 * sin(tempo * 6))
 				draw_circle(p, 25, TINTA)
 				draw_circle(p, 22, Color8(120, 94, 52))
 				draw_arc(p, 22, 0, TAU, 32, OURO, 2, true)
-				escrever(str(c), p, 18, BRANCO, false)
+				escrever(str(c), p + Vector2(0, -3), 17, BRANCO, false)
+				# visto de concluído
+				draw_polyline(PackedVector2Array([p + Vector2(-6, 10), p + Vector2(-2, 14), p + Vector2(6, 6)]), Color8(120, 230, 140), 2.5, true)
+				if prog.get("bonus", {}).has(str(c)):
+					var e := []
+					var pe := p + Vector2(18, -18)
+					for k in 10:
+						e.append(pe + Vector2.from_angle(-PI / 2 + k * TAU / 10) * (8.0 if k % 2 == 0 else 3.5))
+					poli(e, OURO, 1.2)
 			elif c <= lib:
 				brilho_suave(p, 46, VERMELHO, 1.0 + 0.4 * sin(tempo * 4))
 				draw_circle(p, 25, TINTA)
