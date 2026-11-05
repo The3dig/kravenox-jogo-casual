@@ -78,3 +78,12 @@
   Kravenox termina o passo, para um instante e anda devagar até o meio.
 - **Por quê:** pedido do Rone (o começo já vinha grande demais, a parada
   estava brusca e ele quis o escudo e a fase da torre).
+
+## 2026-11-05: o jogo volta a ficar guardado no celular
+
+- **Era:** sem cache (desligado em 2026-11-02 para as versões novas
+  aparecerem), então o Safari baixava ~42 MB toda vez que o jogo abria. Isso
+  acabou com a franquia de internet do Rone.
+- **Passou a ser:** service worker próprio que guarda os arquivos, com nomes
+  que mudam só quando o conteúdo muda; numa versão nova, só baixa o que
+  mudou, e a página sempre confere se há versão nova.

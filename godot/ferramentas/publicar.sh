@@ -12,8 +12,10 @@ DESTINO="${1:-../../kravenox-jogar}/quadros"
 GODOT="${GODOT:-godot}"
 rm -rf build/web && mkdir -p build/web
 "$GODOT" --headless --export-release "Web" build/web/index.html
+# nomes com impressão digital + sw.js que guarda o jogo no celular
+python3 ferramentas/versionar.py build/web
 mkdir -p "$DESTINO"
-find "$DESTINO" -maxdepth 1 -name 'index*' -delete
+find "$DESTINO" -maxdepth 1 \( -name 'index*' -o -name 'kx-*' -o -name 'jogo-*' -o -name 'sw.js' \) -delete
 cp build/web/* "$DESTINO"/
 # Celulares que abriram uma versão antiga têm um service worker guardando o
 # jogo; este arquivo o desliga (veja ferramentas/desliga-cache.js).
