@@ -3,11 +3,11 @@
 //
 // - Os arquivos grandes têm a impressão digital no nome (kx-....wasm,
 //   jogo-....pck): se estão guardados, saem do celular, sem internet.
-// - A página (index.html) vem da internet quando dá, para trazer versões
-//   novas; sem internet, sai da cópia guardada.
+// - A página (index.html) sai da cópia guardada na hora; a versão nova é
+//   buscada por trás e vale na próxima vez que o jogo abrir.
 // - Numa versão nova, só os arquivos que mudaram são baixados; os que saíram
 //   da lista são apagados.
-const CAIXA = 'kravenox-quadros';
+const CAIXA = '__CAIXA__';
 const ARQUIVOS = __ARQUIVOS__;
 
 self.addEventListener('install', (ev) => {
@@ -33,7 +33,7 @@ self.addEventListener('activate', (ev) => {
 		}
 		// caixas do service worker antigo do Godot
 		for (const k of await caches.keys()) {
-			if (k.startsWith('Kravenox: Quadro')) await caches.delete(k);
+			if (k.startsWith('__VELHO__')) await caches.delete(k);
 		}
 		await self.clients.claim();
 	})());
@@ -43,16 +43,21 @@ self.addEventListener('fetch', (ev) => {
 	const url = new URL(ev.request.url);
 	if (ev.request.method !== 'GET' || !url.href.startsWith(self.registration.scope)) return;
 	const nome = url.pathname.split('/').pop();
-	if (ev.request.mode === 'navigate' || nome === '' || nome === 'index.html') {
+	// só a página deste jogo (outros jogos em subpastas cuidam das suas)
+	const pagina = url.href.split('?')[0];
+	if (pagina === self.registration.scope || pagina === self.registration.scope + 'index.html') {
+		// Abre na hora com a cópia guardada (funciona sem internet e com a internet
+		// lenta da franquia acabada). Por trás, busca a página nova para a próxima vez.
+		const caixa = caches.open(CAIXA);
+		const nova = fetch(ev.request, { cache: 'no-store' }).then(async (r) => {
+			if (r.ok && (r.headers.get('content-type') || '').includes('text/html')) await (await caixa).put('index.html', r.clone());
+			return r;
+		});
+		ev.waitUntil(nova.then(() => {}, () => {}));
 		ev.respondWith((async () => {
-			const c = await caches.open(CAIXA);
-			try {
-				const r = await fetch(ev.request);
-				if (r.ok) c.put('index.html', r.clone());
-				return r;
-			} catch (e) {
-				return (await c.match('index.html')) || Response.error();
-			}
+			const guardada = await (await caixa).match('index.html');
+			if (guardada) return guardada;
+			try { return await nova; } catch (e) { return Response.error(); }
 		})());
 		return;
 	}
