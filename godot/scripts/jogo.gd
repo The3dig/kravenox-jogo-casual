@@ -337,6 +337,12 @@ func carregar_progresso() -> void:
 			prog[k] = d[k]
 	prog["liberado"] = clampi(int(prog["liberado"]), 1, TOTAL_CAPITULOS)
 	prog["fragmentos"] = int(prog["fragmentos"])
+	modo = str(prog.get("modo", "normal"))
+	var pt = prog.get("partida", null)
+	if pt is Dictionary:
+		# o iPhone recarregou a página no meio de um capítulo: volta nele, no mesmo modo
+		modo = str(pt.get("modo", "normal"))
+		cap_sel = int(pt.get("capitulo", 0))
 
 
 func salvar() -> void:
@@ -2091,10 +2097,14 @@ func clique_menu(p: Vector2) -> void:
 			elif b["normal"].has_point(p):
 				modo = "normal"
 				cap_sel = 0
+				prog["modo"] = modo
+				salvar()
 			elif b["pesadelo"].has_point(p):
 				if pesadelo_liberado():
 					modo = "pesadelo"
 					cap_sel = 0
+					prog["modo"] = modo
+					salvar()
 				else:
 					popup = {"titulo": "PESADELO", "texto": "Vença o Mundo 1 para liberar"}
 			elif b["ant"].has_point(p):
