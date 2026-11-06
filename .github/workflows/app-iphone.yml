@@ -1,0 +1,61 @@
+# Monta o app de iPhone (.ipa) do Quadros do Cisma num Mac do GitHub, sem
+# assinatura. O SideStore/AltStore assina com o Apple ID grátis de quem instala.
+# O arquivo sai na página "Releases" do repositório, em "App de iPhone".
+name: App de iPhone
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/kravenox-ultima-fogueira, main]
+    paths: ["godot/**", ".github/workflows/app-iphone.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Baixar o Godot 4.5 e o modelo de iPhone
+        run: |
+          curl -sSL -o godot.zip https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_macos.universal.zip
+          unzip -q godot.zip
+          python3 godot/ferramentas/baixar_modelo.py ios.zip "$HOME/Library/Application Support/Godot/export_templates/4.5.stable"
+
+      - name: Gerar o projeto do Xcode
+        run: |
+          cd godot
+          ../Godot.app/Contents/MacOS/Godot --headless --import || true
+          rm -rf build/ios && mkdir -p build/ios
+          ../Godot.app/Contents/MacOS/Godot --headless --export-release "iOS" build/ios/Kravenox.ipa
+          ls build/ios
+
+      - name: Compilar (sem assinatura)
+        run: |
+          cd godot/build/ios
+          xcodebuild -project Kravenox.xcodeproj -scheme Kravenox -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath "$PWD/Kravenox.xcarchive" archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" | tail -40
+          mkdir -p Payload
+          cp -R Kravenox.xcarchive/Products/Applications/*.app Payload/
+          zip -qry Kravenox-Quadros-do-Cisma.ipa Payload
+          ls -la *.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kravenox-Quadros-do-Cisma-ipa
+          path: godot/build/ios/Kravenox-Quadros-do-Cisma.ipa
+
+      - name: Publicar em Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-iphone
+          name: App de iPhone (Quadros do Cisma)
+          prerelease: true
+          body: |
+            App de iPhone do Kravenox: Quadros do Cisma, sem assinatura.
+            Instale com o SideStore ou o AltStore (Apple ID grátis). Montado a partir de ${{ github.sha }}.
+          files: godot/build/ios/Kravenox-Quadros-do-Cisma.ipa
