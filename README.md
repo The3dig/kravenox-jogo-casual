@@ -35,8 +35,20 @@ dispara. Entre as ondas ele espera no meio do anel.
 
 ## Telas
 
-Abertura (logo e carregamento) → Início (Jogar, Melhorias, Bestiário, Som) →
-Mundos → Capítulo. O Bestiário mostra os monstros já encontrados.
+- **Abertura:** logo e carregamento.
+- **Início:** barra com o Kravenox, o Poder e os fragmentos; botão de ajustes;
+  modo **Normal / Pesadelo** (Pesadelo libera depois do Mundo 1: monstros
+  mais fortes e fragmentos em dobro); o capítulo escolhido com setas, sobre a
+  ilustração do mundo dele; botão Começar (ou Continuar); botões laterais:
+  **Presente do dia**, **Missões do dia**, **Baús dos mundos** (um por mundo
+  completo) e **Enquanto você estava fora** (fragmentos que juntam sozinhos,
+  até 12 horas).
+- **Barra de baixo:** Melhorias · Bestiário · Batalha · Mundos · Ajustes.
+- **Mundos:** cada mundo tem uma ilustração do lugar do livro
+  (`godot/assets/mundos/`, pintadas por `godot/ferramentas/pintar_mundos.py`;
+  os mundos 1, 2 e 8 usam as pinturas conceituais oficiais) e os 4 capítulos
+  embaixo.
+- **Ajustes:** música, efeitos e apagar progresso.
 
 ## Como abrir
 
