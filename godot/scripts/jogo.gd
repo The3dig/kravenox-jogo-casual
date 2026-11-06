@@ -1303,14 +1303,20 @@ func caixa(r: Rect2, cor: Color, raio := 6, borda := 0, cor_borda := Color.BLACK
 	sb.bg_color = cor
 	sb.draw_center = centro
 	sb.set_corner_radius_all(raio)
-	sb.anti_aliasing = true
+	# sem suavização nem sombra desfocada: as duas geram muitas formas por caixa e
+	# pesavam no celular. A sombra virou uma caixa escura deslocada.
+	sb.anti_aliasing = false
+	sb.corner_detail = 3
 	if borda > 0:
 		sb.set_border_width_all(borda)
 		sb.border_color = cor_borda
-	if sombra > 0:
-		sb.shadow_size = sombra
-		sb.shadow_color = Color(0, 0, 0, 0.6)
-		sb.shadow_offset = Vector2(0, 3)
+	if sombra > 0 and centro:
+		var sb2 := StyleBoxFlat.new()
+		sb2.bg_color = Color(0, 0, 0, 0.45)
+		sb2.set_corner_radius_all(raio + 1)
+		sb2.anti_aliasing = false
+		sb2.corner_detail = 3
+		draw_style_box(sb2, Rect2(r.position + Vector2(0, 3), r.size + Vector2(0, 1)))
 	draw_style_box(sb, r)
 
 
@@ -1320,10 +1326,23 @@ func degrade(r: Rect2, cima: Color, baixo: Color) -> void:
 		PackedColorArray([cima, cima, baixo, baixo]))
 
 
+# Brilho redondo: uma imagem pronta de degradê, tingida (antes eram 6 círculos
+# por brilho, o que pesava muito no celular).
+var tex_brilho: Texture2D
+
+
 func brilho_suave(c: Vector2, r: float, cor: Color, forca := 1.0) -> void:
-	for k in 6:
-		var f := 1.0 - k / 6.0
-		draw_circle(c, r * f, Color(cor, 0.07 * forca * (1.0 + k * 0.35)))
+	if tex_brilho == null:
+		var n := 64
+		var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+		for y in n:
+			for x in n:
+				var d := Vector2(x + 0.5 - n / 2.0, y + 0.5 - n / 2.0).length() / (n / 2.0)
+				var a := clampf(1.0 - d, 0.0, 1.0)
+				img.set_pixel(x, y, Color(1, 1, 1, a * a * 0.9 + a * 0.1))
+		img.generate_mipmaps()
+		tex_brilho = ImageTexture.create_from_image(img)
+	draw_texture_rect(tex_brilho, Rect2(c - Vector2(r, r), Vector2(r, r) * 2), false, Color(cor, minf(1.0, 0.42 * forca)))
 
 
 func escrever(t: String, centro: Vector2, tam: int, cor: Color, contorno := true, f: Font = null) -> void:
@@ -1541,23 +1560,58 @@ func desenhar_topo() -> void:
 		draw_line(c + Vector2(15, -5), c + Vector2(7, 5), cor, 2, true)
 
 
+var tex_laje := {}
+
+
+# Pinta a laje de pedra uma vez (com borda, degradê, miolo e rachaduras) e a
+# reaproveita em todos os quadros. A versão vazia já traz o "+" roxo.
+func textura_laje(vazia: bool) -> Texture2D:
+	if tex_laje.has(vazia):
+		return tex_laje[vazia]
+	var n := 100
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var m := 3   # margem para a sombra
+	img.fill_rect(Rect2i(m + 1, m + 4, n - 2 * m, n - 2 * m), Color(0, 0, 0, 0.5))   # sombra
+	for y in range(m, n - m):
+		var t := float(y - m) / (n - 2 * m)
+		var cor := PEDRA_CLARA.lerp(PEDRA_ESC, t)
+		img.fill_rect(Rect2i(m, y, n - 2 * m, 1), cor)
+	var b := PEDRA_BORDA
+	img.fill_rect(Rect2i(m, m, n - 2 * m, 2), b)
+	img.fill_rect(Rect2i(m, n - m - 2, n - 2 * m, 2), b)
+	img.fill_rect(Rect2i(m, m, 2, n - 2 * m), b)
+	img.fill_rect(Rect2i(n - m - 2, m, 2, n - 2 * m), b)
+	var dentro := Rect2i(m + 8, m + 8, n - 2 * m - 16, n - 2 * m - 16)
+	img.fill_rect(dentro, Color(0.06, 0.05, 0.08, 1).lerp(PEDRA_ESC, 0.35))
+	img.fill_rect(Rect2i(dentro.position, Vector2i(dentro.size.x, 1)), Color(0, 0, 0, 0.6))
+	img.fill_rect(Rect2i(dentro.position, Vector2i(1, dentro.size.y)), Color(0, 0, 0, 0.6))
+	for k in [[20, 30, 1, 1], [60, 70, 1, -1], [70, 20, -1, 1]]:
+		for j in 12:
+			img.set_pixel(k[0] + j * k[2], k[1] + j * k[3] / 2, Color(0, 0, 0, 0.45))
+	# cantos arredondados de leve
+	for c in [Vector2i(m, m), Vector2i(n - m - 1, m), Vector2i(m, n - m - 1), Vector2i(n - m - 1, n - m - 1)]:
+		img.set_pixelv(c, Color(0, 0, 0, 0))
+	if vazia:
+		var cc := Color(ROXO, 0.3)
+		var meio := n / 2
+		img.fill_rect(Rect2i(meio - 11, meio - 1, 22, 2), cc)
+		img.fill_rect(Rect2i(meio - 1, meio - 11, 2, 22), cc)
+		for k in 64:
+			var a := k * TAU / 64
+			img.set_pixel(meio + int(cos(a) * 17), meio + int(sin(a) * 17), Color(ROXO, 0.2))
+	img.generate_mipmaps()
+	tex_laje[vazia] = ImageTexture.create_from_image(img)
+	return tex_laje[vazia]
+
+
 func desenhar_quadro(i: int) -> void:
 	var r := ret_quadro(i)
 	var q = quadros[i]
 	var sel := selec == ["quadro", i]
 	var luz: float = brilho[i] / 0.35
-	# laje de pedra
-	caixa(r.grow(2), Color(0, 0, 0, 0.6), 7, 0, Color.BLACK, true, 6)
-	degrade(r, PEDRA_CLARA, PEDRA_ESC)
-	caixa(r, Color(0, 0, 0, 0), 6, 2, PEDRA_BORDA, false)
-	caixa(r.grow(-7), Color(0.05, 0.04, 0.07, 0.55), 4, 1, Color(0, 0, 0, 0.5))
-	# rachaduras finas na pedra (fixas por quadro)
-	var rnd := RandomNumberGenerator.new()
-	rnd.seed = i * 977 + 13
-	for k in 2:
-		var a := r.position + Vector2(rnd.randf_range(8, TAM - 8), rnd.randf_range(8, TAM - 8))
-		var b := a + Vector2(rnd.randf_range(-14, 14), rnd.randf_range(-14, 14))
-		draw_line(a, b, Color(0, 0, 0, 0.35), 1)
+	# laje de pedra: uma imagem pronta (antes eram várias caixas e linhas por quadro)
+	draw_texture_rect(textura_laje(q == null), r.grow(3), false)
 	if luz > 0:
 		caixa(r.grow(1), Color(0, 0, 0, 0), 7, 3, Color(ROXO, luz), false)
 		brilho_suave(r.get_center(), 60, ROXO, luz)
@@ -1565,10 +1619,7 @@ func desenhar_quadro(i: int) -> void:
 		caixa(r.grow(3), Color(0, 0, 0, 0), 8, 3, OURO if sel else VERMELHO, false)
 	var c := r.get_center()
 	if q == null:
-		var cc := Color(ROXO, 0.22 + 0.08 * sin(tempo * 2 + i))
-		draw_line(c + Vector2(-10, 0), c + Vector2(10, 0), cc, 2, true)
-		draw_line(c + Vector2(0, -10), c + Vector2(0, 10), cc, 2, true)
-		draw_arc(c, 16, 0, TAU, 28, Color(cc, cc.a * 0.6), 1, true)
+		pass   # o "+" roxo já vem na imagem da laje vazia
 	elif not (not arrasto.is_empty() and arrasto["moveu"] and arrasto["de"] == "quadro" and arrasto["i"] == i):
 		icone(q["id"], c + Vector2(0, -4), 0.95)
 		# nível em marcas douradas
