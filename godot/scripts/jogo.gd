@@ -18,6 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
+const VERSAO := "2026-11-07a"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -925,8 +926,10 @@ func andar_no_anel(dt: float) -> void:
 
 func atualizar(dt: float) -> void:
 	dt *= vel_jogo
-	if fim_onda_t > 0.45:
-		dt *= 0.4   # câmera lenta: dá para ver o último monstro morrer
+	if fim_onda_t > 0:
+		fim_onda_t -= dt
+		if fim_onda_t > 0.45:
+			dt *= 0.4   # câmera lenta: dá para ver o último monstro morrer
 	tempo += dt
 	msg_t -= dt
 	for i in ANEL.size():
@@ -1079,15 +1082,11 @@ func atualizar(dt: float) -> void:
 		tiros.clear()
 		estado = "vitoria"
 		limpar_partida()
-	elif fila.is_empty() and monstros.is_empty() and fim_onda_t != 0.0:
-		if fim_onda_t < 0:
-			# o último monstro acabou de morrer: espera a morte dele aparecer
-			fim_onda_t = 0.9
-			efeitos.append({"t": "anel", "p": k_vis, "r0": 20, "r1": 160, "vida": 0.6, "max": 0.6, "cor": OURO})
-		else:
-			fim_onda_t = maxf(0.0, fim_onda_t - dt)   # chega a 0: na próxima vez vai para a loja
 	elif fila.is_empty() and monstros.is_empty():
-		fim_onda_t = -1.0
+		# o último monstro morreu: a onda acaba e o progresso é gravado NA HORA (se o
+		# Safari recarregar logo depois, nada se perde); a câmera lenta é só visual
+		fim_onda_t = 0.9
+		efeitos.append({"t": "anel", "p": k_vis, "r0": 20, "r1": 160, "vida": 0.6, "max": 0.6, "cor": OURO})
 		if bonus_ativo():
 			bonus_res = "ok"
 			if not prog.has("bonus"):
@@ -1108,7 +1107,7 @@ func atualizar(dt: float) -> void:
 			trocas_gratis = 1 + nivel_melhoria("sorte")
 			sortear_loja()
 			aviso("Capítulo vencido! Agora a fase bônus: defenda a torre", 4.0)
-			salvar_logo = 0.5
+			salvar_partida()
 		else:
 			estado = "loja"
 			var premio := 5 + onda + capitulo / 3
@@ -1117,7 +1116,7 @@ func atualizar(dt: float) -> void:
 			trocas_gratis = 1 + nivel_melhoria("sorte")
 			sortear_loja()
 			aviso("Onda vencida! +%d de essência, +30 vida" % premio, 3.0)
-			salvar_logo = 0.5
+			salvar_partida()
 
 
 # ------------------------------------------------------------ toque
@@ -2566,6 +2565,7 @@ func desenhar_ajustes() -> void:
 	escrever("Apaga capítulos, melhorias e fragmentos deste aparelho.", Vector2(LARG / 2, 400), 13, CINZA)
 	escrever("O jogo funciona sem internet depois de aberto uma vez.", Vector2(LARG / 2, 470), 14, Color8(150, 220, 170))
 	escrever("Kravenox: Quadros do Cisma", Vector2(LARG / 2, 640), 15, OURO, true, fonte_titulo)
+	escrever("versão " + VERSAO, Vector2(LARG / 2, 664), 13, CINZA, false)
 	desenhar_abas()
 	desenhar_popup()
 
