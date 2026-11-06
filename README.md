@@ -48,7 +48,12 @@ dispara. Entre as ondas ele espera no meio do anel.
   (`godot/assets/mundos/`, pintadas por `godot/ferramentas/pintar_mundos.py`;
   os mundos 1, 2 e 8 usam as pinturas conceituais oficiais) e os 4 capítulos
   embaixo.
-- **Ajustes:** música, efeitos e apagar progresso.
+- **Ajustes:** música, efeitos, apagar progresso e a versão instalada.
+- **Kravenox** (toque no rosto dele, no alto do início): Poder, nível, a
+  forma atual (as formas da folha de sprites, de Despertar Frágil a Soberano
+  do Reino Quebrado, mudam a cor da aura), atributos (Vida, Dano, Defesa,
+  Crítico), cartas para evoluir esses quatro, e os botões Formas, Conquistas
+  (12, com fragmentos de prêmio) e Bestiário.
 
 ## Como abrir
 

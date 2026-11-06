@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-07a"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-07b"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -70,6 +70,29 @@ const MELHORIAS := [
 	{"id": "forca", "nome": "Fúria do Cisma", "desc": "+10% de dano dos poderes", "max": 20, "custo": 6},
 	{"id": "passo", "nome": "Passo Predador", "desc": "+6% de velocidade", "max": 5, "custo": 5},
 	{"id": "sorte", "nome": "Olho do Vazio", "desc": "+1 troca grátis por onda", "max": 2, "custo": 10},
+	{"id": "defesa", "nome": "Pele de Pedra", "desc": "-3% do dano que ele recebe", "max": 10, "custo": 6},
+	{"id": "critico", "nome": "Olhos de Brasa", "desc": "+3% de chance de crítico (dano em dobro)", "max": 10, "custo": 6},
+]
+# As formas do Kravenox (folha de sprites, universo/personagens/kravenox.md):
+# ele muda de forma conforme o nível (1 + a soma das melhorias).
+const FORMAS_KX := [
+	[1, "Despertar Frágil"], [3, "Essência Retornando"], [6, "Espinhos Aflorados"], [10, "Sede de Poder"],
+	[15, "Corrupção Crescente"], [21, "Vontade do Abismo"], [28, "Forma Corrompida"], [36, "Asas do Cisma"],
+	[46, "Poder Terrível"], [58, "Soberano do Reino Quebrado"],
+]
+const CONQUISTAS := [
+	{"id": "mundo1", "nome": "Vença o Mundo 1", "tipo": "feitos", "meta": 4, "premio": 10},
+	{"id": "caps20", "nome": "Vença 20 capítulos", "tipo": "feitos", "meta": 20, "premio": 25},
+	{"id": "livro1", "nome": "Vença o Livro I (35 capítulos)", "tipo": "feitos", "meta": 35, "premio": 50},
+	{"id": "fim", "nome": "Vença os 76 capítulos", "tipo": "feitos", "meta": 76, "premio": 120},
+	{"id": "m500", "nome": "Espante 500 monstros", "tipo": "mortes", "meta": 500, "premio": 10},
+	{"id": "m5000", "nome": "Espante 5000 monstros", "tipo": "mortes", "meta": 5000, "premio": 40},
+	{"id": "chefes", "nome": "Derrote 10 chefes", "tipo": "chefes", "meta": 10, "premio": 15},
+	{"id": "fusoes", "nome": "Funda itens 30 vezes", "tipo": "fusoes", "meta": 30, "premio": 12},
+	{"id": "nv5", "nome": "Leve um item ao nível 5", "tipo": "nivel5", "meta": 1, "premio": 15},
+	{"id": "torre", "nome": "Defenda a torre 10 vezes", "tipo": "bonus", "meta": 10, "premio": 20},
+	{"id": "pesadelo", "nome": "Vença um capítulo no Pesadelo", "tipo": "feitos_p", "meta": 1, "premio": 15},
+	{"id": "asas", "nome": "Alcance a forma Asas do Cisma", "tipo": "nivel", "meta": 36, "premio": 30},
 ]
 
 # Paleta da fantasia sombria: preto azulado, roxo do Vazio, vermelho do
@@ -641,6 +664,9 @@ func colocar(i: int, item: Dictionary) -> bool:
 		return true
 	if q["id"] == item["id"] and q["nv"] == item["nv"] and q["nv"] < NIVEL_MAX:
 		q["nv"] += 1
+		contar_total("fusoes")
+		if q["nv"] >= NIVEL_MAX:
+			contar_total("nivel5")
 		som("nivel")
 		anel(centro_quadro(i), 10, 60, 0.4, OURO)
 		aviso("Fundiu! %s nível %d" % [ITENS[q["id"]]["nome"], q["nv"]])
@@ -851,10 +877,19 @@ func texto_voa(p: Vector2, t: String, cor: Color) -> void:
 func ferir(m: Dictionary, dano: float) -> void:
 	if m["hp"] <= 0:
 		return
+	var critico := randf() < 0.03 * nivel_melhoria("critico")
+	if critico:
+		dano *= 2.0
 	m["hp"] -= dano
 	m["flash"] = 0.1
-	texto_voa(m["pos"] + Vector2(randf_range(-8, 8), -30), str(int(dano)), BRANCO)
+	if critico:
+		texto_voa(m["pos"] + Vector2(randf_range(-8, 8), -38), "%d!" % int(dano), OURO)
+	else:
+		texto_voa(m["pos"] + Vector2(randf_range(-8, 8), -30), str(int(dano)), BRANCO)
 	if m["hp"] <= 0:
+		contar_total("mortes")
+		if m["chefe"]:
+			contar_total("chefes")
 		som("acerto")
 		mortes += 1
 		contar_missao("mortes")
@@ -1031,7 +1066,7 @@ func atualizar(dt: float) -> void:
 					som("esmagamento")
 					texto_voa(CENTRO + Vector2(0, -70), "-%d" % int(m["dano"]), VERMELHO)
 				else:
-					var dano: float = m["dano"]
+					var dano: float = m["dano"] * (1.0 - 0.03 * nivel_melhoria("defesa"))
 					if escudo > 0:
 						var tira := minf(escudo, dano)
 						escudo -= tira
@@ -1094,6 +1129,7 @@ func atualizar(dt: float) -> void:
 			prog["bonus"][str(capitulo)] = true
 			premio_bonus = (2 + mundo_de(capitulo)) * (2 if modo == "pesadelo" else 1)
 			contar_missao("bonus")
+			contar_total("bonus")
 			premio_fim += premio_bonus
 			prog["fragmentos"] = int(prog["fragmentos"]) + premio_bonus
 			estado = "vitoria"
@@ -1469,6 +1505,12 @@ func _draw() -> void:
 			desenhar_bestiario()
 		"missoes":
 			desenhar_missoes()
+		"kravenox":
+			desenhar_kravenox_tela()
+		"formas":
+			desenhar_formas()
+		"conquistas":
+			desenhar_conquistas()
 		"ajustes":
 			desenhar_ajustes()
 		_:
@@ -1848,7 +1890,7 @@ func desenhar_kravenox(k: Vector2) -> void:
 			var tam := 18.0 + 6 * minf(k_mult, 6.0) + (j % 2) * 8
 			var ini := k + Vector2(-k_dir * 18, y)
 			draw_line(ini, ini + Vector2(-k_dir * tam, 0), Color(laranja, 0.55), 3, true)
-	brilho_suave(k + Vector2(0, -4), 48, VERMELHO, 0.35)
+	brilho_suave(k + Vector2(0, -4), 48, cor_forma(), 0.4)
 	desenhar_arte(nome, base, 68, k_dir < 0)
 	if k_flash > 0:
 		desenhar_arte(nome, base, 68, k_dir < 0, Color(1, 0.3, 0.3, k_flash * 4), true)
@@ -2109,6 +2151,14 @@ func botoes_menu() -> Dictionary:
 	var b := {}
 	b["voltar"] = Rect2(12, 16, 40, 36)
 	b["ajustes"] = Rect2(14, 92, 40, 40)
+	b["avatar"] = Rect2(10, 10, 80, 70)
+	b["kx_formas"] = Rect2(12, 128, 74, 74)
+	b["kx_conquistas"] = Rect2(12, 210, 74, 74)
+	b["kx_bestiario"] = Rect2(12, 292, 74, 74)
+	for i in 4:
+		b["kx_carta%d" % i] = Rect2(14 + i * 114, 532, 110, 196)
+	for i in CONQUISTAS.size():
+		b["conquista%d" % i] = Rect2(370, TOPO_MUNDOS + 6 + i * 51 + 8, 94, 32)
 	b["normal"] = Rect2(110, 150, 128, 40)
 	b["pesadelo"] = Rect2(242, 150, 128, 40)
 	b["ant"] = Rect2(30, 440, 48, 64)
@@ -2122,7 +2172,7 @@ func botoes_menu() -> Dictionary:
 	for i in 5:
 		b["aba_" + nomes[i]] = Rect2(i * 96, ALT - 82, 96, 82)
 	for i in MELHORIAS.size():
-		b["melhoria%d" % i] = Rect2(338, 150 + i * 104 + 24, 112, 44)
+		b["melhoria%d" % i] = Rect2(338, 146 + i * 84 + 16, 112, 44)
 	for i in MISSOES.size():
 		b["missao%d" % i] = Rect2(338, 160 + i * 110 + 30, 112, 44)
 	b["musica"] = Rect2(330, 150, 120, 44)
@@ -2167,15 +2217,22 @@ func clique_menu(p: Vector2) -> void:
 				som("gema")
 				ir_para("inicio")
 			return
-		"mundos", "melhorias", "bestiario", "missoes", "ajustes":
+		"mundos", "melhorias", "bestiario", "missoes", "ajustes", "kravenox":
 			if b["voltar"].has_point(p):
 				ir_para("inicio")
+				return
+		"formas", "conquistas":
+			if b["voltar"].has_point(p):
+				ir_para("kravenox")
 				return
 	if tela != "abertura" and abas(p, b):
 		return
 	match tela:
 		"inicio":
 			var c := cap_atual()
+			if b["avatar"].has_point(p):
+				ir_para("kravenox")
+				return
 			if b["jogar"].has_point(p):
 				som("gema")
 				comecar_capitulo(c)
@@ -2245,6 +2302,30 @@ func clique_menu(p: Vector2) -> void:
 					if not comprar_melhoria(i):
 						som("dano")
 					return
+		"kravenox":
+			if b["kx_formas"].has_point(p):
+				ir_para("formas")
+			elif b["kx_conquistas"].has_point(p):
+				ir_para("conquistas")
+			elif b["kx_bestiario"].has_point(p):
+				ir_para("bestiario")
+			else:
+				for i in 4:
+					if b["kx_carta%d" % i].has_point(p):
+						var idx := indice_melhoria(CARTAS_KX[i])
+						if not comprar_melhoria(idx):
+							som("dano")
+						return
+		"conquistas":
+			for i in CONQUISTAS.size():
+				if b["conquista%d" % i].has_point(p):
+					var c: Dictionary = CONQUISTAS[i]
+					var pegas: Dictionary = prog.get("conquistas", {})
+					if progresso_conquista(c) >= int(c["meta"]) and not pegas.has(c["id"]):
+						pegas[c["id"]] = true
+						prog["conquistas"] = pegas
+						ganhar(int(c["premio"]), "CONQUISTA!")
+					return
 		"missoes":
 			var m := missoes_do_dia()
 			for i in MISSOES.size():
@@ -2296,6 +2377,23 @@ func botao_icone(r: Rect2, tipo: String, rotulo: String, alerta := false) -> voi
 			draw_arc(c, 15, 0, TAU, 24, OURO, 2, true)
 			draw_line(c, c + Vector2(0, -10), OURO, 2)
 			draw_line(c, c + Vector2(7, 3), OURO, 2)
+		"formas":
+			brilho_suave(c, 30, cor_forma(), 0.9)
+			for k in 5:
+				var a := -PI / 2 + (k - 2) * 0.45
+				draw_colored_polygon(PackedVector2Array([c + Vector2.from_angle(a) * 18, c + Vector2.from_angle(a - 0.2) * 7, c + Vector2.from_angle(a + 0.2) * 7]), OURO)
+			draw_circle(c + Vector2(0, 4), 9, Color8(20, 16, 26))
+			draw_circle(c + Vector2(-3, 3), 2, VERMELHO)
+			draw_circle(c + Vector2(3, 3), 2, VERMELHO)
+		"conquistas":
+			brilho_suave(c, 30, OURO, 0.8)
+			poli([c + Vector2(-12, -14), c + Vector2(12, -14), c + Vector2(9, 2), c + Vector2(0, 7), c + Vector2(-9, 2)], OURO, 1.2)
+			draw_rect(Rect2(c + Vector2(-2, 6), Vector2(4, 6)), OURO)
+			draw_rect(Rect2(c + Vector2(-8, 12), Vector2(16, 4)), OURO)
+		"bestiario":
+			brilho_suave(c, 30, ROXO, 0.7)
+			poli([c + Vector2(-14, -11), c + Vector2(-1, -8), c + Vector2(-1, 13), c + Vector2(-14, 10)], Color8(90, 58, 140), 1.2)
+			poli([c + Vector2(14, -11), c + Vector2(1, -8), c + Vector2(1, 13), c + Vector2(14, 10)], Color8(110, 70, 160), 1.2)
 		"engrenagem":
 			for k in 8:
 				var a := k * TAU / 8
@@ -2384,6 +2482,7 @@ func desenhar_inicio() -> void:
 		draw_rect(Rect2(0, 0, LARG, ALT), Color(0.35, 0.0, 0.02, 0.22))
 	# barra do alto: o Kravenox, o poder e os fragmentos
 	var av := Rect2(12, 12, 66, 66)
+	brilho_suave(av.get_center(), 50, cor_forma(), 0.6)
 	caixa(av, Color8(28, 20, 30), 10, 2, OURO, true, 6)
 	var tk: Texture2D = tex["kravenox"]
 	draw_texture_rect_region(tk, av.grow(-5), Rect2(0, 0, tk.get_width(), tk.get_width() * 0.92))
@@ -2619,14 +2718,14 @@ func desenhar_melhorias() -> void:
 	var b := botoes_menu()
 	for i in MELHORIAS.size():
 		var m: Dictionary = MELHORIAS[i]
-		var r := Rect2(16, 150 + i * 104, LARG - 32, 92)
+		var r := Rect2(16, 146 + i * 84, LARG - 32, 78)
 		caixa(r, Color(0.06, 0.05, 0.08, 0.93), 10, 1, Color(PEDRA_BORDA, 0.9), true, 6)
 		var lv := nivel_melhoria(m["id"])
 		var mx := int(m["max"])
-		escrever_esq(m["nome"], r.position + Vector2(16, 30), 16, OURO, fonte_titulo)
-		escrever_esq(m["desc"], r.position + Vector2(16, 54), 15, CINZA)
+		escrever_esq(m["nome"], r.position + Vector2(16, 26), 15, OURO, fonte_titulo)
+		escrever_esq(m["desc"], r.position + Vector2(16, 47), 14, CINZA)
 		for k in mx:
-			var p := r.position + Vector2(22 + k * (15 if mx <= 10 else 14), 74)
+			var p := r.position + Vector2(22 + k * (15 if mx <= 10 else 14), 63)
 			var d := PackedVector2Array([p + Vector2(0, -5), p + Vector2(4.5, 0), p + Vector2(0, 5), p + Vector2(-4.5, 0)])
 			draw_colored_polygon(d, VERMELHO if k < lv else PEDRA_CLARA)
 		var bb: Rect2 = b["melhoria%d" % i]
@@ -2774,3 +2873,212 @@ func desenhar_torre() -> void:
 	var y0 := topo.y - 52
 	draw_rect(Rect2(base.x - wb / 2 - 1, y0 - 1, wb + 2, 7), Color(0, 0, 0, 0.8))
 	draw_rect(Rect2(base.x - wb / 2, y0, wb * clampf(torre_hp / maxf(1.0, torre_max), 0, 1), 5), ROXO)
+
+
+# ============================================================ a tela do Kravenox
+const CARTAS_KX := ["vida", "forca", "defesa", "critico"]
+const CORES_FORMA := [Color8(180, 40, 40), Color8(210, 40, 44), Color8(230, 50, 40), Color8(220, 30, 80),
+	Color8(190, 40, 150), Color8(150, 60, 220), Color8(120, 70, 255), Color8(90, 140, 255),
+	Color8(255, 120, 60), Color8(255, 200, 80)]
+
+
+func contar_total(id: String, n := 1) -> void:
+	if robo:
+		return
+	var t: Dictionary = prog.get("total", {})
+	t[id] = int(t.get(id, 0)) + n
+	prog["total"] = t
+
+
+func indice_melhoria(id: String) -> int:
+	for i in MELHORIAS.size():
+		if MELHORIAS[i]["id"] == id:
+			return i
+	return 0
+
+
+func nivel_kravenox() -> int:
+	var n := 1
+	for m in MELHORIAS:
+		n += nivel_melhoria(m["id"])
+	return n
+
+
+func forma_atual() -> int:
+	var nv := nivel_kravenox()
+	var f := 0
+	for i in FORMAS_KX.size():
+		if nv >= int(FORMAS_KX[i][0]):
+			f = i
+	return f
+
+
+func cor_forma() -> Color:
+	return CORES_FORMA[forma_atual()]
+
+
+func progresso_conquista(c: Dictionary) -> int:
+	match c["tipo"]:
+		"feitos":
+			return prog["feitos"].size()
+		"feitos_p":
+			return prog.get("feitos_p", {}).size()
+		"nivel":
+			return nivel_kravenox()
+	return int(prog.get("total", {}).get(c["tipo"], 0))
+
+
+func conquistas_prontas() -> int:
+	var n := 0
+	var pegas: Dictionary = prog.get("conquistas", {})
+	for c in CONQUISTAS:
+		if progresso_conquista(c) >= int(c["meta"]) and not pegas.has(c["id"]):
+			n += 1
+	return n
+
+
+func icone_pequeno(tipo: String, c: Vector2, cor: Color) -> void:
+	match tipo:
+		"vida":
+			draw_circle(c + Vector2(-7, -4), 9, cor)
+			draw_circle(c + Vector2(7, -4), 9, cor)
+			draw_colored_polygon(PackedVector2Array([c + Vector2(-15, 0), c + Vector2(15, 0), c + Vector2(0, 16)]), cor)
+			draw_circle(c + Vector2(-9, -7), 3, Color(1, 1, 1, 0.6))
+		"forca":
+			for k in [-1.0, 1.0]:
+				draw_line(c + Vector2(-14 * k, 14), c + Vector2(13 * k, -14), Color8(220, 220, 230), 5, true)
+				draw_line(c + Vector2(-10 * k, 4), c + Vector2(-3 * k, 11), cor, 4, true)
+		"defesa":
+			poli([c + Vector2(0, -17), c + Vector2(14, -11), c + Vector2(12, 5), c + Vector2(0, 17), c + Vector2(-12, 5), c + Vector2(-14, -11)], cor, 1.5)
+			poli([c + Vector2(0, -12), c + Vector2(8, -8), c + Vector2(7, 3), c + Vector2(0, 11)], Color(1, 1, 1, 0.25))
+		"critico":
+			var e := []
+			for k in 10:
+				e.append(c + Vector2.from_angle(-PI / 2 + k * TAU / 10) * (17.0 if k % 2 == 0 else 7.0))
+			poli(e, cor, 1.5)
+
+
+func desenhar_kravenox_tela() -> void:
+	desenhar_fundo(0.55)
+	var cf := cor_forma()
+	var f := forma_atual()
+	var nv := nivel_kravenox()
+	# poder e forma
+	escrever("PODER", Vector2(LARG / 2, 136), 13, Color8(255, 170, 120), true, fonte_titulo)
+	escrever(str(poder()), Vector2(LARG / 2, 166), 34, OURO, true)
+	escrever(FORMAS_KX[f][1].to_upper(), Vector2(LARG / 2, 202), 16, cf.lightened(0.3), true, fonte_titulo)
+	# o Kravenox com a aura da forma
+	var base := Vector2(LARG / 2, 418)
+	brilho_suave(base + Vector2(0, -95), 150, cf, 0.7 + 0.15 * sin(tempo * 2))
+	sombra_chao(base, 64)
+	desenhar_arte("kravenox", base + Vector2(0, -sin(tempo * 1.4) * 3), 196, false)
+	var b := botoes_menu()
+	botao_icone(b["kx_formas"], "formas", "Formas")
+	botao_icone(b["kx_conquistas"], "conquistas", "Conquistas", conquistas_prontas() > 0)
+	botao_icone(b["kx_bestiario"], "bestiario", "Bestiário")
+	# barra até a próxima forma
+	var ini := int(FORMAS_KX[f][0])
+	var prox := int(FORMAS_KX[f + 1][0]) if f + 1 < FORMAS_KX.size() else ini
+	var fr := 1.0 if prox == ini else clampf(float(nv - ini) / float(prox - ini), 0, 1)
+	var barra := Rect2(30, 442, LARG - 60, 14)
+	caixa(barra.grow(2), Color8(20, 16, 26), 8, 1, Color(OURO, 0.6))
+	if fr > 0:
+		degrade(Rect2(barra.position, Vector2(barra.size.x * fr, barra.size.y)), cf.lightened(0.2), cf.darkened(0.3))
+	escrever("Nível %d" % nv, Vector2(LARG / 2, 472), 16, BRANCO)
+	if f + 1 < FORMAS_KX.size():
+		escrever("Próxima forma: %s (nível %d)" % [FORMAS_KX[f + 1][1], prox], Vector2(LARG / 2, 492), 13, CINZA, false)
+	else:
+		escrever("Forma final alcançada", Vector2(LARG / 2, 492), 13, OURO, false)
+	# atributos
+	var atr := [["vida", "%d" % int(150 + 20 * nivel_melhoria("vida")), Color8(230, 60, 70)],
+		["forca", "+%d%%" % (10 * nivel_melhoria("forca")), Color8(240, 160, 60)],
+		["defesa", "-%d%%" % (3 * nivel_melhoria("defesa")), Color8(110, 170, 255)],
+		["critico", "%d%%" % (3 * nivel_melhoria("critico")), Color8(200, 120, 255)]]
+	for i in 4:
+		var r := Rect2(14 + i * 114, 502, 110, 26)
+		caixa(r, Color(0.05, 0.04, 0.07, 0.9), 13, 1, Color(atr[i][2], 0.6))
+		draw_set_transform(r.position + Vector2(16, 13), 0, Vector2(0.55, 0.55))
+		icone_pequeno(atr[i][0], Vector2.ZERO, atr[i][2])
+		draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
+		escrever(atr[i][1], r.get_center() + Vector2(8, 0), 15, BRANCO, false)
+	# as quatro cartas de evolução
+	var nomes := {"vida": "Vida", "forca": "Ataque", "defesa": "Defesa", "critico": "Crítico"}
+	var fundos := {"vida": Color8(40, 110, 60), "forca": Color8(140, 90, 30), "defesa": Color8(40, 80, 150), "critico": Color8(100, 50, 150)}
+	for i in 4:
+		var id: String = CARTAS_KX[i]
+		var m: Dictionary = MELHORIAS[indice_melhoria(id)]
+		var r: Rect2 = b["kx_carta%d" % i]
+		var lv := nivel_melhoria(id)
+		var mx := int(m["max"])
+		caixa(r, Color(fundos[id], 0.95), 10, 2, Color(fundos[id].lightened(0.4), 0.9), true, 6)
+		degrade(Rect2(r.position + Vector2(3, 3), Vector2(r.size.x - 6, 60)), Color(1, 1, 1, 0.12), Color(1, 1, 1, 0))
+		escrever(nomes[id], Vector2(r.get_center().x, r.position.y + 18), 16, BRANCO, true)
+		brilho_suave(Vector2(r.get_center().x, r.position.y + 66), 40, Color.WHITE, 0.4)
+		icone_pequeno(id, Vector2(r.get_center().x, r.position.y + 66), atr[i][2].lightened(0.15))
+		escrever("Nv %d/%d" % [lv, mx], Vector2(r.get_center().x, r.position.y + 104), 14, BRANCO, true)
+		var curto := {"vida": "+20 de vida", "forca": "+10% de dano", "defesa": "-3% de dano sofrido", "critico": "+3% de crítico"}
+		escrever(curto[id], Vector2(r.get_center().x, r.position.y + 124), 12, Color(1, 1, 1, 0.85), false)
+		var bb := Rect2(r.position.x + 8, r.end.y - 50, r.size.x - 16, 40)
+		if lv >= mx:
+			botao(bb, "MÁX", CINZA, false)
+		else:
+			var custo := custo_melhoria(m)
+			var pode := int(prog["fragmentos"]) >= custo
+			botao(bb, "", OURO if pode else CINZA, pode, pode)
+			cristal(bb.position + Vector2(24, 20), 7, VERMELHO)
+			escrever_esq(str(custo), bb.position + Vector2(36, 27), 18, BRANCO if pode else CINZA)
+	cabecalho("KRAVENOX")
+	desenhar_abas()
+	desenhar_popup()
+
+
+func desenhar_formas() -> void:
+	desenhar_fundo(0.65)
+	cabecalho("FORMAS")
+	var f := forma_atual()
+	var nv := nivel_kravenox()
+	for i in FORMAS_KX.size():
+		var r := Rect2(16, TOPO_MUNDOS + 4 + i * 61, LARG - 32, 56)
+		var tem := nv >= int(FORMAS_KX[i][0])
+		var cor: Color = CORES_FORMA[i]
+		caixa(r, Color(0.06, 0.05, 0.08, 0.93), 10, 2 if i == f else 1, OURO if i == f else Color(PEDRA_BORDA, 0.8), true, 4)
+		var c := r.position + Vector2(32, 28)
+		brilho_suave(c, 30, cor, 1.0 if tem else 0.2)
+		draw_circle(c, 13, cor if tem else PEDRA_ESC)
+		draw_arc(c, 13, 0, TAU, 20, Color(OURO, 0.8 if tem else 0.3), 1.5, true)
+		escrever_esq(FORMAS_KX[i][1], r.position + Vector2(60, 25), 16, BRANCO if tem else CINZA, fonte_titulo)
+		escrever_esq("Nível %d" % int(FORMAS_KX[i][0]), r.position + Vector2(60, 45), 13, CINZA)
+		if i == f:
+			escrever("ATUAL", Vector2(r.end.x - 44, r.get_center().y), 13, OURO, false, fonte_titulo)
+		elif not tem:
+			draw_rect(Rect2(Vector2(r.end.x - 50, r.get_center().y - 4), Vector2(14, 11)), CINZA)
+			draw_arc(Vector2(r.end.x - 43, r.get_center().y - 5), 5, PI, TAU, 10, CINZA, 2)
+	desenhar_abas()
+
+
+func desenhar_conquistas() -> void:
+	desenhar_fundo(0.65)
+	cabecalho("CONQUISTAS")
+	var b := botoes_menu()
+	var pegas: Dictionary = prog.get("conquistas", {})
+	for i in CONQUISTAS.size():
+		var c: Dictionary = CONQUISTAS[i]
+		var r := Rect2(12, TOPO_MUNDOS + 6 + i * 51, LARG - 24, 47)
+		var feito_n := mini(progresso_conquista(c), int(c["meta"]))
+		var pronta := feito_n >= int(c["meta"])
+		var pega: bool = pegas.has(c["id"])
+		caixa(r, Color(0.06, 0.05, 0.08, 0.93), 8, 1, Color(OURO if pronta and not pega else PEDRA_BORDA, 0.9))
+		escrever_esq(c["nome"], r.position + Vector2(12, 20), 14, OURO if pronta else BRANCO)
+		var barra := Rect2(r.position + Vector2(12, 30), Vector2(220, 7))
+		draw_rect(barra, Color8(20, 16, 26))
+		draw_rect(Rect2(barra.position, Vector2(barra.size.x * feito_n / float(c["meta"]), barra.size.y)), Color8(200, 60, 50))
+		escrever_esq("%d/%d" % [feito_n, int(c["meta"])], r.position + Vector2(242, 39), 12, CINZA)
+		var bb: Rect2 = b["conquista%d" % i]
+		if pega:
+			botao(bb, "Pega ✓", CINZA, false)
+		else:
+			botao(bb, "", OURO if pronta else CINZA, pronta, pronta)
+			cristal(bb.position + Vector2(24, 16), 6, VERMELHO)
+			escrever_esq(str(int(c["premio"])), bb.position + Vector2(36, 23), 16, BRANCO if pronta else CINZA)
+	desenhar_abas()
+	desenhar_popup()
