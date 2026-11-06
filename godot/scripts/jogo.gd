@@ -168,7 +168,9 @@ var k_vis := Vector2.ZERO  # onde o Kravenox está de fato (entre as ondas ele a
 var k_no_anel := false     # já chegou ao quadro e está dando a volta
 var k_andando := false
 var k_pausa := 0.0
-var k_salto := 0.0       # quadros que ainda faltam no salto do Passo Predador
+var k_salto := 0.0
+var fim_onda_t := -1.0   # o último monstro morreu: um instante em câmera lenta antes da loja
+var salvar_logo := -1.0  # grava a partida um pouco depois, com tudo parado (gravar dá uma travadinha no Safari)       # quadros que ainda faltam no salto do Passo Predador
 var destaque_cap := 0    # capítulo que acabou de ser vencido (brilha no mapa)       # pausa curta ao sair do caminho, antes de ir ao meio
 var escudo := 0.0        # escudo por cima da vida (item Escudo)
 var escudo_flash := 0.0
@@ -241,6 +243,9 @@ func preparar_som() -> void:
 		vozes.append(v)
 
 
+var tw_musica: Tween
+
+
 func tocar_musica(nome: String) -> void:
 	if nome == faixa or robo:
 		return
@@ -248,9 +253,21 @@ func tocar_musica(nome: String) -> void:
 	var st: AudioStreamOggVorbis = load("res://musica/%s.ogg" % nome)
 	st.loop = nome in TRILHAS_EM_LACO
 	st.loop_offset = 0.5   # o mesmo ponto de volta que o RPG usa (music/index.json)
-	musica.stream = st
-	if som_ligado:
-		musica.play()
+	if not som_ligado:
+		musica.stream = st
+		return
+	# troca com fade: a música que está tocando abaixa, a nova sobe
+	if tw_musica and tw_musica.is_valid():
+		tw_musica.kill()
+	var tw := create_tween()
+	tw_musica = tw
+	if musica.playing:
+		tw.tween_property(musica, "volume_db", -40.0, 0.6)
+	tw.tween_callback(func():
+		musica.stream = st
+		musica.volume_db = -40.0
+		musica.play())
+	tw.tween_property(musica, "volume_db", -7.0, 0.8)
 
 
 func som(nome: String) -> void:
@@ -549,6 +566,7 @@ func novo_jogo() -> void:
 	k_andando = false
 	k_pausa = 0.0
 	k_salto = 0.0
+	fim_onda_t = -1.0
 	escudo = 0.0
 	bonus_pendente = false
 	bonus_res = ""
@@ -907,6 +925,8 @@ func andar_no_anel(dt: float) -> void:
 
 func atualizar(dt: float) -> void:
 	dt *= vel_jogo
+	if fim_onda_t > 0.45:
+		dt *= 0.4   # câmera lenta: dá para ver o último monstro morrer
 	tempo += dt
 	msg_t -= dt
 	for i in ANEL.size():
@@ -963,6 +983,17 @@ func atualizar(dt: float) -> void:
 			if absf(d.x) > 1:
 				k_dir = 1 if d.x > 0 else -1
 	if estado != "onda":
+		for t in tiros:
+			t["p"] += t["v"] * dt
+			t["vida"] -= dt
+		tiros = tiros.filter(func(t): return t["vida"] > 0)
+		if salvar_logo > 0:
+			salvar_logo -= dt
+			if salvar_logo <= 0 and not k_andando:
+				salvar_logo = -1.0
+				salvar_partida()
+			elif salvar_logo <= 0:
+				salvar_logo = 0.1
 		return
 
 	# o Kravenox anda sem parar (depois de chegar ao anel)
@@ -1048,7 +1079,15 @@ func atualizar(dt: float) -> void:
 		tiros.clear()
 		estado = "vitoria"
 		limpar_partida()
+	elif fila.is_empty() and monstros.is_empty() and fim_onda_t != 0.0:
+		if fim_onda_t < 0:
+			# o último monstro acabou de morrer: espera a morte dele aparecer
+			fim_onda_t = 0.9
+			efeitos.append({"t": "anel", "p": k_vis, "r0": 20, "r1": 160, "vida": 0.6, "max": 0.6, "cor": OURO})
+		else:
+			fim_onda_t = maxf(0.0, fim_onda_t - dt)   # chega a 0: na próxima vez vai para a loja
 	elif fila.is_empty() and monstros.is_empty():
+		fim_onda_t = -1.0
 		if bonus_ativo():
 			bonus_res = "ok"
 			if not prog.has("bonus"):
@@ -1068,9 +1107,8 @@ func atualizar(dt: float) -> void:
 			hp = minf(hp_max, hp + 30)
 			trocas_gratis = 1 + nivel_melhoria("sorte")
 			sortear_loja()
-			tiros.clear()
 			aviso("Capítulo vencido! Agora a fase bônus: defenda a torre", 4.0)
-			salvar_partida()
+			salvar_logo = 0.5
 		else:
 			estado = "loja"
 			var premio := 5 + onda + capitulo / 3
@@ -1078,9 +1116,8 @@ func atualizar(dt: float) -> void:
 			hp = minf(hp_max, hp + 30)
 			trocas_gratis = 1 + nivel_melhoria("sorte")
 			sortear_loja()
-			tiros.clear()
 			aviso("Onda vencida! +%d de essência, +30 vida" % premio, 3.0)
-			salvar_partida()
+			salvar_logo = 0.5
 
 
 # ------------------------------------------------------------ toque
