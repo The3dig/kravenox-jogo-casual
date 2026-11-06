@@ -18,6 +18,6 @@ mkdir -p "$DESTINO"
 find "$DESTINO" -maxdepth 1 \( -name 'index*' -o -name 'kx-*' -o -name 'jogo-*' -o -name 'sw.js' \) -delete
 cp build/web/* "$DESTINO"/
 # Celulares que abriram uma versão antiga têm um service worker guardando o
-# jogo; este arquivo o desliga (veja ferramentas/desliga-cache.js).
-cp ferramentas/desliga-cache.js "$DESTINO"/index.service.worker.js
+# jogo; com este arquivo eles passam a usar o sw.js novo, sem recarregar a página.
+cp build/web/sw.js "$DESTINO"/index.service.worker.js
 echo "Pronto. Faça o commit e o push no kravenox-jogar."

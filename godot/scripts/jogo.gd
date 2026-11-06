@@ -330,9 +330,8 @@ func carregar_progresso() -> void:
 		return
 	var d = JSON.parse_string(f.get_as_text())
 	if d is Dictionary:
-		for k in prog.keys():
-			if d.has(k):
-				prog[k] = d[k]
+		for k in d.keys():   # tudo o que estiver salvo (inclusive a partida em andamento)
+			prog[k] = d[k]
 	prog["liberado"] = clampi(int(prog["liberado"]), 1, TOTAL_CAPITULOS)
 	prog["fragmentos"] = int(prog["fragmentos"])
 
@@ -343,6 +342,7 @@ func salvar() -> void:
 	var f := FileAccess.open(ARQUIVO, FileAccess.WRITE)
 	if f:
 		f.store_string(JSON.stringify(prog))
+		f.close()   # fecha na hora: no navegador é aí que o arquivo vai para o armazenamento do aparelho
 
 
 func mundo_de(c: int) -> int:
@@ -392,6 +392,64 @@ func comecar_capitulo(c: int) -> void:
 	capitulo = clampi(c, 1, TOTAL_CAPITULOS)
 	tela = "jogo"
 	novo_jogo()
+	retomar_partida()
+
+
+# ------------------------------------------------------------ continuar de onde parou
+# O Safari do iPhone às vezes recarrega a página (tela bloqueada, troca de app,
+# falta de memória). Entre as ondas o jogo guarda o capítulo, a fase, a vida, a
+# essência e os itens dos quadros; ao abrir o capítulo de novo, continua dali.
+func salvar_partida() -> void:
+	if robo or tela != "jogo" or estado != "loja":
+		return
+	var qs := []
+	for q in quadros:
+		qs.append(null if q == null else {"id": q["id"], "nv": int(q["nv"])})
+	prog["partida"] = {"capitulo": capitulo, "onda": onda, "essencia": essencia, "hp": hp, "escudo": escudo,
+		"quadros": qs, "loja": loja, "trocas": trocas_gratis, "bonus_pendente": bonus_pendente,
+		"premio_fim": premio_fim, "mortes": mortes, "tamanho": ANEL.size()}
+	salvar()
+
+
+func limpar_partida() -> void:
+	if prog.has("partida"):
+		prog.erase("partida")
+		salvar()
+
+
+func partida_guardada() -> Dictionary:
+	var pt = prog.get("partida", null)
+	return pt if pt is Dictionary else {}
+
+
+func retomar_partida() -> void:
+	var pt := partida_guardada()
+	if pt.is_empty() or int(pt["capitulo"]) != capitulo or int(pt.get("tamanho", -1)) != ANEL.size():
+		return
+	onda = int(pt["onda"])
+	essencia = int(pt["essencia"])
+	hp = minf(hp_max, float(pt["hp"]))
+	escudo = float(pt.get("escudo", 0.0))
+	trocas_gratis = int(pt.get("trocas", 1))
+	bonus_pendente = bool(pt.get("bonus_pendente", false))
+	premio_fim = int(pt.get("premio_fim", 0))
+	mortes = int(pt.get("mortes", 0))
+	for i in mini(ANEL.size(), pt["quadros"].size()):
+		var q = pt["quadros"][i]
+		quadros[i] = null if q == null else {"id": str(q["id"]), "nv": int(q["nv"])}
+	var lj: Array = pt.get("loja", [])
+	if lj.size() == 3:
+		loja = lj.map(func(x): return null if x == null else str(x))
+	if bonus_pendente:
+		aviso("Continuando: falta a fase bônus", 3.0)
+	else:
+		aviso("Continuando de onde parou: fase %d de %d" % [onda + 1, FASES], 3.0)
+
+
+func _notification(what: int) -> void:
+	# o app foi para segundo plano: guarda (vale entre as ondas)
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST:
+		salvar_partida()
 
 
 func ir_para(t: String) -> void:
@@ -563,6 +621,7 @@ func iniciar_onda() -> void:
 	if quadros.all(func(q): return q == null):
 		aviso("Coloque pelo menos um poder num quadro!")
 		return
+	salvar_partida()
 	onda += 1
 	estado = "onda"
 	selec = []
@@ -958,6 +1017,7 @@ func atualizar(dt: float) -> void:
 		hp = 0.0
 		estado = "derrota"
 		fim_capitulo(false)
+		limpar_partida()
 	elif bonus_ativo() and torre_hp <= 0:
 		# a torre caiu: acaba o bônus, o capítulo já estava vencido
 		torre_hp = 0.0
@@ -966,6 +1026,7 @@ func atualizar(dt: float) -> void:
 		fila.clear()
 		tiros.clear()
 		estado = "vitoria"
+		limpar_partida()
 	elif fila.is_empty() and monstros.is_empty():
 		if bonus_ativo():
 			bonus_res = "ok"
@@ -975,8 +1036,8 @@ func atualizar(dt: float) -> void:
 			premio_bonus = 2 + mundo_de(capitulo)
 			premio_fim += premio_bonus
 			prog["fragmentos"] = int(prog["fragmentos"]) + premio_bonus
-			salvar()
 			estado = "vitoria"
+			limpar_partida()
 		elif onda >= FASES:
 			fim_capitulo(true)
 			bonus_pendente = true
@@ -987,6 +1048,7 @@ func atualizar(dt: float) -> void:
 			sortear_loja()
 			tiros.clear()
 			aviso("Capítulo vencido! Agora a fase bônus: defenda a torre", 4.0)
+			salvar_partida()
 		else:
 			estado = "loja"
 			var premio := 5 + onda + capitulo / 3
@@ -996,6 +1058,7 @@ func atualizar(dt: float) -> void:
 			sortear_loja()
 			tiros.clear()
 			aviso("Onda vencida! +%d de essência, +30 vida" % premio, 3.0)
+			salvar_partida()
 
 
 # ------------------------------------------------------------ toque
@@ -1052,6 +1115,12 @@ func _unhandled_input(ev: InputEvent) -> void:
 
 
 func clique(p: Vector2) -> void:
+	clique_jogo(p)
+	if tela == "jogo" and estado == "loja":
+		salvar_partida()
+
+
+func clique_jogo(p: Vector2) -> void:
 	var b := botoes()
 	if estado == "derrota" or estado == "vitoria":
 		if b["denovo"].has_point(p):
@@ -1826,7 +1895,11 @@ func clique_menu(p: Vector2) -> void:
 			if b["jogar"].has_point(p):
 				som("gema")
 				destaque_cap = 0
-				ir_para("mundos")
+				var pt := partida_guardada()
+				if not pt.is_empty():
+					comecar_capitulo(int(pt["capitulo"]))
+				else:
+					ir_para("mundos")
 			elif b["icone0"].has_point(p):
 				ir_para("melhorias")
 			elif b["icone1"].has_point(p):
@@ -1946,7 +2019,13 @@ func desenhar_inicio() -> void:
 	escrever(CAPITULOS[c - 1], Vector2(LARG / 2, 530), 18, BRANCO)
 	var b := botoes_menu()
 	botao(b["jogar"], "", VERMELHO, true, true)
-	escrever("JOGAR", b["jogar"].get_center(), 26, BRANCO, false, fonte_titulo)
+	var pt := partida_guardada()
+	if pt.is_empty():
+		escrever("JOGAR", b["jogar"].get_center(), 26, BRANCO, false, fonte_titulo)
+	else:
+		escrever("CONTINUAR", b["jogar"].get_center() + Vector2(0, -8), 24, BRANCO, false, fonte_titulo)
+		var fase_txt := "bônus" if pt.get("bonus_pendente", false) else "fase %d" % (int(pt["onda"]) + 1)
+		escrever("Capítulo %d · %s" % [int(pt["capitulo"]), fase_txt], b["jogar"].get_center() + Vector2(0, 16), 13, Color8(255, 210, 200), false)
 	icone_menu(0, b["icone0"], "Melhorias")
 	icone_menu(1, b["icone1"], "Bestiário")
 	icone_menu(2, b["icone2"], "Som")
@@ -2114,6 +2193,7 @@ func soltar_arrasto(p: Vector2) -> void:
 		return
 	selec = [a["de"], a["i"]]
 	clique_quadro(alvo)
+	salvar_partida()
 
 
 func quadro_em(p: Vector2) -> int:
