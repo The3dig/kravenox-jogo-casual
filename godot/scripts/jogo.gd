@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-09b"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-09c"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -334,6 +334,9 @@ var nova_cronica := false
 
 # som: trilhas do RPG 2D (kravenox-jogar/rpg/music) e efeitos do Cratera do Cisma
 const TRILHAS_EM_LACO := ["abismo", "batalha", "chefe", "espinhos", "reino"]
+# Uma trilha do RPG por mundo: toca na tela inicial, no mapa e entre as ondas.
+const MUSICA_MUNDO := ["abismo", "floresta", "antigo", "valdora", "primeiro", "origem", "alem", "guerra", "reiVazio",
+	"guerraMundos", "primeiroMundo", "entre", "cidade", "biblioteca", "fortaleza", "estrelas", "semNome", "aster", "vale"]
 const EFEITOS := ["acerto", "corte", "raio", "esmagamento", "dano", "gema", "chefe", "nivel", "thornox"]
 var musica: AudioStreamPlayer
 var faixa := ""
@@ -407,7 +410,7 @@ func tocar_musica(nome: String) -> void:
 		return
 	faixa = nome
 	var st: AudioStreamOggVorbis = load("res://musica/%s.ogg" % nome)
-	st.loop = nome in TRILHAS_EM_LACO
+	st.loop = nome in TRILHAS_EM_LACO or nome in MUSICA_MUNDO
 	st.loop_offset = 0.5   # o mesmo ponto de volta que o RPG usa (music/index.json)
 	if not som_ligado:
 		musica.stream = st
@@ -442,8 +445,10 @@ func som(nome: String) -> void:
 
 
 func musica_certa() -> String:
-	if tela != "jogo":
+	if tela == "abertura":
 		return "reino"
+	if tela != "jogo":
+		return MUSICA_MUNDO[clampi(mundo_de(cap_atual()) - 1, 0, MUSICA_MUNDO.size() - 1)]
 	match estado:
 		"onda":
 			if onda == FASES:
@@ -453,7 +458,7 @@ func musica_certa() -> String:
 			return "vitoria"
 		"derrota":
 			return "gameover"
-	return "abismo"
+	return MUSICA_MUNDO[clampi(mundo_de(capitulo) - 1, 0, MUSICA_MUNDO.size() - 1)]
 
 
 func ligar_som(sim: bool) -> void:

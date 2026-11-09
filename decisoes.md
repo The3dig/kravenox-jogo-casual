@@ -132,3 +132,14 @@
   o jogo depois de 5 minutos ou mais fora, ele confere se há versão nova e
   recarrega. Os arquivos grandes continuam guardados (sem gastar internet).
 - **Por quê:** o Rone reclamou que a atualização automática não acontecia.
+
+## 2026-11-09: uma música por mundo
+
+- **Era:** 7 trilhas do RPG; a mesma ("abismo") tocava entre as ondas em
+  todos os mundos, e "reino" em todos os menus.
+- **Passou a ser:** cada um dos 19 mundos tem uma trilha do RPG que combina
+  com ele (floresta, Valdora, biblioteca, estrelas…), tocando na tela
+  inicial, no mapa e entre as ondas. Batalha, chefe, vitória e derrota
+  continuam iguais; a abertura continua com "reino". Lista em
+  `MUSICA_MUNDO` (`jogo.gd`). O jogo ficou ~11 MB maior (baixado uma vez).
+- **Por quê:** o Rone achou a música boa, mas repetitiva; escolheu uma por mundo.
