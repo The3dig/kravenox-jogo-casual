@@ -178,3 +178,13 @@
 - **Horda:** era só olhar (o Kravenox atirava sozinho em tudo). Passou a ser:
   ele só alcança quem está perto, o jogador arrasta o Kravenox até a horda e
   usa dois golpes com recarga (Esmagar e Espinhos).
+
+## 2026-11-09: Velocidade 4× e Baú do Dia na loja
+
+- **Era:** o item pago dava Velocidade 3× (perto demais do 2× grátis).
+- **Passou a ser:** Velocidade 4× (o botão vai 1× → 2× → 4×; acelerado, o
+  jogo dá vários passos pequenos para os tiros não atravessarem os monstros).
+  No alto da Loja entrou o **Baú do Dia, grátis**: fragmentos (quase sempre),
+  às vezes Fúria pela metade na próxima partida ou um monte grande de
+  fragmentos, e raramente (5%) um visual da loja (aura ou moldura).
+- **Por quê:** pedido do Rone.

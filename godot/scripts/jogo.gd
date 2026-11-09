@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-09e"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-09f"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -1255,7 +1255,9 @@ func _process(delta: float) -> void:
 	t_tela += delta
 	if tela == "jogo" or tela == "especial":
 		if tela == "jogo":
-			atualizar(minf(delta, 0.05))
+			# acelerado (2× ou 4×): vários passos pequenos, para os tiros não atravessarem os monstros
+			for _i in vel_jogo:
+				atualizar(minf(delta, 0.05))
 		else:
 			atualizar_esp(minf(delta, 0.05))
 		tremor = maxf(0.0, tremor - delta * 2.5)
@@ -1325,7 +1327,6 @@ func atualizar(dt: float) -> void:
 	if lento_t > 0:
 		lento_t -= dt
 		dt *= 0.3   # câmera lenta (chefe espantado, Fúria)
-	dt *= vel_jogo
 	if fim_onda_t > 0:
 		fim_onda_t -= dt
 		if fim_onda_t > 0.45:
@@ -1689,7 +1690,7 @@ func clique_jogo(p: Vector2) -> void:
 		ir_para("mundos")
 		return
 	if b["vel"].has_point(p):
-		vel_jogo = vel_jogo + 1 if vel_jogo < (3 if tem("vel3") else 2) else 1
+		vel_jogo = 2 if vel_jogo == 1 else (4 if vel_jogo == 2 and tem("vel4") else 1)
 		return
 	if b["som"].has_point(p):
 		ligar_som(not som_ligado)
@@ -3385,6 +3386,10 @@ func desenhar_inicio() -> void:
 	pilula_fragmentos(LARG - 14, 16)
 	var b := botoes_menu()
 	botao(b["loja"], "Loja", OURO, true, true)
+	if bau_loja_pronto():
+		var d: Vector2 = b["loja"].position + Vector2(b["loja"].size.x - 4, 2)
+		draw_circle(d, 7 + sin(tempo * 5), VERMELHO)
+		escrever("!", d, 12, BRANCO, false)
 	botao_icone(b["ajustes"], "engrenagem", "")
 	# Normal / Pesadelo
 	var mp := pesadelo_liberado()
@@ -5853,7 +5858,7 @@ const LOJA_ITENS := [
 	{"id": "aura_ouro", "nome": "Aura Dourada", "preco": "R$ 3,90", "tipo": "aura", "cor": Color8(255, 205, 90), "desc": "a luz em volta do Kravenox fica dourada"},
 	{"id": "aura_vazio", "nome": "Aura do Vazio", "preco": "R$ 3,90", "tipo": "aura", "cor": Color8(150, 60, 255), "desc": "a luz em volta do Kravenox fica roxa do Vazio"},
 	{"id": "moldura_brasa", "nome": "Moldura de Brasa", "preco": "R$ 2,90", "tipo": "moldura", "cor": Color8(255, 90, 40), "desc": "os quadros com poder ganham borda de brasa"},
-	{"id": "vel3", "nome": "Velocidade 3×", "preco": "R$ 4,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "o botão de velocidade ganha o 3×"},
+	{"id": "vel4", "nome": "Velocidade 4×", "preco": "R$ 4,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "o botão de velocidade ganha o 4×"},
 	{"id": "fora24", "nome": "Coleta de 24 horas", "preco": "R$ 2,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "o \"Fora\" junta fragmentos por até 24 h, e não 12 h"},
 ]
 var toques_versao := 0
@@ -5903,9 +5908,66 @@ func usando(it: Dictionary) -> bool:
 	return true
 
 
+func ret_loja(i: int) -> Rect2:
+	return Rect2(14, 212 + i * 73, LARG - 28, 68)
+
+
+func bau_loja_pronto() -> bool:
+	return prog.get("bau_loja", "") != hoje()
+
+
+# Baú do Dia da loja: grátis, uma vez por dia.
+func abrir_bau_loja() -> void:
+	if not bau_loja_pronto():
+		popup = {"titulo": "BAÚ DO DIA", "texto": "Já aberto hoje. Volte amanhã para outro!"}
+		return
+	prog["bau_loja"] = hoje()
+	var w := mundo_de(int(prog["liberado"]))
+	var sorte := randf()
+	var visuais := LOJA_ITENS.filter(func(it): return it["tipo"] in ["aura", "moldura"] and not tem(it["id"]))
+	if sorte < 0.05 and not visuais.is_empty():
+		var it: Dictionary = visuais.pick_random()
+		var c: Dictionary = prog.get("compras", {})
+		c[it["id"]] = "bau"
+		prog["compras"] = c
+		salvar()
+		som("chefe")
+		popup = {"titulo": "BAÚ DO DIA: RARO!", "texto": "Você ganhou %s! Use na Loja." % it["nome"]}
+	elif sorte < 0.15:
+		ganhar(3 * (6 + w), "BAÚ DO DIA: MONTE GRANDE!")
+	elif sorte < 0.40:
+		prog["furia_presente"] = int(prog.get("furia_presente", 0)) + 1
+		salvar()
+		som("nivel")
+		popup = {"titulo": "BAÚ DO DIA", "texto": "Fúria pela metade na próxima partida!"}
+	else:
+		ganhar(6 + w, "BAÚ DO DIA")
+
+
+func desenhar_bau_loja() -> void:
+	var r := Rect2(14, 144, LARG - 28, 62)
+	var pronto := bau_loja_pronto()
+	caixa(r, Color8(40, 30, 16) if pronto else Color(0.06, 0.05, 0.08, 0.93), 10, 2 if pronto else 1, OURO if pronto else PEDRA_BORDA, true, 4)
+	var c := r.position + Vector2(38, 31)
+	if pronto:
+		brilho_suave(c, 40, OURO, 1.0 + 0.3 * sin(tempo * 4))
+	caixa(Rect2(c + Vector2(-17, -4), Vector2(34, 20)), Color8(110, 70, 36), 3, 1, TINTA)
+	caixa(Rect2(c + Vector2(-17, -13), Vector2(34, 11)), Color8(140, 90, 46), 5, 1, TINTA)
+	draw_rect(Rect2(c + Vector2(-3, -5), Vector2(6, 8)), OURO)
+	escrever_esq("Baú do Dia · grátis", r.position + Vector2(76, 26), 16, OURO, fonte_titulo)
+	escrever_esq("Toque para abrir!" if pronto else "Aberto hoje · volte amanhã", r.position + Vector2(76, 48), 13, BRANCO if pronto else CINZA)
+	if pronto:
+		var d := r.position + Vector2(r.size.x - 18, 14)
+		draw_circle(d, 8 + sin(tempo * 5), VERMELHO)
+		escrever("!", d, 13, BRANCO, false)
+
+
 func clique_loja(p: Vector2) -> void:
+	if Rect2(14, 144, LARG - 28, 62).has_point(p):
+		abrir_bau_loja()
+		return
 	for i in LOJA_ITENS.size():
-		if not Rect2(LARG - 128, 152 + i * 82 + 18, 108, 40).has_point(p):
+		if not Rect2(LARG - 128, ret_loja(i).position.y + 14, 108, 40).has_point(p):
 			continue
 		var it: Dictionary = LOJA_ITENS[i]
 		if not tem(it["id"]):
@@ -5929,14 +5991,15 @@ func clique_loja(p: Vector2) -> void:
 func desenhar_loja_apoiador() -> void:
 	desenhar_fundo(0.7)
 	cabecalho("LOJA")
-	texto_quebrado("Nada aqui deixa o Kravenox mais forte: é só visual e conforto, para apoiar o jogo.", Vector2(24, 116), LARG - 48, 13, Color8(200, 230, 200), 2, true)
+	texto_quebrado("Nada aqui deixa o Kravenox mais forte: é só visual e conforto, para apoiar o jogo.", Vector2(24, 112), LARG - 48, 13, Color8(200, 230, 200), 2, true)
+	desenhar_bau_loja()
 	for i in LOJA_ITENS.size():
 		var it: Dictionary = LOJA_ITENS[i]
-		var r := Rect2(14, 152 + i * 82, LARG - 28, 76)
+		var r := ret_loja(i)
 		var dono := tem(it["id"])
 		var pacote: bool = it["tipo"] == "pacote"
 		caixa(r, Color8(34, 20, 24) if pacote else Color(0.06, 0.05, 0.08, 0.93), 10, 2 if pacote else 1, Color(it["cor"], 0.8) if pacote else Color(PEDRA_BORDA, 0.9), true, 4)
-		var c := r.position + Vector2(38, 38)
+		var c := r.position + Vector2(38, r.size.y / 2)
 		match it["tipo"]:
 			"aura", "pacote":
 				brilho_suave(c, 40, it["cor"], 1.2 + 0.2 * sin(tempo * 3))
@@ -5946,16 +6009,16 @@ func desenhar_loja_apoiador() -> void:
 				caixa(Rect2(c - Vector2(21, 21), Vector2(42, 42)), Color(0, 0, 0, 0), 5, 3, it["cor"], false)
 			"conforto":
 				brilho_suave(c, 34, OURO, 0.8)
-				if it["id"] == "vel3":
-					escrever("3×", c, 24, OURO, true, fonte_titulo)
+				if it["id"] == "vel4":
+					escrever("4×", c, 24, OURO, true, fonte_titulo)
 				else:
 					draw_circle(c, 15, Color8(30, 24, 44))
 					draw_arc(c, 15, 0, TAU, 24, OURO, 2, true)
 					draw_line(c, c + Vector2(0, -10), OURO, 2)
 					draw_line(c, c + Vector2(7, 3), OURO, 2)
-		escrever_esq(it["nome"], r.position + Vector2(76, 24), 15, OURO, fonte_titulo)
-		texto_quebrado(it["desc"], r.position + Vector2(76, 30), r.size.x - 200, 12, Color8(210, 200, 220), 3)
-		var bb := Rect2(LARG - 128, r.position.y + 18, 108, 40)
+		escrever_esq(it["nome"], r.position + Vector2(76, 22), 15, OURO, fonte_titulo)
+		texto_quebrado(it["desc"], r.position + Vector2(76, 27), r.size.x - 200, 12, Color8(210, 200, 220), 3)
+		var bb := Rect2(LARG - 128, r.position.y + 14, 108, 40)
 		if not dono:
 			botao(bb, it["preco"], OURO, true, true)
 		elif it["tipo"] == "conforto":
