@@ -216,3 +216,16 @@
 - **Passou a ser:** responde em ~0,1 s, para rápido ao soltar e a velocidade
   máxima caiu de 230/220 para 195 (passo, não disparada).
 - **Por quê:** relato do Rone jogando a Horda.
+
+## 2026-11-09: continuar em outro celular, tutorial curto e política de privacidade
+
+- **Continuar em outro celular** (Ajustes): "Copiar progresso" gera um código
+  de texto (o progresso comprimido, ~200 a 800 letras) e "Colar progresso" no
+  outro celular troca o progresso pelo do código (pede para tocar de novo
+  para confirmar). Sem servidor e sem internet. Pedido do Rone, que tem dois
+  celulares.
+- **Tutorial curto:** só no capítulo 1 de quem está começando, uma mãozinha
+  mostra arrastar um poder, iniciar a onda e fundir. Não trava nada e acaba
+  na segunda onda. O Rone pediu que não fosse longo.
+- **Política de privacidade:** `kravenox-jogar/privacidade.html` (exigida pela
+  Apple e pelo Google): o jogo não coleta nada. Ainda falta um contato.

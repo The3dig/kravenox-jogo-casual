@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-09i"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-09j"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -901,6 +901,8 @@ func iniciar_onda() -> void:
 		return
 	if not escolha.is_empty():
 		return
+	if capitulo == 1 and onda >= 1 and not robo:
+		prog["tutorial"] = true   # o tutorial curto acaba na segunda onda
 	salvar_partida()
 	onda += 1
 	estado = "onda"
@@ -2031,6 +2033,7 @@ func desenhar_jogo() -> void:
 	desenhar_mundo()
 	desenhar_topo()   # por cima dos monstros que entram pelo alto
 	desenhar_loja()
+	desenhar_tutorial()
 	desenhar_arrasto()
 	if msg_t > 0 and msg != "" and escolha.is_empty():
 		var w := fonte.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
@@ -2922,6 +2925,8 @@ func botoes_menu() -> Dictionary:
 	b["musica"] = Rect2(330, 150, 120, 44)
 	b["efeitos"] = Rect2(330, 210, 120, 44)
 	b["apagar"] = Rect2(40, 360, 400, 50)
+	b["copiar_prog"] = Rect2(40, 520, 195, 50)
+	b["colar_prog"] = Rect2(245, 520, 195, 50)
 	b["popup_ok"] = Rect2(LARG / 2 - 90, ALT / 2 + 30, 180, 50)
 	return b
 
@@ -3169,7 +3174,11 @@ func clique_menu(p: Vector2) -> void:
 						DESC_MONSTROS[tipo], nv, 2 * nv, n, "" if nv >= 3 else " · próximo nível: %d" % prox]}
 					return
 		"ajustes":
-			if b["versao"].has_point(p):
+			if b["copiar_prog"].has_point(p):
+				copiar_progresso()
+			elif b["colar_prog"].has_point(p):
+				colar_progresso()
+			elif b["versao"].has_point(p):
 				toques_versao += 1
 				if toques_versao >= 7:
 					toques_versao = 0
@@ -3574,7 +3583,11 @@ func desenhar_ajustes() -> void:
 	draw_line(Vector2(30, 334), Vector2(LARG - 30, 334), Color(PEDRA_BORDA, 0.7), 1)
 	botao(b["apagar"], "Toque de novo para apagar tudo" if apagar_confirma > 0 else "Apagar progresso", VERMELHO, true, apagar_confirma > 0)
 	escrever("Apaga capítulos, melhorias e fragmentos deste aparelho.", Vector2(LARG / 2, 428), 13, CINZA)
-	escrever("O jogo funciona sem internet depois de aberto uma vez.", Vector2(LARG / 2, 490), 14, Color8(150, 220, 170))
+	escrever("O jogo funciona sem internet depois de aberto uma vez.", Vector2(LARG / 2, 462), 14, Color8(150, 220, 170))
+	colar_confirma = maxf(0.0, colar_confirma - 0.016)
+	escrever("Continuar em outro celular", Vector2(LARG / 2, 500), 15, OURO, true, fonte_titulo)
+	botao(b["copiar_prog"], "Copiar progresso", AZUL, true, false)
+	botao(b["colar_prog"], "Toque para trocar" if colar_confirma > 0 else "Colar progresso", VERMELHO if colar_confirma > 0 else AZUL, true, colar_confirma > 0)
 	escrever("Kravenox: Quadros do Cisma", Vector2(LARG / 2, 640), 15, OURO, true, fonte_titulo)
 	escrever("versão " + VERSAO, Vector2(LARG / 2, 664), 13, CINZA, false)
 	if prog.get("compras", {}).has("apoiador"):
@@ -6064,3 +6077,157 @@ func desenhar_loja_apoiador() -> void:
 		escrever("modo de teste da loja: tudo liberado", Vector2(LARG / 2, ALT - 96), 12, Color8(255, 200, 120), false)
 	desenhar_abas()
 	desenhar_popup()
+
+
+# ============================================================ levar o progresso para outro celular (9/11)
+# Sem servidor e sem internet: o progresso vira um código de texto (JSON
+# comprimido em base64). Num celular: Ajustes → Copiar progresso. No outro:
+# Ajustes → Colar progresso. O código troca o progresso do celular que recebe.
+const PREFIXO_COD := "KRX1-"
+var colar_confirma := 0.0
+var progresso_recebido := {}
+
+
+func codigo_progresso() -> String:
+	var d := prog.duplicate(true)
+	d.erase("partida")
+	var bytes := JSON.stringify(d).to_utf8_buffer()
+	return PREFIXO_COD + str(bytes.size()) + "-" + Marshalls.raw_to_base64(bytes.compress(FileAccess.COMPRESSION_DEFLATE))
+
+
+func ler_codigo(c: String) -> Dictionary:
+	c = c.strip_edges().replace(" ", "").replace("\n", "").replace("\r", "")
+	var i0 := c.find(PREFIXO_COD)
+	if i0 < 0:
+		return {}
+	var resto := c.substr(i0 + PREFIXO_COD.length())
+	var i := resto.find("-")
+	if i < 0:
+		return {}
+	var tam := int(resto.substr(0, i))
+	if tam <= 0 or tam > 2000000:
+		return {}
+	var b := Marshalls.base64_to_raw(resto.substr(i + 1)).decompress(tam, FileAccess.COMPRESSION_DEFLATE)
+	var d = JSON.parse_string(b.get_string_from_utf8())
+	if d is Dictionary and d.has("liberado") and d.has("feitos"):
+		return d
+	return {}
+
+
+func copiar_progresso() -> void:
+	salvar()
+	var c := codigo_progresso()
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("try{navigator.clipboard.writeText(%s)}catch(e){}" % JSON.stringify(c))
+		JavaScriptBridge.eval("window.prompt('Copie este código (toque nele, Selecionar Tudo, Copiar) e mande para o outro celular. Lá: Ajustes → Colar progresso.', %s)" % JSON.stringify(c))
+		popup = {"titulo": "CÓDIGO DO PROGRESSO", "texto": "Mande o código para o outro celular (WhatsApp, Notas, e-mail). Lá, em Ajustes, toque em Colar progresso."}
+	else:
+		DisplayServer.clipboard_set(c)
+		popup = {"titulo": "CÓDIGO COPIADO", "texto": "O código já está copiado. Mande para o outro celular (WhatsApp, Notas, e-mail) e lá, em Ajustes, toque em Colar progresso."}
+
+
+func colar_progresso() -> void:
+	if colar_confirma > 0 and not progresso_recebido.is_empty():
+		# segundo toque: troca o progresso deste celular
+		var f := FileAccess.open(ARQUIVO, FileAccess.WRITE)
+		if f:
+			f.store_string(JSON.stringify(progresso_recebido))
+			f.close()
+		carregar_progresso()
+		cap_sel = 0
+		colar_confirma = 0.0
+		progresso_recebido = {}
+		som("nivel")
+		popup = {"titulo": "PROGRESSO CARREGADO", "texto": "Pronto! Este celular agora está no capítulo %d, com %d fragmentos." % [int(prog["liberado"]), int(prog["fragmentos"])]}
+		return
+	var c := ""
+	if OS.has_feature("web"):
+		c = str(JavaScriptBridge.eval("window.prompt('Cole aqui o código do outro celular:', '') || ''"))
+	else:
+		c = DisplayServer.clipboard_get()
+	if c.strip_edges() == "":
+		if not OS.has_feature("web"):
+			popup = {"titulo": "COLAR PROGRESSO", "texto": "Copie o código do outro celular primeiro e depois toque aqui."}
+		return
+	var d := ler_codigo(c)
+	if d.is_empty():
+		popup = {"titulo": "CÓDIGO INVÁLIDO", "texto": "Esse código não funcionou. Copie de novo o código inteiro (começa com KRX1-)."}
+		return
+	progresso_recebido = d
+	colar_confirma = 10.0
+	popup = {"titulo": "CONFIRMAR", "texto": "O código é de um jogo no capítulo %d, com %d fragmentos. Ele vai TROCAR o progresso deste celular. Para confirmar, toque de novo em \"Colar progresso\"." % [int(d["liberado"]), int(d.get("fragmentos", 0))]}
+
+
+# ============================================================ tutorial curto (9/11)
+# Só no capítulo 1 de quem está começando: uma mãozinha mostra as primeiras
+# ações (arrastar um poder, começar a onda, fundir). Não trava nada.
+func passo_tutorial() -> int:
+	if prog.get("tutorial", false) or capitulo != 1 or tipo_partida != "capitulo" or int(prog["liberado"]) > 1:
+		return -1
+	if estado != "loja" or not escolha.is_empty() or not arrasto.is_empty():
+		return -1
+	if quadros.all(func(q): return q == null):
+		return 0
+	if onda == 0:
+		return 1
+	if onda == 1:
+		return 2
+	return -1
+
+
+func mao(p: Vector2, toque: float) -> void:
+	# mãozinha branca apontando, com um anel quando "toca"
+	if toque > 0:
+		draw_arc(p, 14 + 18 * toque, 0, TAU, 28, Color(1, 1, 1, 0.8 * (1.0 - toque)), 3, true)
+	var b := p + Vector2(10, 16)
+	draw_rect(Rect2(p + Vector2(-4, 0), Vector2(9, 22)), Color(1, 0.95, 0.9))
+	draw_circle(p + Vector2(0.5, 0), 4.5, Color(1, 0.95, 0.9))
+	draw_circle(b, 13, Color(1, 0.95, 0.9))
+	draw_arc(b, 13, 0, TAU, 24, Color(0, 0, 0, 0.6), 1.5, true)
+
+
+func desenhar_tutorial() -> void:
+	var passo := passo_tutorial()
+	if passo < 0:
+		return
+	var b := botoes()
+	var t := fmod(tempo, 1.8) / 1.8
+	match passo:
+		0, 2:
+			# arrastar da loja até um quadro (no passo 2: até um poder igual, para fundir)
+			var de := -1
+			var para := -1
+			for i in 3:
+				if loja[i] != null and essencia >= preco(loja[i]):
+					for k in ANEL.size():
+						if passo == 2 and quadros[k] != null and quadros[k]["id"] == loja[i] and int(quadros[k]["nv"]) == 1:
+							de = i
+							para = k
+							break
+					if de >= 0:
+						break
+					if passo == 0 and de < 0:
+						de = i
+						para = 0
+			if passo == 2:
+				desenhar_dica_tutorial("Dica: solte um poder igual em cima de outro do mesmo nível. Eles se fundem e ficam mais fortes!")
+			else:
+				desenhar_dica_tutorial("Arraste um poder da loja até um quadro")
+			if de < 0 or para < 0:
+				return
+			var a: Vector2 = b["loja%d" % de].get_center()
+			var z: Vector2 = ret_quadro(para).get_center()
+			var f := clampf((t - 0.15) / 0.6, 0, 1)
+			var p := a.lerp(z, f * f * (3 - 2 * f))
+			if t > 0.15 and t < 0.8:
+				icone(loja[de], p + Vector2(0, -30), 0.6)
+			mao(p, (t - 0.8) / 0.2 if t > 0.8 else 0.0)
+		1:
+			desenhar_dica_tutorial("Agora toque em Iniciar onda")
+			mao(b["onda"].get_center() + Vector2(30, 6), t)
+
+
+func desenhar_dica_tutorial(texto: String) -> void:
+	var r := Rect2(24, LOJA_Y - 60, LARG - 48, 44)
+	caixa(r, Color(0.08, 0.06, 0.12, 0.92), 10, 2, OURO, true, 4)
+	texto_quebrado(texto, r.position + Vector2(12, 4 if fonte.get_string_size(texto, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x > r.size.x - 24 else 12), r.size.x - 24, 14, BRANCO, 2, true)
