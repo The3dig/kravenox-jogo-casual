@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-09g"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-09h"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -4658,7 +4658,7 @@ func desenhar_ecos() -> void:
 # forte), Refúgio (fechar-se num quarto e construir até o amanhecer) e Caçada
 # (andar pela sala com o dedo; parado, o Kravenox ataca sozinho).
 const MODOS := [
-	{"id": "horda", "nome": "Horda", "desc": "Multidões atacam a torre. Arraste o Kravenox até elas e use Esmagar e Espinhos. Aguente 10 ondas.", "desde": 5},
+	{"id": "horda", "nome": "Horda", "desc": "Multidões atacam a torre. Ande com o controle virtual até elas e use Esmagar e Espinhos. Aguente 10 ondas.", "desde": 5},
 	{"id": "colosso", "nome": "Colosso", "desc": "O Gigante do Vazio ataca sem parar. Arraste o Kravenox para desviar; o dano dele cresce com o tempo.", "desde": 10},
 	{"id": "refugio", "nome": "Refúgio", "desc": "Corra para o quarto e feche a porta. Construa torres e conserte a porta até o amanhecer.", "desde": 15},
 	{"id": "cacada", "nome": "Caçada", "desc": "Ande pela sala com o dedo; parado, o Kravenox ataca sozinho. Atravesse 10 salas.", "desde": 20},
@@ -5147,14 +5147,19 @@ func atualizar_horda(dt: float) -> void:
 			som("esmagamento")
 			texto_voa(CENTRO + Vector2(0, -70), "-%d" % int(m["dano"]), VERMELHO)
 	# o Kravenox vai até onde o dedo está
-	var alvo_k = esp.get("alvo")
+	# controle virtual: o dedo arrasta a partir de onde tocou (como na Caçada)
 	var desejada := Vector2.ZERO
-	if alvo_k != null:
-		var d: Vector2 = Vector2(alvo_k.x, clampf(alvo_k.y - 40, 150, ALT - 120)) - k_vis
-		var vmax := 250.0 * (1.0 + 0.06 * nivel_melhoria("passo"))
-		desejada = d.normalized() * vmax * clampf(d.length() / 60.0, 0.0, 1.0)   # freia ao chegar
+	if esp.get("joy_ini") != null:
+		var mov: Vector2 = ((esp["joy"] - esp["joy_ini"]) / 50.0).limit_length(1.0)
+		if mov.length() > 0.15:
+			desejada = mov * 230.0 * (1.0 + 0.06 * nivel_melhoria("passo"))
+	elif esp.get("alvo") != null:
+		# (teste automático) ir até um ponto
+		var d: Vector2 = esp["alvo"] - Vector2(0, 40) - k_vis
+		desejada = d.normalized() * 230.0 * clampf(d.length() / 60.0, 0.0, 1.0)
 	andar_kx(desejada, dt)
 	k_vis.x = clampf(k_vis.x, 20, LARG - 20)
+	k_vis.y = clampf(k_vis.y, 150, ALT - 140)
 	for g in esp["cd"]:
 		esp["cd"][g] = maxf(0.0, esp["cd"][g] - dt)
 	var de := k_vis + Vector2(0, -22)
@@ -5526,8 +5531,6 @@ func entrada_esp(ev: InputEvent) -> void:
 			esp["joy"] = p
 		if esp.get("id", "") == "colosso":
 			esp["alvo_x"] = p.x
-		if esp.get("id", "") == "horda" and esp.get("alvo") != null:
-			esp["alvo"] = p
 
 
 func toque_esp(p: Vector2) -> void:
@@ -5553,7 +5556,8 @@ func toque_esp(p: Vector2) -> void:
 				if botao_golpe(g).has_point(p):
 					usar_golpe(g)
 					return
-			esp["alvo"] = p
+			esp["joy_ini"] = p
+			esp["joy"] = p
 		"cacada":
 			esp["joy_ini"] = p
 			esp["joy"] = p
@@ -5602,7 +5606,7 @@ func desenhar_esp() -> void:
 	desenhar_topo_esp()
 	if id == "refugio":
 		desenhar_painel_refugio()
-	elif id == "horda" and esp["fim"] == "":
+	if id == "horda" and esp["fim"] == "":
 		for g in GOLPES_HORDA:
 			var r := botao_golpe(g)
 			var cd: float = esp["cd"][g]
@@ -5616,8 +5620,8 @@ func desenhar_esp() -> void:
 			escrever_esq(GOLPES_HORDA[g][0], r.position + Vector2(64, 38), 14, BRANCO if pronto else CINZA, fonte_titulo)
 			escrever_esq("pronto!" if pronto else "%.0f s" % ceilf(cd), r.position + Vector2(66, 60), 14, OURO if pronto else CINZA)
 		if esp["t"] < 7:
-			escrever("Arraste o dedo: o Kravenox vai até lá", Vector2(LARG / 2, 690), 15, BRANCO)
-	elif id == "cacada" and esp["fim"] == "" and esp.get("joy_ini") != null:
+			escrever("Toque e arraste para andar (controle virtual)", Vector2(LARG / 2, 690), 15, BRANCO)
+	if id in ["cacada", "horda"] and esp["fim"] == "" and esp.get("joy_ini") != null:
 		var c: Vector2 = esp["joy_ini"]
 		draw_arc(c, 50, 0, TAU, 32, Color(OURO, 0.5), 3, true)
 		draw_circle(c + (esp["joy"] - c).limit_length(50), 18, Color(OURO, 0.6))

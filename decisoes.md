@@ -199,3 +199,12 @@
   sólida: ele bate e desliza pela borda, tem que dar a volta. O bônus virou
   **Vigília do Kravenox** (e o item da loja, "Vigília de 24 horas").
 - **Por quê:** o Rone achou a locomoção artificial e o nome "Fora" ruim.
+
+## 2026-11-09: Horda com controle virtual
+
+- **Era:** o Kravenox ia até o ponto onde o dedo estava (o dedo cobria o
+  personagem e o controle parecia artificial).
+- **Passou a ser:** controle virtual, igual à Caçada: tocar em qualquer lugar
+  e arrastar; ele anda na direção arrastada (com aceleração, poeira e a torre
+  sólida da versão anterior).
+- **Por quê:** o Rone continuou achando a locomoção ruim.
