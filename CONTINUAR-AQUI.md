@@ -38,7 +38,9 @@ conversa nova sem perder nada. Leia inteiro antes de mexer.
 ## O jogo hoje
 
 Tudo em `godot/scripts/jogo.gd` (um nó só, desenho em `_draw()`).
-Versão atual em Ajustes: **2026-11-07b** (constante `VERSAO`).
+Versão atual em Ajustes: **2026-11-09a** (constante `VERSAO`).
+Branch de trabalho desde 9/11: `claude/new-session-7fm2ni` (saiu da
+`claude/kravenox-ultima-fogueira`).
 
 - **Mecânica:** o Kravenox anda sem parar por um caminho de quadros; cada quadro
   guarda um poder comprado na loja; ao pisar, o poder dispara. Arrastar itens
@@ -85,6 +87,19 @@ Versão atual em Ajustes: **2026-11-07b** (constante `VERSAO`).
 
 Origem de cada arte: `versoes-antigas/python/assets/LEIAME.md`.
 Histórico de decisões: `decisoes.md` (raiz deste repositório).
+
+## Evoluções de 9/11 (pesquisa de jogos parecidos)
+
+Tudo de `ideias-evolucao.md` entrou (ver `decisoes.md`). Onde fica no código
+(`jogo.gd`): constantes `SINERGIAS`, `LENDARIAS`, `BENCAOS`, `TRACOS`,
+`PACTOS`, `REGRAS_DESAFIO`, `ECOS`, `CONSTRUCOES`, `NOVIDADES` no topo; a
+lógica na seção "evoluções de 9/11/2026" e as telas novas em "telas novas"
+(fim do arquivo). `tipo_partida` = capitulo / abismo / desafio. Cada sistema
+aparece num capítulo (`liberou(id)`, tabela `NOVIDADES`). Trechos do livro
+para Crônicas e eventos: `godot/dados/trechos.json`, gerado por
+`godot/ferramentas/extrair_trechos.py` a partir do RPG.
+Robô: `-- --robo --abismo --cap=20` e `-- --robo --desafio --cap=30` testam
+os modos novos.
 
 ## Como trabalhar no jogo
 

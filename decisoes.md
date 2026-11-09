@@ -87,3 +87,37 @@
 - **Passou a ser:** service worker próprio que guarda os arquivos, com nomes
   que mudam só quando o conteúdo muda; numa versão nova, só baixa o que
   mudou, e a página sempre confere se há versão nova.
+
+## 2026-11-09: o jogo ganha os sistemas da pesquisa de jogos parecidos
+
+- **Era:** a partida era só comprar, posicionar e fundir poderes; fora dela,
+  melhorias, missões, baús e conquistas. Barra de abas: Melhorias ·
+  Bestiário · Batalha · Mundos · Ajustes.
+- **Passou a ser:** tudo o que está em `ideias-evolucao.md`:
+  - **Na partida:** combinações entre quadros vizinhos (Grimório), poderes
+    lendários (nível 5 + parceiro), escolha de 1 de 3 bênçãos entre as ondas
+    (às vezes uma "sombria"), Encruzilhada no meio do capítulo (trecho do
+    livro, onda de elite ou fogueira), monstros de elite (blindado, veloz,
+    vampiro, divisor), terreno (fenda, altar, pedra maldita), Fúria do
+    Kravenox (golpe em todos, muda com a forma), combo, números de dano maiores
+    no crítico, tremor de tela, câmera lenta no chefe, vibração (só no app) e
+    "arriscar mais uma onda" depois do bônus.
+  - **Fora da partida:** Abismo sem Fim (recorde), Desafio do Dia (regra
+    sorteada pela data, sem internet), Pactos do Abismo, Crônicas (trechos
+    dos capítulos), nível de caça no Bestiário com a ficha de cada monstro,
+    Ecos (companheiros abertos pelos baús), Acampamento (6 construções),
+    presente do dia em sequência de 7 dias, presente de volta depois de 3 dias
+    fora, e as novidades liberadas uma por capítulo.
+  - **Abas:** Bestiário saiu da barra (continua na tela do Kravenox) e entrou
+    Acampamento.
+- **Por quê:** o Rone pediu para analisar jogos parecidos e fazer tudo o que
+  agrega interesse.
+- **Ficou de fora de propósito:** o Modo Pesadelo continua (os Pactos somam a
+  ele, não substituem, para não mexer no progresso já salvo). O mapa do
+  capítulo com bifurcação virou a Encruzilhada, que é mais simples.
+- **Inventado (não está no livro):** os nomes das bênçãos, das combinações,
+  das lendárias, dos pactos e das construções; os Ecos (luzes da Essência,
+  sem ser personagem do livro); a Larva-Mãe e a Sentinela sem Rosto já eram
+  invenção do jogo. Os textos das Crônicas e dos eventos saem do RPG
+  (`kravenox-jogar/rpg/js`), que adapta o livro, pela ferramenta
+  `godot/ferramentas/extrair_trechos.py`.

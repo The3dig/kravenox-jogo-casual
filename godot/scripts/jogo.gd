@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-07b"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-09a"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -94,6 +94,99 @@ const CONQUISTAS := [
 	{"id": "pesadelo", "nome": "Vença um capítulo no Pesadelo", "tipo": "feitos_p", "meta": 1, "premio": 15},
 	{"id": "asas", "nome": "Alcance a forma Asas do Cisma", "tipo": "nivel", "meta": 36, "premio": 30},
 ]
+
+# ---- evoluções de 9/11/2026 (ideias-evolucao.md) ----
+# Quadros vizinhos no caminho que combinam. "*" = dois poderes iguais lado a lado.
+const SINERGIAS := [
+	{"a": "garras", "b": "espinhos", "nome": "Sangria", "desc": "os golpes desses quadros fazem o monstro sangrar por 3 s"},
+	{"a": "raio", "b": "fonte", "nome": "Raio Faminto", "desc": "o raio dá +1 de essência por monstro atingido; a fonte rende em dobro"},
+	{"a": "cristal", "b": "escudo", "nome": "Cristal Blindado", "desc": "a cura também vira escudo e o escudo também cura"},
+	{"a": "esmagamento", "b": "rasgo", "nome": "Tremor do Abismo", "desc": "esses golpes deixam os monstros tontos por 1 s"},
+	{"a": "passo", "b": "garras", "nome": "Bote", "desc": "o quadro onde o salto cai dispara duas vezes"},
+	{"a": "corrida", "b": "espinhos", "nome": "Rastro de Espinhos", "desc": "correndo, cada casa por onde passa solta espinhos"},
+	{"a": "raio", "b": "rasgo", "nome": "Fenda Elétrica", "desc": "o raio pula em mais 3 monstros e o corte atravessa mais", "secreta": true},
+	{"a": "*", "b": "*", "nome": "Eco", "desc": "dois poderes iguais lado a lado: +25% de dano cada", "secreta": true},
+]
+# Poder no nível 5 + o poder parceiro em qualquer quadro = vira lendário na onda seguinte.
+const LENDARIAS := {
+	"garras": {"par": "passo", "nome": "Garras do Predador", "desc": "golpe muito maior, mais forte e que sempre faz sangrar"},
+	"espinhos": {"par": "escudo", "nome": "Coroa de Espinhos", "desc": "24 espinhos que atravessam; cada disparo dá escudo"},
+	"rasgo": {"par": "fonte", "nome": "Fenda do Vazio", "desc": "cinco cortes em leque, 50% mais fortes"},
+	"raio": {"par": "cristal", "nome": "Tempestade da Essência", "desc": "o raio pula em 12 monstros e cura a cada pulo"},
+	"esmagamento": {"par": "corrida", "nome": "Terremoto", "desc": "atinge a tela inteira e deixa todos tontos"},
+	"fonte": {"par": "cristal", "nome": "Fonte Eterna", "desc": "muito mais essência e cura a cada passo"},
+}
+const BENCAOS := [
+	{"id": "furia", "nome": "Fúria Antiga", "desc": "+12% de dano dos poderes"},
+	{"id": "couro", "nome": "Couro de Espinhos", "desc": "+30 de vida máxima"},
+	{"id": "ganancia", "nome": "Ganância", "desc": "cada monstro dá +1 de essência"},
+	{"id": "ligeiro", "nome": "Pés Ligeiros", "desc": "o Kravenox anda 12% mais rápido"},
+	{"id": "certeiro", "nome": "Olho Certeiro", "desc": "+8% de chance de crítico"},
+	{"id": "barganha", "nome": "Barganha", "desc": "os itens da loja custam 1 a menos"},
+	{"id": "cantos", "nome": "Cantos do Abismo", "desc": "quadros de canto dão +30% de dano"},
+	{"id": "espelho", "nome": "Pele Espelhada", "desc": "devolve 40% do dano que ele leva"},
+	{"id": "vampiro", "nome": "Sede", "desc": "cada monstro espantado cura 2 de vida"},
+	{"id": "troca", "nome": "Olhar do Vazio", "desc": "+1 troca grátis por onda"},
+	{"id": "pacto_sangue", "nome": "Pacto de Sangue", "desc": "dano ×1,5, mas −30% de vida máxima", "sombria": true},
+	{"id": "avareza", "nome": "Avareza", "desc": "monstros dão o dobro de essência, mas a loja custa +3", "sombria": true},
+	{"id": "frenesi", "nome": "Frenesi", "desc": "anda 30% mais rápido, mas leva 20% mais dano", "sombria": true},
+]
+const TRACOS := {"blindado": ["Blindado", Color8(170, 180, 200)], "veloz": ["Veloz", Color8(255, 160, 60)],
+	"vampiro": ["Vampiro", Color8(255, 50, 70)], "divisor": ["Divisor", Color8(120, 230, 120)]}
+const PACTOS := [
+	{"id": "velozes", "nome": "Monstros Velozes", "desc": "+25% de velocidade", "pts": 1},
+	{"id": "cara", "nome": "Loja Cara", "desc": "itens custam +3", "pts": 1},
+	{"id": "robustos", "nome": "Monstros Robustos", "desc": "+40% de vida", "pts": 2},
+	{"id": "sem_cura", "nome": "Sem Descanso", "desc": "não cura entre as ondas", "pts": 2},
+	{"id": "elites", "nome": "Horda de Elite", "desc": "muito mais monstros de elite", "pts": 2},
+	{"id": "fragil", "nome": "Kravenox Frágil", "desc": "−30% de vida máxima", "pts": 3},
+	{"id": "furiosos", "nome": "Monstros Furiosos", "desc": "+30% de dano dos monstros", "pts": 3},
+]
+const REGRAS_DESAFIO := [
+	{"id": "duas_armas", "nome": "Só Dois Poderes", "desc": "a loja só vende dois poderes"},
+	{"id": "chefe_duplo", "nome": "Chefe Duplo", "desc": "a fase 4 tem dois chefes"},
+	{"id": "pressa", "nome": "Pressa", "desc": "monstros 30% mais rápidos"},
+	{"id": "sem_trocas", "nome": "Sem Trocas", "desc": "nenhuma troca grátis; trocar custa 4"},
+	{"id": "elites", "nome": "Só Elites", "desc": "todo monstro é de elite"},
+	{"id": "vidro", "nome": "Vidro", "desc": "−40% de vida, mas +40% de dano"},
+]
+# Ecos: luzes da Essência que seguem o Kravenox. Abertos pelos baús dos mundos.
+const ECOS := [
+	{"id": "rubro", "nome": "Eco Rubro", "desc": "ataca um monstro perto a cada 2 s", "bau": 1, "cor": Color8(255, 80, 70)},
+	{"id": "verde", "nome": "Eco Verde", "desc": "cura 4 de vida a cada 4 s", "bau": 2, "cor": Color8(110, 230, 140)},
+	{"id": "dourado", "nome": "Eco Dourado", "desc": "+1 de essência a cada 4 s de onda", "bau": 3, "cor": Color8(255, 210, 90)},
+	{"id": "azul", "nome": "Eco Azul", "desc": "+5 de escudo a cada 4 s", "bau": 4, "cor": Color8(120, 180, 255)},
+]
+const CONSTRUCOES := [
+	{"id": "fogueira", "nome": "Fogueira", "desc": "+5 de cura entre as ondas", "max": 3, "custo": 15},
+	{"id": "poco", "nome": "Poço da Essência", "desc": "+1 de essência no fim de cada onda", "max": 3, "custo": 15},
+	{"id": "forja", "nome": "Forja", "desc": "começa o capítulo com um poder de nível 2 (3, 4)", "max": 3, "custo": 25},
+	{"id": "vigia", "nome": "Torre de Vigia", "desc": "+25% de vida da torre na fase bônus", "max": 3, "custo": 12},
+	{"id": "altar", "nome": "Altar dos Ecos", "desc": "os Ecos ficam 25% mais fortes", "max": 3, "custo": 20},
+	{"id": "biblioteca", "nome": "Biblioteca", "desc": "+1 fragmento por capítulo vencido", "max": 3, "custo": 20},
+]
+# Cada novidade aparece num capítulo diferente (as primeiras semanas sempre têm algo novo).
+const NOVIDADES := [
+	{"id": "bencaos", "desde": 2, "titulo": "BÊNÇÃOS", "texto": "Depois de algumas ondas, escolha 1 de 3 bênçãos. Elas valem até o fim do capítulo."},
+	{"id": "sinergias", "desde": 3, "titulo": "COMBINAÇÕES", "texto": "Poderes vizinhos que combinam ganham efeito extra. Veja as descobertas no Grimório (toque no rosto do Kravenox)."},
+	{"id": "encruzilhada", "desde": 3, "titulo": "ENCRUZILHADA", "texto": "No meio do capítulo, escolha o caminho: um trecho do livro, uma onda de elite ou a fogueira."},
+	{"id": "acampamento", "desde": 4, "titulo": "ACAMPAMENTO", "texto": "Construa a fogueira, o poço, a forja e mais. Aba Acampamento, embaixo."},
+	{"id": "furia", "desde": 4, "titulo": "FÚRIA DO KRAVENOX", "texto": "Espantar monstros enche a Fúria. Cheia, toque no botão para um golpe que atinge todos."},
+	{"id": "elites", "desde": 5, "titulo": "ELITES", "texto": "Alguns monstros vêm de elite: blindados, velozes, vampiros ou divisores. Valem o dobro."},
+	{"id": "terreno", "desde": 5, "titulo": "TERRENO", "texto": "Fendas dão +50% de dano, altares curam, pedras malditas não aceitam poder mas dão essência."},
+	{"id": "abismo", "desde": 5, "titulo": "ABISMO SEM FIM", "texto": "Ondas sem fim, cada vez mais fortes. Bata o seu recorde."},
+	{"id": "desafio", "desde": 6, "titulo": "DESAFIO DO DIA", "texto": "Um capítulo com regra especial, diferente a cada dia. Prêmio grande uma vez por dia."},
+	{"id": "pactos", "desde": 9, "titulo": "PACTOS DO ABISMO", "texto": "Ligue maldições para deixar o jogo mais difícil e ganhar mais fragmentos."},
+]
+const DESC_MONSTROS := {
+	"larva": "Larvas grandes, cinza-arroxeadas, de olhos roxos e boca cheia de dentes. Racham o chão com veios de energia roxa por onde passam.",
+	"esfera": "Pequeno autômato redondo de um olho roxo e patas em garra, visto na Cratera do Cisma.",
+	"verme": "Vermes esverdeados de boca aberta e dentes afiados, que cercam o Kravenox. (O livro ainda não deu nome a eles.)",
+	"sentinela": "Guerreiros de armadura negra rachada por veios roxos, olhos roxos e espadas. Andam em grupo.",
+	"larvamae": "A maior das Larvas da Essência. Chefe do Quadros do Cisma: chama larvas menores.",
+	"semrosto": "Uma Sentinela do Vazio sem rosto, maior que as outras. Chefe do Quadros do Cisma: chama sentinelas esféricas.",
+	"thornox": "O irmão do Kravenox. Chefe do último capítulo de cada mundo.",
+}
 
 # Paleta da fantasia sombria: preto azulado, roxo do Vazio, vermelho do
 # Kravenox, ouro velho para a interface.
@@ -213,7 +306,31 @@ var prog := {}
 var robo_tentativas := 0
 var modo := "normal"          # normal / pesadelo
 var efeitos_ligados := true
+var vibracao_ligada := true
 var PAPEL_C := Color8(230, 215, 180)
+
+# estado das evoluções de 9/11
+var tipo_partida := "capitulo"   # capitulo / abismo / desafio
+var bencaos := []                # ids das bênçãos escolhidas nesta partida
+var escolha := {}                # tela de escolha aberta: {"tipo", "titulo", "texto", "opcoes"}
+var onda_elite := false          # a próxima onda é só de elites (Encruzilhada)
+var terreno := []                # "" / fenda / altar / maldita, por quadro
+var golpe := {}                  # efeitos extras do golpe que está acontecendo (sangra, atordoa)
+var pendentes := []              # monstros que nascem no fim do quadro (divisores)
+var combo := 0
+var combo_t := 0.0
+var furia := 0.0
+var tremor := 0.0
+var lento_t := 0.0
+var eco_t := 0.0
+var eco_ang := 0.0
+var em_risco := false
+var risco_n := 0
+var risco_pote := 0
+var desafio := {}                # {"dia", "regra", "capitulo", "armas"}
+var trechos := {}
+var cron_cap := 0
+var nova_cronica := false
 
 # som: trilhas do RPG 2D (kravenox-jogar/rpg/music) e efeitos do Cratera do Cisma
 const TRILHAS_EM_LACO := ["abismo", "batalha", "chefe", "espinhos", "reino"]
@@ -242,6 +359,11 @@ func _ready() -> void:
 	fundo = load("res://assets/arte/cratera.png")
 	vinheta = gerar_vinheta()
 	preparar_som()
+	var ft := FileAccess.open("res://dados/trechos.json", FileAccess.READ)
+	if ft:
+		var dt = JSON.parse_string(ft.get_as_text())
+		if dt is Dictionary:
+			trechos = dt
 	carregar_progresso()
 	if robo:
 		tela = "jogo"
@@ -251,6 +373,16 @@ func _ready() -> void:
 				capitulo = int(a.substr(6))
 				for m in MELHORIAS:
 					prog["melhorias"][m["id"]] = m["max"]
+				prog["liberado"] = capitulo
+		for a in OS.get_cmdline_user_args():
+			if a == "--abismo":
+				prog["liberado"] = maxi(capitulo, 8)
+				comecar_abismo()
+				return
+			if a == "--desafio":
+				prog["liberado"] = maxi(capitulo, 12)
+				comecar_desafio()
+				return
 	novo_jogo()
 
 
@@ -379,6 +511,13 @@ func carregar_progresso() -> void:
 	prog["liberado"] = clampi(int(prog["liberado"]), 1, TOTAL_CAPITULOS)
 	prog["fragmentos"] = int(prog["fragmentos"])
 	modo = str(prog.get("modo", "normal"))
+	vibracao_ligada = bool(prog.get("vibracao", true))
+	var ultima := float(prog.get("ultima_visita", 0.0))
+	if ultima > 0 and agora() - ultima > 3 * 86400:
+		# ficou 3 dias ou mais fora: presente maior e Fúria adiantada nas próximas partidas
+		prog["volta_pendente"] = true
+		prog["furia_presente"] = 3
+	prog["ultima_visita"] = agora()
 	var pt = prog.get("partida", null)
 	if pt is Dictionary:
 		# o iPhone recarregou a página no meio de um capítulo: volta nele, no mesmo modo
@@ -404,7 +543,14 @@ func feito(c: int) -> bool:
 
 
 func fim_capitulo(venceu: bool) -> void:
-	var dobro := 2 if modo == "pesadelo" else 1
+	if tipo_partida == "abismo":
+		fim_abismo()
+		return
+	if tipo_partida == "desafio":
+		fim_desafio(venceu)
+		return
+	var dobro := 2 if pesadelo_ativo() else 1
+	nova_cronica = venceu and not feito(capitulo) and trechos.has(str(capitulo))
 	if venceu:
 		contar_missao("caps")
 		if modo == "pesadelo":
@@ -419,6 +565,14 @@ func fim_capitulo(venceu: bool) -> void:
 			prog["liberado"] = maxi(int(prog["liberado"]), mini(capitulo + 1, TOTAL_CAPITULOS))
 	else:
 		premio_fim = maxi(0, onda - 1) * dobro
+	if venceu:
+		premio_fim += nivel_obra("biblioteca")
+		var pts := pontos_pacto()
+		if pts > 0:
+			premio_fim = int(round(premio_fim * mult_pacto()))
+			var rec: Dictionary = prog.get("pacto_rec", {})
+			rec[str(capitulo)] = maxi(int(rec.get(str(capitulo), 0)), pts)
+			prog["pacto_rec"] = rec
 	prog["fragmentos"] = int(prog["fragmentos"]) + premio_fim
 	salvar()
 
@@ -449,6 +603,7 @@ func pode_melhorar() -> bool:
 
 func comecar_capitulo(c: int) -> void:
 	capitulo = clampi(c, 1, TOTAL_CAPITULOS)
+	tipo_partida = "capitulo"
 	tela = "jogo"
 	novo_jogo()
 	retomar_partida()
@@ -459,14 +614,15 @@ func comecar_capitulo(c: int) -> void:
 # falta de memória). Entre as ondas o jogo guarda o capítulo, a fase, a vida, a
 # essência e os itens dos quadros; ao abrir o capítulo de novo, continua dali.
 func salvar_partida() -> void:
-	if robo or tela != "jogo" or estado != "loja":
+	if robo or tela != "jogo" or estado != "loja" or em_risco:
 		return
 	var qs := []
 	for q in quadros:
-		qs.append(null if q == null else {"id": q["id"], "nv": int(q["nv"])})
+		qs.append(null if q == null else {"id": q["id"], "nv": int(q["nv"]), "lend": bool(q.get("lend", false))})
 	prog["partida"] = {"modo": modo, "capitulo": capitulo, "onda": onda, "essencia": essencia, "hp": hp, "escudo": escudo,
 		"quadros": qs, "loja": loja, "trocas": trocas_gratis, "bonus_pendente": bonus_pendente,
-		"premio_fim": premio_fim, "mortes": mortes, "tamanho": ANEL.size()}
+		"premio_fim": premio_fim, "mortes": mortes, "tamanho": ANEL.size(), "tipo": tipo_partida,
+		"bencaos": bencaos, "escolha": escolha, "onda_elite": onda_elite, "furia": furia, "desafio": desafio}
 	salvar()
 
 
@@ -485,6 +641,15 @@ func retomar_partida() -> void:
 	var pt := partida_guardada()
 	if pt.is_empty() or int(pt["capitulo"]) != capitulo or int(pt.get("tamanho", -1)) != ANEL.size() or str(pt.get("modo", "normal")) != modo:
 		return
+	if str(pt.get("tipo", "capitulo")) != tipo_partida:
+		return
+	bencaos = Array(pt.get("bencaos", []))
+	var esc = pt.get("escolha", {})
+	escolha = esc if esc is Dictionary else {}
+	onda_elite = bool(pt.get("onda_elite", false))
+	furia = float(pt.get("furia", 0.0))
+	hp_max = calc_hp_max()
+	k_vel = calc_k_vel()
 	onda = int(pt["onda"])
 	essencia = int(pt["essencia"])
 	hp = minf(hp_max, float(pt["hp"]))
@@ -495,11 +660,13 @@ func retomar_partida() -> void:
 	mortes = int(pt.get("mortes", 0))
 	for i in mini(ANEL.size(), pt["quadros"].size()):
 		var q = pt["quadros"][i]
-		quadros[i] = null if q == null else {"id": str(q["id"]), "nv": int(q["nv"])}
+		quadros[i] = null if q == null else {"id": str(q["id"]), "nv": int(q["nv"]), "lend": bool(q.get("lend", false))}
 	var lj: Array = pt.get("loja", [])
 	if lj.size() == 3:
 		loja = lj.map(func(x): return null if x == null else str(x))
-	if bonus_pendente:
+	if tipo_partida == "abismo":
+		aviso("Continuando o Abismo: onda %d" % (onda + 1), 3.0)
+	elif bonus_pendente:
 		aviso("Continuando: falta a fase bônus", 3.0)
 	else:
 		aviso("Continuando de onde parou: fase %d de %d" % [onda + 1, FASES], 3.0)
@@ -514,6 +681,8 @@ func _notification(what: int) -> void:
 func ir_para(t: String) -> void:
 	tela = t
 	t_tela = 0.0
+	if t == "inicio":
+		checar_novidades()
 	if t == "mundos":
 		# vindo de um capítulo, mostra o mundo dele; vindo do início, o próximo capítulo
 		var c := capitulo if destaque_cap > 0 else liberado_modo()
@@ -581,10 +750,28 @@ func novo_jogo() -> void:
 	montar_caminho()
 	onda = 0
 	essencia = 25 + 6 * nivel_melhoria("essencia") + 3 * (capitulo - 1)
-	hp_max = 150.0 + 20 * nivel_melhoria("vida")
+	bencaos = []
+	escolha = {}
+	onda_elite = false
+	combo = 0
+	combo_t = 0.0
+	em_risco = false
+	risco_n = 0
+	risco_pote = 0
+	pendentes = []
+	golpe = {}
+	tremor = 0.0
+	lento_t = 0.0
+	furia = 0.0
+	if int(prog.get("furia_presente", 0)) > 0 and liberou("furia"):
+		furia = 50.0
+		if not robo:
+			prog["furia_presente"] = int(prog["furia_presente"]) - 1
+	montar_terreno()
+	hp_max = calc_hp_max()
 	hp = hp_max
 	# em caminhos maiores ele anda um pouco mais rápido, para a volta não demorar demais
-	k_vel = 1.4 * (1.0 + 0.06 * nivel_melhoria("passo")) * sqrt(ANEL.size() / 12.0)
+	k_vel = calc_k_vel()
 	k_vis = CENTRO + Vector2(0, -18)
 	k_no_anel = false
 	k_andando = false
@@ -614,13 +801,25 @@ func novo_jogo() -> void:
 	estado = "loja"
 	selec = []
 	vender = false
-	trocas_gratis = 1 + nivel_melhoria("sorte")
+	trocas_gratis = trocas_por_onda()
 	mortes = 0
-	if capitulo == 1:
+	if tipo_partida == "abismo":
+		aviso("Abismo sem Fim · recorde: onda %d" % int(prog.get("abismo_rec", 0)), 3.0)
+	elif tipo_partida == "desafio":
+		aviso("Desafio do Dia: %s" % regra_desafio()["nome"], 3.5)
+	elif capitulo == 1:
 		aviso("Arraste um poder da loja até um quadro", 6.0)
 	else:
 		aviso("Capítulo %d · %s" % [capitulo, CAPITULOS[capitulo - 1]], 3.0)
 	sortear_loja()
+	# a Forja do acampamento já deixa um poder no primeiro quadro
+	var fj := nivel_obra("forja")
+	if fj > 0 and tipo_partida != "desafio":
+		var ids := ITENS.keys().filter(func(k): return ITEM_DESDE[k] <= capitulo and not k in ["passo", "corrida"])
+		for i in ANEL.size():
+			if terreno[i] != "maldita":
+				quadros[i] = {"id": ids.pick_random(), "nv": 1 + fj}
+				break
 
 
 # ------------------------------------------------------------ tabuleiro
@@ -645,24 +844,30 @@ func pos_kravenox() -> Vector2:
 func sortear_loja() -> void:
 	loja = []
 	var ids := ITENS.keys().filter(func(k): return ITEM_DESDE[k] <= capitulo)
+	if tipo_partida == "desafio" and regra_desafio()["id"] == "duas_armas":
+		ids = Array(desafio.get("armas", ids))
 	for _i in 3:
 		loja.append(ids.pick_random())
 
 
 func preco(iid: String) -> int:
-	return ITENS[iid]["custo"] + (capitulo - 1) / 6
+	var c: int = ITENS[iid]["custo"] + (capitulo - 1) / 6 - nb("barganha") + 3 * nb("avareza") + (3 if pacto("cara") else 0)
+	return maxi(1, c)
 
 
 func valor_venda(q: Dictionary) -> int:
-	return (ITENS[q["id"]]["custo"] * int(pow(2, q["nv"] - 1))) / 2
+	return (ITENS[q["id"]]["custo"] * int(pow(2, q["nv"] - 1))) / 2 * (2 if q.get("lend", false) else 1)
 
 
 func colocar(i: int, item: Dictionary) -> bool:
 	var q = quadros[i]
+	if terreno[i] == "maldita":
+		aviso("Pedra maldita: não aceita poder")
+		return false
 	if q == null:
 		quadros[i] = item
 		return true
-	if q["id"] == item["id"] and q["nv"] == item["nv"] and q["nv"] < NIVEL_MAX:
+	if q["id"] == item["id"] and q["nv"] == item["nv"] and q["nv"] < NIVEL_MAX and not q.get("lend", false):
 		q["nv"] += 1
 		contar_total("fusoes")
 		if q["nv"] >= NIVEL_MAX:
@@ -684,11 +889,15 @@ func iniciar_onda() -> void:
 	if quadros.all(func(q): return q == null):
 		aviso("Coloque pelo menos um poder num quadro!")
 		return
+	if not escolha.is_empty():
+		return
 	salvar_partida()
 	onda += 1
 	estado = "onda"
 	selec = []
 	vender = false
+	combo = 0
+	evoluir_lendarias()
 	var tipos := ["larva", "larva", "larva", "larva"]
 	if capitulo >= MONSTRO_DESDE["esfera"]:
 		tipos += ["esfera", "esfera", "esfera"]
@@ -699,15 +908,38 @@ func iniciar_onda() -> void:
 	if capitulo >= 12:
 		tipos += ["verme", "sentinela"]
 	fila = []
-	for _i in 4 + onda * 2 + mini(8, (capitulo - 1) / 3):
+	for _i in mini(46, 4 + onda * 2 + mini(8, (capitulo - 1) / 3)):
 		fila.append(tipos.pick_random())
+	if tipo_partida == "abismo":
+		if robo:
+			print("ROBO abismo onda %d · vida %d/%d · bênçãos %d" % [onda, int(hp), int(hp_max), bencaos.size()])
+		if onda % 5 == 0:
+			var ch: String = ["larvamae", "semrosto", "thornox"][(onda / 5 - 1) % 3]
+			fila.insert(3, ch)
+			aviso("Onda %d · Chefe: %s!" % [onda, MONSTROS[ch]["nome"]], 3.0)
+		else:
+			aviso("Abismo · onda %d" % onda, 1.5)
+		t_spawn = 0.8
+		t_onda = 0.0
+		gap = maxf(0.3, 1.2 - onda * 0.03)
+		return
+	if em_risco:
+		for _i in 6 + risco_n * 4:
+			fila.append(tipos.pick_random())
+		if risco_n % 2 == 0:
+			fila.insert(4, chefe_do_capitulo())
+		aviso("Risco %d: vença e o pote cresce!" % risco_n, 2.5)
+		t_spawn = 0.8
+		t_onda = 0.0
+		gap = 0.4
+		return
 	if onda > FASES:
 		# fase bônus: muitos monstros, rápidos, indo para a torre do centro
 		bonus_pendente = false
 		fila = []
 		for _i in mini(30, 10 + capitulo / 2):
 			fila.append(tipos.pick_random())
-		torre_max = 200.0 + 40.0 * capitulo
+		torre_max = (200.0 + 40.0 * capitulo) * (1.0 + 0.25 * nivel_obra("vigia"))
 		torre_hp = torre_max
 		aviso("Fase bônus: os monstros vão atrás da torre!", 3.0)
 		t_spawn = 0.8
@@ -717,6 +949,8 @@ func iniciar_onda() -> void:
 	if onda == FASES:
 		var c := chefe_do_capitulo()
 		fila.insert(3, c)
+		if tipo_partida == "desafio" and regra_desafio()["id"] == "chefe_duplo":
+			fila.insert(8, "larvamae" if c != "larvamae" else "semrosto")
 		aviso("Chefe: %s!" % MONSTROS[c]["nome"], 3.0)
 	else:
 		aviso("Fase %d de %d" % [onda, FASES], 1.5)
@@ -728,12 +962,15 @@ func iniciar_onda() -> void:
 # Nos dois primeiros capítulos de cada mundo, a Larva-Mãe; no terceiro, a
 # Sentinela sem Rosto; no último, o Thornox.
 func bonus_ativo() -> bool:
-	return onda > FASES and estado == "onda"
+	return onda > FASES and estado == "onda" and not em_risco and tipo_partida == "capitulo"
 
 
 func chefe_do_capitulo() -> String:
 	var j := (capitulo - 1) % CAPS_POR_MUNDO
 	return "thornox" if j == 3 else ("semrosto" if j == 2 else "larvamae")
+
+
+var filho_nasce := false   # o monstro que está nascendo veio de um Divisor
 
 
 func criar_monstro(tipo: String, p = null) -> void:
@@ -751,93 +988,160 @@ func criar_monstro(tipo: String, p = null) -> void:
 		som("thornox" if tipo == "thornox" else "chefe")
 	prog["vistos"][tipo] = true
 	var cresce := 0.10 * (capitulo - 1) - 0.035 * maxi(0, capitulo - 40)   # cresce mais devagar no Livro II
-	var esc := (1.0 + cresce) * (1.0 + 0.12 * (onda - 1))
+	var esc := (1.0 + cresce) * (pow(1.09, onda - 1) if tipo_partida == "abismo" else 1.0 + 0.12 * (onda - 1))
 	var vida: float = m["hp"] * esc
 	if chefe:
 		vida = 170.0 * (1.0 + 1.3 * cresce) * {"larvamae": 1.0, "semrosto": 1.4, "thornox": 1.8}[tipo]
-	var forte := 1.8 if modo == "pesadelo" else 1.0
-	vida *= forte
-	monstros.append({"tipo": tipo, "pos": p, "hp": vida, "hp_max": vida, "vel": m["vel"],
-		"dano": m["dano"] * 0.7 * (1.0 + 0.03 * (capitulo - 1) + 0.05 * onda) * (1.4 if modo == "pesadelo" else 1.0),
-		"premio": m["premio"] if not chefe else 10 + capitulo, "t_ataque": 0.0,
+		if tipo_partida == "abismo":
+			vida *= 1.0 + 0.5 * (onda / 5 - 1)
+		elif em_risco:
+			vida *= 1.0 + 0.3 * risco_n
+	var forte := 1.8 if pesadelo_ativo() else 1.0
+	vida *= forte * (1.4 if pacto("robustos") else 1.0)
+	var vel: float = m["vel"] * (1.25 if pacto("velozes") else 1.0)
+	if tipo_partida == "desafio" and regra_desafio()["id"] == "pressa":
+		vel *= 1.3
+	var dano: float = m["dano"] * 0.7 * (1.0 + 0.03 * (capitulo - 1) + 0.05 * (onda if tipo_partida == "abismo" else mini(onda, 12))) * (1.4 if pesadelo_ativo() else 1.0) * (1.3 if pacto("furiosos") else 1.0)
+	var premio: int = m["premio"] if not chefe else 10 + capitulo
+	# elite: um traço especial, o dobro de vida e de prêmio
+	var traco := ""
+	if not chefe and not filho_nasce and liberou("elites"):
+		var chance := 0.06 + 0.002 * capitulo + (0.25 if pacto("elites") else 0.0)
+		if onda_elite or (tipo_partida == "desafio" and regra_desafio()["id"] == "elites"):
+			chance = 1.0
+		if randf() < chance:
+			traco = TRACOS.keys().pick_random()
+			vida *= 2.0
+			premio *= 2
+			dano *= 1.2
+			if traco == "veloz":
+				vel *= 1.6
+	if filho_nasce:
+		vida *= 0.4
+	monstros.append({"tipo": tipo, "pos": p, "hp": vida, "hp_max": vida, "vel": vel, "dano": dano,
+		"premio": premio, "t_ataque": 0.0, "traco": traco, "filho": filho_nasce,
+		"sangra": 0.0, "sangra_dps": 0.0, "sangra_tick": 0.5, "tonto": 0.0,
 		"flash": 0.0, "anim": randf() * 2.0, "chefe": chefe, "t_poder": 4.0})
 
 
 # ------------------------------------------------------------ poderes
-func ativar(i: int) -> void:
+func ativar(i: int, repete := false) -> void:
 	brilho[i] = 0.35
-	# mordida básica: sempre acerta quem está colado nele (evita empate eterno)
+	golpe = {}
 	var kb := pos_kravenox()
-	for m in monstros:
-		if m["pos"].distance_to(kb) < 60:
-			ferir(m, 5.0 + onda)
+	if not repete:
+		# mordida básica: sempre acerta quem está colado nele (evita empate eterno)
+		for m in monstros:
+			if m["pos"].distance_to(kb) < 60:
+				ferir(m, 5.0 + mini(onda, 12))
+		match terreno[i]:
+			"altar":
+				if hp < hp_max:
+					hp = minf(hp_max, hp + 3)
+					texto_voa(kb + Vector2(0, -40), "+3", VERDE)
+			"maldita":
+				essencia += 1
+				texto_voa(kb + Vector2(0, -40), "+1", OURO)
 	var q = quadros[i]
 	if q == null:
+		combo = 0
 		return
+	if not repete:
+		combo += 1
+		combo_t = 2.5
 	var nv: int = q["nv"]
-	var mult := (1.0 + 0.8 * (nv - 1)) * (1.0 + 0.1 * nivel_melhoria("forca"))
+	var lend: bool = q.get("lend", false)
+	var sins := sinergias_do(i)
+	for nome in sins:
+		descobrir("S:" + nome, "Nova combinação: %s!" % nome)
+	var mult := (1.0 + 0.8 * (nv - 1)) * mult_dano() * mult_quadro(i)
+	if "Eco" in sins:
+		mult *= 1.25
+	if "Sangria" in sins or (lend and q["id"] == "garras"):
+		golpe["sangra"] = true
+	if "Tremor do Abismo" in sins or (lend and q["id"] == "esmagamento"):
+		golpe["tonto"] = true
 	var k := pos_kravenox()
 	match q["id"]:
 		"garras":
 			som("corte")
-			var r := 105.0 + nv * 10
+			var r := 105.0 + nv * 10 + (50.0 if lend else 0.0)
+			var d_g := 17 * mult * (1.6 if lend else 1.0)
 			efeitos.append({"t": "garra", "p": k, "r": r, "vida": 0.3})
 			for m in monstros:
 				var d: Vector2 = m["pos"] - k
 				if d.length() < r:
-					ferir(m, 17 * mult)
+					ferir(m, d_g)
 					if not m["chefe"]:
 						m["pos"] += d.normalized() * 16   # o golpe empurra
 					efeitos.append({"t": "arranhao", "p": m["pos"] + Vector2(0, -12), "vida": 0.28, "a": randf_range(-1.1, -0.6)})
 		"espinhos":
 			som("corte")
-			var n := 8 + (nv - 1) * 2
+			var n := 24 if lend else 8 + (nv - 1) * 2
 			for j in n:
 				var a := float(j) / n * TAU
-				tiros.append({"p": k, "v": Vector2.from_angle(a) * 330, "dano": 9 * mult, "fura": 0,
-					"vida": 1.0, "cor": Color8(30, 30, 40), "r": 5.0, "acertos": []})
+				tiros.append({"p": k, "v": Vector2.from_angle(a) * 330, "dano": 9 * mult, "fura": 2 if lend else 0,
+					"vida": 1.0, "cor": Color8(30, 30, 40), "r": 5.0, "acertos": [], "golpe": golpe.duplicate()})
+			if lend:
+				escudo = minf(80.0, escudo + 6)
 		"raio":
 			som("raio")
 			var alvos := monstros.duplicate()
 			alvos.sort_custom(func(x, y): return x["pos"].distance_to(k) < y["pos"].distance_to(k))
 			var de := k
-			for m in alvos.slice(0, 2 + nv):
+			var n_alvos := 12 if lend else 2 + nv + (3 if "Fenda Elétrica" in sins else 0)
+			var pegou := 0
+			for m in alvos.slice(0, n_alvos):
 				efeitos.append({"t": "raio", "a": de, "b": m["pos"], "vida": 0.2})
 				ferir(m, 15 * mult)
 				de = m["pos"]
+				pegou += 1
+			if lend and pegou > 0:
+				hp = minf(hp_max, hp + pegou)
+			if "Raio Faminto" in sins and pegou > 0:
+				essencia += mini(3, pegou)
+				texto_voa(k + Vector2(0, -44), "+%d" % mini(3, pegou), OURO)
 		"esmagamento":
 			som("esmagamento")
-			var r := 150.0 + nv * 12
-			anel(k + Vector2(0, 18), 20, r, 0.35, Color8(200, 150, 90))
+			var r := 900.0 if lend else 150.0 + nv * 12
+			anel(k + Vector2(0, 18), 20, minf(r, 420.0), 0.35, Color8(200, 150, 90))
+			tremer(0.35 if lend else 0.2, 30)
 			for m in monstros:
 				if m["pos"].distance_to(k) < r:
-					ferir(m, 16 * mult)
+					ferir(m, 16 * mult * (1.4 if lend else 1.0))
 		"rasgo":
 			som("corte")
 			var alvo = mais_perto(k)
 			var a: float = (alvo["pos"] - k).angle() if alvo != null else randf() * TAU
 			var desvios := [0.0]
-			if nv >= 5:
+			if lend:
+				desvios = [-0.5, -0.25, 0.0, 0.25, 0.5]
+			elif nv >= 5:
 				desvios = [-0.3, 0.0, 0.3]
 			elif nv >= 3:
 				desvios = [-0.2, 0.2]
+			var d_r := 24 * mult * (1.5 if lend else 1.0) * (1.2 if "Fenda Elétrica" in sins else 1.0)
 			for d in desvios:
-				tiros.append({"p": k, "v": Vector2.from_angle(a + d) * 480, "dano": 24 * mult, "fura": 99,
-					"vida": 1.4, "cor": Color8(220, 30, 90), "r": 9.0, "acertos": []})
+				tiros.append({"p": k, "v": Vector2.from_angle(a + d) * 480, "dano": d_r, "fura": 99,
+					"vida": 1.4, "cor": Color8(220, 30, 90), "r": 12.0 if "Fenda Elétrica" in sins else 9.0, "acertos": [], "golpe": golpe.duplicate()})
 		"cristal":
 			som("gema")
 			var cura := 4 + 3 * nv
 			hp = minf(hp_max, hp + cura)
 			texto_voa(k + Vector2(0, -40), "+%d" % cura, Color8(90, 220, 160))
 			anel(k, 10, 50, 0.3, Color8(90, 220, 160))
+			if "Cristal Blindado" in sins:
+				escudo = minf(20.0 + 20.0 * nv, escudo + cura)
 		"passo":
 			# salto: pula 2 quadros por nível sem ativar os do meio
 			k_salto = float(mini(2 * nv, ANEL.size() - 1))
+			k_bote = "Bote" in sins
 			texto_voa(k + Vector2(0, -44), "+%d quadros" % int(k_salto), VERDE)
 			anel(k + Vector2(0, 18), 10, 40, 0.25, VERDE)
 		"corrida":
 			k_mult = 2.0 * nv
 			k_rapido = 2.0 * nv
+			k_rastro = "Rastro de Espinhos" in sins
 			texto_voa(k + Vector2(0, -44), "%dx" % int(k_mult), Color8(255, 170, 90))
 			anel(k + Vector2(0, 18), 10, 44, 0.25, Color8(255, 150, 60))
 		"escudo":
@@ -848,11 +1152,17 @@ func ativar(i: int) -> void:
 				escudo += ganho
 				texto_voa(k + Vector2(0, -44), "+%d escudo" % int(ganho), AZUL)
 				anel(k, 20, 46, 0.3, AZUL)
+				if "Cristal Blindado" in sins:
+					hp = minf(hp_max, hp + ganho / 2)
 		"fonte":
 			som("gema")
-			essencia += nv
-			texto_voa(k + Vector2(0, -40), "+%d" % nv, OURO)
-	anel(centro_quadro(i), 20, 50, 0.25, ITENS[q["id"]]["cor"])
+			var e := nv * (2 if "Raio Faminto" in sins else 1) + (nv + 4 if lend else 0)
+			essencia += e
+			texto_voa(k + Vector2(0, -40), "+%d" % e, OURO)
+			if lend:
+				hp = minf(hp_max, hp + 8)
+	golpe = {}
+	anel(centro_quadro(i), 20, 50, 0.25, OURO if lend else ITENS[q["id"]]["cor"])
 
 
 func anel(p: Vector2, r0: float, r1: float, vida: float, cor: Color) -> void:
@@ -870,34 +1180,58 @@ func mais_perto(p: Vector2):
 	return melhor
 
 
-func texto_voa(p: Vector2, t: String, cor: Color) -> void:
-	textos.append({"p": p, "txt": t, "cor": cor, "vida": 0.8})
+func texto_voa(p: Vector2, t: String, cor: Color, tam := 18) -> void:
+	textos.append({"p": p, "txt": t, "cor": cor, "vida": 0.8, "tam": tam})
 
 
-func ferir(m: Dictionary, dano: float) -> void:
+func ferir(m: Dictionary, dano: float, critico_ok := true) -> void:
 	if m["hp"] <= 0:
 		return
-	var critico := randf() < 0.03 * nivel_melhoria("critico")
+	dano *= 1.0 + 0.02 * nivel_caca(m["tipo"])
+	if m["traco"] == "blindado":
+		dano *= 0.6
+	var critico := critico_ok and randf() < chance_critico()
 	if critico:
 		dano *= 2.0
 	m["hp"] -= dano
 	m["flash"] = 0.1
+	if golpe.has("sangra"):
+		m["sangra"] = 3.0
+		m["sangra_dps"] = maxf(m["sangra_dps"], dano * 0.3)
+	if golpe.has("tonto"):
+		m["tonto"] = 0.3 if m["chefe"] else 1.0
 	if critico:
-		texto_voa(m["pos"] + Vector2(randf_range(-8, 8), -38), "%d!" % int(dano), OURO)
-	else:
+		texto_voa(m["pos"] + Vector2(randf_range(-8, 8), -38), "%d!" % int(dano), OURO, 27)
+	elif critico_ok:
 		texto_voa(m["pos"] + Vector2(randf_range(-8, 8), -30), str(int(dano)), BRANCO)
+	else:
+		texto_voa(m["pos"] + Vector2(randf_range(-8, 8), -30), str(int(dano)), Color8(255, 90, 90), 14)
 	if m["hp"] <= 0:
 		contar_total("mortes")
+		if not robo:
+			var ab: Dictionary = prog.get("abates", {})
+			ab[m["tipo"]] = int(ab.get(m["tipo"], 0)) + 1
+			prog["abates"] = ab
 		if m["chefe"]:
 			contar_total("chefes")
+			tremer(1.0, 220)
+			lento_t = 0.7
 		som("acerto")
 		mortes += 1
 		contar_missao("mortes")
-		essencia += m["premio"]
+		var premio: int = (m["premio"] + nb("ganancia")) * int(pow(2, nb("avareza")))
+		essencia += premio
+		if liberou("furia"):
+			furia = minf(100.0, furia + (25.0 if m["chefe"] else (6.0 if m["traco"] != "" else 3.0)))
+		if nb("vampiro") > 0:
+			hp = minf(hp_max, hp + 2 * nb("vampiro"))
+		if m["traco"] == "divisor" and not m["filho"]:
+			for _i in 2:
+				pendentes.append([m["tipo"], m["pos"] + Vector2(randf_range(-24, 24), randf_range(-24, 24))])
 		for _i in (40 if m["chefe"] else 10):
 			efeitos.append({"t": "part", "p": m["pos"], "v": Vector2.from_angle(randf() * TAU) * randf_range(40, 160), "vida": 0.6})
-		if m["premio"] > 0:
-			texto_voa(m["pos"] + Vector2(0, -10), "+%d" % m["premio"], OURO)
+		if premio > 0:
+			texto_voa(m["pos"] + Vector2(0, -10), "+%d" % premio, OURO)
 
 
 # ------------------------------------------------------------ laço
@@ -911,10 +1245,17 @@ func _process(delta: float) -> void:
 	t_tela += delta
 	if tela == "jogo":
 		atualizar(minf(delta, 0.05))
+		tremor = maxf(0.0, tremor - delta * 2.5)
+		position = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * tremor * 7.0 if tremor > 0 else Vector2.ZERO
 	else:
+		position = Vector2.ZERO
 		tempo += delta
 	tocar_musica(musica_certa())
 	queue_redraw()
+
+
+var k_bote := false     # Bote: o quadro onde o salto cai dispara duas vezes
+var k_rastro := false   # Rastro de Espinhos: correndo, cada casa solta espinhos
 
 
 func andar_no_anel(dt: float) -> void:
@@ -934,6 +1275,9 @@ func andar_no_anel(dt: float) -> void:
 			k_ultimo = cai
 			anel(centro_quadro(cai), 10, 50, 0.3, VERDE)
 			ativar(cai)
+			if k_bote:
+				k_bote = false
+				ativar(cai, true)
 		k_vis = pos_kravenox()
 		k_andando = true
 		return
@@ -944,6 +1288,7 @@ func andar_no_anel(dt: float) -> void:
 		if k_rapido <= 0:
 			k_rapido = 0.0
 			k_mult = 1.0
+			k_rastro = false
 	var antes := pos_kravenox().x
 	k_pos = fmod(k_pos + vel * dt, float(ANEL.size()))
 	k_anim += dt * vel * 6
@@ -954,12 +1299,19 @@ func andar_no_anel(dt: float) -> void:
 	if atual != k_ultimo:
 		k_ultimo = atual
 		ativar(atual)
+		if k_rastro and k_rapido > 0:
+			for j in 4:
+				tiros.append({"p": pos_kravenox(), "v": Vector2.from_angle(j * TAU / 4 + PI / 4) * 300, "dano": 9 * mult_dano(),
+					"fura": 0, "vida": 0.8, "cor": Color8(30, 30, 40), "r": 5.0, "acertos": [], "golpe": {}})
 
 	k_vis = pos_kravenox()
 	k_andando = true
 
 
 func atualizar(dt: float) -> void:
+	if lento_t > 0:
+		lento_t -= dt
+		dt *= 0.3   # câmera lenta (chefe espantado, Fúria)
 	dt *= vel_jogo
 	if fim_onda_t > 0:
 		fim_onda_t -= dt
@@ -984,6 +1336,9 @@ func atualizar(dt: float) -> void:
 	# Fora do anel ele anda a pé, no passo normal: para o meio quando a onda
 	# acaba e de volta ao seu quadro quando a próxima começa.
 	k_flash = maxf(0.0, k_flash - dt)
+	combo_t -= dt
+	if combo_t <= 0:
+		combo = 0
 	escudo_flash = maxf(0.0, escudo_flash - dt)
 	torre_flash = maxf(0.0, torre_flash - dt)
 	if k_no_anel and estado != "onda":
@@ -1051,6 +1406,15 @@ func atualizar(dt: float) -> void:
 	for m in monstros:
 		m["anim"] += dt
 		m["flash"] -= dt
+		if m["sangra"] > 0:
+			m["sangra"] -= dt
+			m["sangra_tick"] -= dt
+			if m["sangra_tick"] <= 0:
+				m["sangra_tick"] = 0.5
+				ferir(m, m["sangra_dps"] * 0.5, false)
+		if m["tonto"] > 0:
+			m["tonto"] -= dt
+			continue
 		var alvo_m: Vector2 = CENTRO + Vector2(0, -10) if bonus_ativo() else k
 		var para: Vector2 = alvo_m - m["pos"]
 		var alcance := 70.0 if m["chefe"] else (44.0 if bonus_ativo() else 34.0)
@@ -1066,7 +1430,15 @@ func atualizar(dt: float) -> void:
 					som("esmagamento")
 					texto_voa(CENTRO + Vector2(0, -70), "-%d" % int(m["dano"]), VERMELHO)
 				else:
-					var dano: float = m["dano"] * (1.0 - 0.03 * nivel_melhoria("defesa"))
+					var dano: float = m["dano"] * mult_dano_recebido()
+					if m["traco"] == "vampiro":
+						m["hp"] = minf(m["hp_max"], m["hp"] + dano * 0.5)
+					if nb("espelho") > 0:
+						ferir(m, dano * 0.4 * nb("espelho"), false)
+					if liberou("furia"):
+						furia = minf(100.0, furia + 1.5)
+					if dano >= 15:
+						tremer(0.25, 40)
 					if escudo > 0:
 						var tira := minf(escudo, dano)
 						escudo -= tira
@@ -1094,7 +1466,9 @@ func atualizar(dt: float) -> void:
 				continue
 			var raio := 50.0 if m["chefe"] else 18.0
 			if m["pos"].distance_to(t["p"]) < raio + t["r"]:
+				golpe = t.get("golpe", {})
 				ferir(m, t["dano"])
+				golpe = {}
 				t["acertos"].append(m)
 				if t["fura"] <= 0:
 					t["vida"] = 0.0
@@ -1102,8 +1476,27 @@ func atualizar(dt: float) -> void:
 				t["fura"] -= 1
 	tiros = tiros.filter(func(t): return t["vida"] > 0)
 	monstros = monstros.filter(func(m): return m["hp"] > 0)
+	for pn in pendentes:
+		filho_nasce = true
+		criar_monstro(pn[0], pn[1])
+		filho_nasce = false
+	pendentes.clear()
+	atualizar_eco(dt)
 
-	if hp <= 0:
+	if hp <= 0 and em_risco:
+		# caiu arriscando: o capítulo já estava vencido, fica com metade do pote
+		hp = 0.0
+		var metade := risco_pote / 2
+		prog["fragmentos"] = int(prog["fragmentos"]) + metade
+		premio_fim += metade
+		risco_pote = 0
+		bonus_res = "risco_caiu"
+		monstros.clear()
+		fila.clear()
+		tiros.clear()
+		estado = "vitoria"
+		salvar()
+	elif hp <= 0:
 		hp = 0.0
 		estado = "derrota"
 		fim_capitulo(false)
@@ -1122,37 +1515,57 @@ func atualizar(dt: float) -> void:
 		# Safari recarregar logo depois, nada se perde); a câmera lenta é só visual
 		fim_onda_t = 0.9
 		efeitos.append({"t": "anel", "p": k_vis, "r0": 20, "r1": 160, "vida": 0.6, "max": 0.6, "cor": OURO})
-		if bonus_ativo():
+		if em_risco:
+			risco_pote += (3 + mundo_de(capitulo)) * risco_n * (2 if pesadelo_ativo() else 1)
+			bonus_res = "risco"
+			estado = "vitoria"
+		elif bonus_ativo():
 			bonus_res = "ok"
 			if not prog.has("bonus"):
 				prog["bonus"] = {}
 			prog["bonus"][str(capitulo)] = true
-			premio_bonus = (2 + mundo_de(capitulo)) * (2 if modo == "pesadelo" else 1)
+			premio_bonus = int(round((2 + mundo_de(capitulo)) * (2 if pesadelo_ativo() else 1) * mult_pacto()))
 			contar_missao("bonus")
 			contar_total("bonus")
 			premio_fim += premio_bonus
 			prog["fragmentos"] = int(prog["fragmentos"]) + premio_bonus
 			estado = "vitoria"
 			limpar_partida()
-		elif onda >= FASES:
+		elif tipo_partida == "desafio" and onda >= FASES:
+			fim_capitulo(true)
+			estado = "vitoria"
+			limpar_partida()
+		elif tipo_partida == "capitulo" and onda >= FASES:
 			fim_capitulo(true)
 			bonus_pendente = true
 			estado = "loja"
-			essencia += 8 + capitulo / 3
-			hp = minf(hp_max, hp + 30)
-			trocas_gratis = 1 + nivel_melhoria("sorte")
-			sortear_loja()
+			descanso_entre_ondas()
+			essencia += 3 + capitulo / 3
 			aviso("Capítulo vencido! Agora a fase bônus: defenda a torre", 4.0)
+			oferecer_escolha()
 			salvar_partida()
 		else:
 			estado = "loja"
-			var premio := 5 + onda + capitulo / 3
-			essencia += premio
-			hp = minf(hp_max, hp + 30)
-			trocas_gratis = 1 + nivel_melhoria("sorte")
-			sortear_loja()
-			aviso("Onda vencida! +%d de essência, +30 vida" % premio, 3.0)
+			var premio := descanso_entre_ondas()
+			aviso("Onda vencida! +%d de essência" % premio, 3.0)
+			oferecer_escolha()
 			salvar_partida()
+
+
+# Entre as ondas: essência, cura (Fogueira), trocas e loja nova.
+func descanso_entre_ondas() -> int:
+	var premio := 5 + mini(onda, 15) + capitulo / 3 + nivel_obra("poco")
+	if onda_elite:
+		onda_elite = false
+		premio += 25
+		prog["fragmentos"] = int(prog["fragmentos"]) + 3
+		aviso("Elites vencidas! +25 de essência e +3 fragmentos", 3.0)
+	essencia += premio
+	if not pacto("sem_cura"):
+		hp = minf(hp_max, hp + 30 + 5 * nivel_obra("fogueira"))
+	trocas_gratis = trocas_por_onda()
+	sortear_loja()
+	return premio
 
 
 # ------------------------------------------------------------ toque
@@ -1168,6 +1581,9 @@ func botoes() -> Dictionary:
 	b["voltar"] = Rect2(10, 10, 36, 32)
 	b["denovo"] = Rect2(LARG / 2 - 120, ALT / 2 + 30, 240, 54)
 	b["mundos"] = Rect2(LARG / 2 - 120, ALT / 2 + 96, 240, 48)
+	b["arriscar"] = Rect2(LARG / 2 - 120, ALT / 2 + 156, 240, 48)
+	for i in 3:
+		b["esc%d" % i] = Rect2(28, 330 + i * 124, LARG - 56, 112)
 	return b
 
 
@@ -1217,16 +1633,42 @@ func clique(p: Vector2) -> void:
 func clique_jogo(p: Vector2) -> void:
 	var b := botoes()
 	if estado == "derrota" or estado == "vitoria":
-		if b["denovo"].has_point(p):
-			if estado == "vitoria" and capitulo >= TOTAL_CAPITULOS:
+		if estado == "vitoria" and pode_arriscar() and b["arriscar"].has_point(p):
+			arriscar()
+		elif b["denovo"].has_point(p):
+			guardar_pote()
+			if tipo_partida == "abismo":
+				comecar_abismo()
+			elif tipo_partida == "desafio":
+				ir_para("inicio")
+			elif estado == "vitoria" and capitulo >= TOTAL_CAPITULOS:
 				ir_para("inicio")
 			else:
 				comecar_capitulo(capitulo + (1 if estado == "vitoria" else 0))
 		elif b["mundos"].has_point(p):
+			guardar_pote()
+			if tipo_partida != "capitulo":
+				ir_para("inicio")
+				return
 			destaque_cap = capitulo if estado == "vitoria" else 0
 			ir_para("mundos")
 		return
+	if not escolha.is_empty() and estado == "loja":
+		for i in escolha["opcoes"].size():
+			if b["esc%d" % i].has_point(p):
+				escolher(i)
+				return
+		if not b["voltar"].has_point(p):
+			return
+	if estado == "onda" and b["onda"].has_point(p):
+		if furia >= 100.0:
+			soltar_furia()
+		return
 	if b["voltar"].has_point(p):
+		if tipo_partida != "capitulo" or em_risco:
+			guardar_pote()
+			ir_para("inicio")
+			return
 		destaque_cap = capitulo   # volta para o mundo deste capítulo
 		ir_para("mundos")
 		return
@@ -1247,7 +1689,7 @@ func clique_jogo(p: Vector2) -> void:
 			selec = [] if selec == ["loja", i] else ["loja", i]
 			return
 	if b["trocar"].has_point(p):
-		var custo := 0 if trocas_gratis > 0 else 2
+		var custo := 0 if trocas_gratis > 0 else (4 if tipo_partida == "desafio" and regra_desafio()["id"] == "sem_trocas" else 2)
 		if essencia >= custo:
 			essencia -= custo
 			trocas_gratis = 0
@@ -1266,6 +1708,10 @@ func clique_jogo(p: Vector2) -> void:
 		return
 	for i in ANEL.size():
 		if ret_quadro(i).has_point(p):
+			if quadros[i] == null and terreno[i] != "" and selec.is_empty() and not vender:
+				aviso({"fenda": "Fenda: o poder deste quadro dá +50% de dano", "altar": "Altar: cura 3 de vida a cada passo",
+					"maldita": "Pedra maldita: não aceita poder, mas dá 1 de essência a cada passo"}[terreno[i]], 3.0)
+				return
 			clique_quadro(i)
 			return
 	selec = []
@@ -1273,6 +1719,10 @@ func clique_jogo(p: Vector2) -> void:
 
 func clique_quadro(i: int) -> void:
 	var q = quadros[i]
+	if terreno[i] == "maldita" and not selec.is_empty():
+		aviso("Pedra maldita: não aceita poder")
+		selec = []
+		return
 	if vender:
 		if q != null:
 			var v := valor_venda(q)
@@ -1314,6 +1764,21 @@ func clique_quadro(i: int) -> void:
 
 # Modo --robo: compra sozinho entre as ondas (prefere fundir) e inicia a próxima.
 func passo_robo() -> bool:
+	if tipo_partida != "capitulo" and (estado == "vitoria" or estado == "derrota"):
+		print("ROBO %s: %s na onda %d · cap %d · bênçãos %s · fragmentos %d" % [tipo_partida, estado, onda, capitulo, str(bencaos), premio_fim])
+		get_tree().quit()
+		return false
+	if estado == "onda" and furia >= 100.0:
+		soltar_furia()
+	if not escolha.is_empty():
+		var ops: Array = escolha["opcoes"]
+		var k := 0
+		for j in ops.size():
+			if not ops[j].get("sombria", false):
+				k = j
+				break
+		escolher(k)
+		return true
 	if estado == "vitoria" or estado == "derrota":
 		var venceu := estado == "vitoria"
 		var gastou := true
@@ -1327,6 +1792,11 @@ func passo_robo() -> bool:
 						melhor = i
 			if melhor >= 0:
 				gastou = comprar_melhoria(melhor)
+			elif liberou("acampamento"):
+				for i in CONSTRUCOES.size():
+					if comprar_obra(i):
+						gastou = true
+						break
 		print("ROBO cap %d: %s na fase %d (tentativa %d) · bônus %s · fragmentos %d · melhorias %s" % [capitulo,
 			"venceu" if venceu else "perdeu", onda, robo_tentativas + 1, bonus_res, int(prog["fragmentos"]), str(prog["melhorias"])])
 		if venceu:
@@ -1356,7 +1826,10 @@ func passo_robo() -> bool:
 					alvo = k
 					break
 			if alvo < 0:
-				alvo = quadros.find(null)
+				for k in ANEL.size():
+					if quadros[k] == null and terreno[k] != "maldita":
+						alvo = k
+						break
 			if alvo >= 0:
 				clique(ret_quadro(alvo).get_center())
 			else:
@@ -1513,6 +1986,16 @@ func _draw() -> void:
 			desenhar_conquistas()
 		"ajustes":
 			desenhar_ajustes()
+		"acampamento":
+			desenhar_acampamento()
+		"pactos":
+			desenhar_pactos()
+		"grimorio":
+			desenhar_grimorio()
+		"cronicas":
+			desenhar_cronicas()
+		"ecos":
+			desenhar_ecos()
 		_:
 			desenhar_jogo()
 
@@ -1521,35 +2004,178 @@ func desenhar_jogo() -> void:
 	desenhar_fundo()
 	for i in ANEL.size():
 		desenhar_quadro(i)
+	desenhar_sinergias()
 	desenhar_mundo()
 	desenhar_topo()   # por cima dos monstros que entram pelo alto
 	desenhar_loja()
 	desenhar_arrasto()
-	if msg_t > 0 and msg != "":
+	if msg_t > 0 and msg != "" and escolha.is_empty():
 		var w := fonte.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
 		var a := clampf(msg_t * 2, 0, 1)
 		caixa(Rect2(LARG / 2 - w / 2 - 14, 158, w + 28, 28), Color(0.05, 0.04, 0.07, 0.9 * a), 14, 1, Color(OURO, 0.7 * a))
 		escrever(msg, Vector2(LARG / 2, 172), 18, Color(BRANCO, a), false)
+	if not escolha.is_empty() and estado == "loja":
+		desenhar_escolha()
 	if estado == "derrota" or estado == "vitoria":
-		draw_rect(Rect2(0, 0, LARG, ALT), Color(0.02, 0.01, 0.03, 0.84))
-		var venceu := estado == "vitoria"
-		var final := venceu and capitulo >= TOTAL_CAPITULOS
-		var base := Vector2(LARG / 2, ALT / 2 - 110)
-		brilho_suave(base + Vector2(0, -70), 120, OURO if venceu else VERMELHO, 0.7)
-		desenhar_arte("kravenox", base, 140, false, Color.WHITE if venceu else Color(0.45, 0.4, 0.5))
-		var titulo := "O REINO É DO KRAVENOX" if final else ("CAPÍTULO CONCLUÍDO" if venceu else "O KRAVENOX CAIU")
-		escrever(titulo, Vector2(LARG / 2, ALT / 2 - 76), 26, OURO if venceu else VERMELHO, true, fonte_titulo)
-		var t2 := "Capítulo %d · %s" % [capitulo, CAPITULOS[capitulo - 1]] if venceu else "Chegou à fase %d de %d" % [onda, FASES]
-		escrever(t2, Vector2(LARG / 2, ALT / 2 - 42), 17, BRANCO)
-		cristal(Vector2(LARG / 2 - 58, ALT / 2 - 8), 9, VERMELHO)
-		escrever_esq("+%d fragmentos" % premio_fim, Vector2(LARG / 2 - 42, ALT / 2), 19, Color8(255, 170, 160))
-		if bonus_res == "ok":
-			escrever("Bônus: a torre ficou de pé! (+%d)" % premio_bonus, Vector2(LARG / 2, ALT / 2 + 18), 15, OURO, false)
-		elif bonus_res == "caiu":
-			escrever("Bônus: a torre caiu", Vector2(LARG / 2, ALT / 2 + 18), 15, CINZA, false)
-		var t_botao := "Início" if final else ("Próximo capítulo" if venceu else "Tentar de novo")
-		botao(botoes()["denovo"], t_botao, OURO, true, true)
-		botao(botoes()["mundos"], "Mundos", AZUL)
+		desenhar_fim()
+
+
+func desenhar_fim() -> void:
+	draw_rect(Rect2(0, 0, LARG, ALT), Color(0.02, 0.01, 0.03, 0.84))
+	var venceu := estado == "vitoria"
+	var final := venceu and capitulo >= TOTAL_CAPITULOS and tipo_partida == "capitulo"
+	var base := Vector2(LARG / 2, ALT / 2 - 110)
+	brilho_suave(base + Vector2(0, -70), 120, OURO if venceu else VERMELHO, 0.7)
+	desenhar_arte("kravenox", base, 140, false, Color.WHITE if venceu else Color(0.45, 0.4, 0.5))
+	var titulo := "O REINO É DO KRAVENOX" if final else ("CAPÍTULO CONCLUÍDO" if venceu else "O KRAVENOX CAIU")
+	var t2 := "Capítulo %d · %s" % [capitulo, CAPITULOS[capitulo - 1]] if venceu else "Chegou à fase %d de %d" % [onda, FASES]
+	if tipo_partida == "abismo":
+		titulo = "NOVO RECORDE!" if abismo_novo_rec else "O ABISMO VENCEU"
+		t2 = "Venceu %d ondas · recorde: %d" % [maxi(0, onda - 1), int(prog.get("abismo_rec", 0))]
+	elif tipo_partida == "desafio":
+		titulo = "DESAFIO VENCIDO" if venceu else "DESAFIO PERDIDO"
+		t2 = "Desafio do Dia · %s" % regra_desafio()["nome"]
+	elif bonus_res == "risco" or bonus_res == "risco_caiu":
+		titulo = "O POTE CRESCEU" if bonus_res == "risco" else "CAIU ARRISCANDO"
+	escrever(titulo, Vector2(LARG / 2, ALT / 2 - 76), 26, OURO if venceu else VERMELHO, true, fonte_titulo)
+	escrever(t2, Vector2(LARG / 2, ALT / 2 - 42), 17, BRANCO)
+	cristal(Vector2(LARG / 2 - 58, ALT / 2 - 8), 9, VERMELHO)
+	escrever_esq("+%d fragmentos" % premio_fim, Vector2(LARG / 2 - 42, ALT / 2), 19, Color8(255, 170, 160))
+	if bonus_res == "ok":
+		escrever("Bônus: a torre ficou de pé! (+%d)" % premio_bonus, Vector2(LARG / 2, ALT / 2 + 18), 15, OURO, false)
+	elif bonus_res == "caiu":
+		escrever("Bônus: a torre caiu", Vector2(LARG / 2, ALT / 2 + 18), 15, CINZA, false)
+	elif bonus_res == "risco":
+		escrever("Pote do risco: %d fragmentos (cair = perde metade)" % risco_pote, Vector2(LARG / 2, ALT / 2 + 18), 15, OURO, false)
+	elif bonus_res == "risco_caiu":
+		escrever("Ficou com metade do pote", Vector2(LARG / 2, ALT / 2 + 18), 15, CINZA, false)
+	if nova_cronica and venceu and tipo_partida == "capitulo":
+		escrever("Nova crônica liberada (tela do Kravenox)", Vector2(LARG / 2, ALT / 2 + 290), 14, Color8(200, 180, 255), false)
+	var t_botao := "Início" if final else ("Próximo capítulo" if venceu else "Tentar de novo")
+	if tipo_partida == "abismo":
+		t_botao = "Tentar de novo"
+	elif tipo_partida == "desafio":
+		t_botao = "Início"
+	elif bonus_res == "risco":
+		t_botao = "Guardar e seguir"
+	botao(botoes()["denovo"], t_botao, OURO, true, true)
+	botao(botoes()["mundos"], "Mundos" if tipo_partida == "capitulo" else "Início", AZUL)
+	if venceu and pode_arriscar():
+		botao(botoes()["arriscar"], "Arriscar mais uma onda", VERMELHO)
+
+
+func desenhar_escolha() -> void:
+	draw_rect(Rect2(0, 0, LARG, ALT), Color(0.02, 0.01, 0.04, 0.82))
+	var b := botoes()
+	var y := 150.0
+	escrever(escolha["titulo"], Vector2(LARG / 2, y), 22, OURO, true, fonte_titulo)
+	var txt := str(escolha.get("texto", ""))
+	if txt != "":
+		texto_quebrado(txt, Vector2(34, y + 36), LARG - 68, 16, Color8(232, 222, 205), 6, true)
+	var ops: Array = escolha["opcoes"]
+	for i in ops.size():
+		var op: Dictionary = ops[i]
+		var r: Rect2 = b["esc%d" % i]
+		var sombria: bool = op.get("sombria", false)
+		var cor := VERMELHO if sombria else OURO
+		caixa(r, Color8(34, 12, 18) if sombria else Color8(24, 20, 34), 12, 2, cor, true, 8)
+		degrade(Rect2(r.position + Vector2(3, 3), Vector2(r.size.x - 6, 40)), Color(1, 1, 1, 0.08), Color(1, 1, 1, 0))
+		var c := r.position + Vector2(48, r.size.y / 2)
+		brilho_suave(c, 40, cor, 0.8 + 0.2 * sin(tempo * 3 + i))
+		if escolha["tipo"] == "bencao":
+			cristal(c, 16, Color8(200, 30, 50) if sombria else Color8(255, 210, 120))
+		else:
+			icone_escolha(str(op["id"]), c)
+		escrever_esq(op["nome"], r.position + Vector2(92, 38), 18, Color8(255, 150, 140) if sombria else OURO, fonte_titulo)
+		texto_quebrado(str(op["desc"]), r.position + Vector2(92, 52), r.size.x - 108, 15, BRANCO, 3)
+		if sombria:
+			escrever("SOMBRIA", Vector2(r.end.x - 52, r.position.y + 16), 11, VERMELHO, false, fonte_titulo)
+
+
+func icone_escolha(id: String, c: Vector2) -> void:
+	match id:
+		"livro", "seguir":
+			poli([c + Vector2(-18, -12), c + Vector2(-1, -9), c + Vector2(-1, 14), c + Vector2(-18, 11)], Color8(150, 110, 70), 1.2)
+			poli([c + Vector2(18, -12), c + Vector2(1, -9), c + Vector2(1, 14), c + Vector2(18, 11)], Color8(180, 140, 90), 1.2)
+		"elite":
+			var e := []
+			for k in 10:
+				e.append(c + Vector2.from_angle(-PI / 2 + k * TAU / 10) * (18.0 if k % 2 == 0 else 8.0))
+			poli(e, VERMELHO, 1.5)
+		"fogueira", "descansar":
+			poli([c + Vector2(-12, 14), c + Vector2(0, -18), c + Vector2(12, 14)], Color8(255, 140, 40), 1.2)
+			poli([c + Vector2(-6, 14), c + Vector2(0, -4), c + Vector2(6, 14)], Color8(255, 230, 120))
+		_:
+			cristal(c, 16, ROXO)
+
+
+# Texto em várias linhas, alinhado à esquerda (ou centralizado). Devolve a altura usada.
+func texto_quebrado(t: String, p: Vector2, largura: float, tam: int, cor: Color, max_linhas := 12, centro := false) -> float:
+	var palavras := t.split(" ")
+	var linhas := []
+	var atual := ""
+	for w in palavras:
+		var tenta := (atual + " " + w).strip_edges()
+		if fonte.get_string_size(tenta, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x > largura and atual != "":
+			linhas.append(atual)
+			atual = w
+		else:
+			atual = tenta
+	if atual != "":
+		linhas.append(atual)
+	if linhas.size() > max_linhas:
+		linhas = linhas.slice(0, max_linhas)
+		linhas[-1] = encurtar(linhas[-1] + " …", fonte, tam, largura)
+	var alt := tam * 1.3
+	for i in linhas.size():
+		if centro:
+			escrever(linhas[i], Vector2(p.x + largura / 2, p.y + i * alt + tam * 0.5), tam, cor, false)
+		else:
+			draw_string(fonte, Vector2(p.x, p.y + (i + 1) * alt - tam * 0.3), linhas[i], HORIZONTAL_ALIGNMENT_LEFT, -1, tam, cor)
+	return linhas.size() * alt
+
+
+# Correntes de luz entre quadros vizinhos que combinam.
+func desenhar_sinergias() -> void:
+	if not liberou("sinergias"):
+		return
+	var n := ANEL.size()
+	for i in n:
+		var j := (i + 1) % n
+		var a = quadros[i]
+		var b = quadros[j]
+		if a == null or b == null:
+			continue
+		var nome := nome_sinergia(a["id"], b["id"])
+		if nome == "":
+			continue
+		var pa := centro_quadro(i)
+		var pb := centro_quadro(j)
+		var meio := (pa + pb) / 2
+		var pulsa := 0.6 + 0.4 * sin(tempo * 4 + i)
+		draw_line(pa.lerp(pb, 0.3), pa.lerp(pb, 0.7), Color(ROXO, 0.35 * pulsa), 9, true)
+		draw_line(pa.lerp(pb, 0.3), pa.lerp(pb, 0.7), Color8(230, 200, 255), 2.5, true)
+		var d := PackedVector2Array([meio + Vector2(0, -6), meio + Vector2(6, 0), meio + Vector2(0, 6), meio + Vector2(-6, 0)])
+		draw_colored_polygon(d, OURO if nome != "Eco" else Color8(230, 200, 255))
+
+
+func desenhar_terreno(i: int, r: Rect2) -> void:
+	var c := r.get_center()
+	match terreno[i]:
+		"fenda":
+			var pts := PackedVector2Array([r.position + Vector2(10, 14), c + Vector2(-6, -4), c + Vector2(4, 6), r.end - Vector2(10, 12)])
+			draw_polyline(pts, Color(VERMELHO, 0.35), 7, true)
+			draw_polyline(pts, Color8(255, 120, 90), 2, true)
+		"altar":
+			draw_arc(c, r.size.x * 0.36, 0, TAU, 30, Color(OURO, 0.45), 2, true)
+			for k in 4:
+				var a := k * TAU / 4 + tempo * 0.5
+				draw_circle(c + Vector2.from_angle(a) * r.size.x * 0.36, 2.5, Color(OURO, 0.8))
+		"maldita":
+			draw_rect(r.grow(-4), Color(0.1, 0.0, 0.15, 0.55))
+			draw_line(c + Vector2(-14, -14), c + Vector2(14, 14), Color(ROXO, 0.7), 4, true)
+			draw_line(c + Vector2(14, -14), c + Vector2(-14, 14), Color(ROXO, 0.7), 4, true)
+			draw_circle(c, 6, Color8(40, 20, 60))
 
 
 func desenhar_topo() -> void:
@@ -1560,9 +2186,18 @@ func desenhar_topo() -> void:
 	var t := "FASE %d/%d" % [maxi(onda, 1) if estado == "onda" else mini(onda + 1, FASES), FASES]
 	if onda > FASES or bonus_pendente:
 		t = "BÔNUS"
+	if em_risco:
+		t = "RISCO %d" % risco_n
+	elif tipo_partida == "abismo":
+		t = "ONDA %d" % (onda if estado == "onda" else onda + 1)
 	var w := fonte_titulo.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 	escrever_esq(t, Vector2(LARG - 16 - w, 31), 14, BRANCO, fonte_titulo)
-	var tit := encurtar(("PESADELO · " if modo == "pesadelo" else "") + "CAP. %d · %s" % [capitulo, CAPITULOS[capitulo - 1].to_upper()], fonte_titulo, 13, LARG - 80 - w)
+	var tit_txt := ("PESADELO · " if pesadelo_ativo() else "") + "CAP. %d · %s" % [capitulo, CAPITULOS[capitulo - 1].to_upper()]
+	if tipo_partida == "abismo":
+		tit_txt = "ABISMO SEM FIM · RECORDE %d" % int(prog.get("abismo_rec", 0))
+	elif tipo_partida == "desafio":
+		tit_txt = "DESAFIO · " + regra_desafio()["nome"].to_upper()
+	var tit := encurtar(tit_txt, fonte_titulo, 13, LARG - 80 - w)
 	escrever_esq(tit, Vector2(56, 31), 13, OURO, fonte_titulo)
 	# trilha das fases
 	var y := 60.0
@@ -1689,7 +2324,13 @@ func desenhar_quadro(i: int) -> void:
 	var sel := selec == ["quadro", i]
 	var luz: float = brilho[i] / 0.35
 	# laje de pedra: uma imagem pronta (antes eram várias caixas e linhas por quadro)
-	draw_texture_rect(textura_laje(q == null), r.grow(3), false)
+	draw_texture_rect(textura_laje(q == null and terreno[i] != "maldita"), r.grow(3), false)
+	if terreno[i] != "":
+		desenhar_terreno(i, r)
+	var lend: bool = q != null and q.get("lend", false)
+	if lend:
+		brilho_suave(r.get_center(), 62, OURO, 0.7 + 0.3 * sin(tempo * 3))
+		caixa(r.grow(1), Color(0, 0, 0, 0), 7, 2, OURO, false)
 	if luz > 0:
 		caixa(r.grow(1), Color(0, 0, 0, 0), 7, 3, Color(ROXO, luz), false)
 		brilho_suave(r.get_center(), 60, ROXO, luz)
@@ -1700,6 +2341,10 @@ func desenhar_quadro(i: int) -> void:
 		pass   # o "+" roxo já vem na imagem da laje vazia
 	elif not (not arrasto.is_empty() and arrasto["moveu"] and arrasto["de"] == "quadro" and arrasto["i"] == i):
 		icone(q["id"], c + Vector2(0, -4), 0.95)
+		if lend:
+			# coroa dourada: poder lendário
+			var cc := c + Vector2(0, -TAM / 2 + 8)
+			poli([cc + Vector2(-12, 5), cc + Vector2(-12, -5), cc + Vector2(-6, 0), cc + Vector2(0, -8), cc + Vector2(6, 0), cc + Vector2(12, -5), cc + Vector2(12, 5)], OURO, 1.2)
 		# nível em marcas douradas
 		var n: int = q["nv"]
 		for k in n:
@@ -1799,7 +2444,7 @@ func desenhar_mundo() -> void:
 	for m in monstros:
 		itens.append([m["pos"].y, m])
 	itens.append([k.y, null])
-	if bonus_ativo() or (estado == "vitoria" and bonus_res != ""):
+	if bonus_ativo() or (estado == "vitoria" and bonus_res in ["ok", "caiu"]):
 		itens.append([CENTRO.y + 20, "torre"])
 	itens.sort_custom(func(a, b): return a[0] < b[0])
 	for it in itens:
@@ -1869,7 +2514,9 @@ func desenhar_mundo() -> void:
 	for t in textos:
 		var cor: Color = t["cor"]
 		cor.a = minf(1.0, t["vida"] * 2)
-		escrever(t["txt"], t["p"], 18, cor)
+		var tam: int = t.get("tam", 18)
+		var pop := 1.0 + 0.6 * clampf((t["vida"] - 0.65) / 0.15, 0, 1) if tam > 20 else 1.0
+		escrever(t["txt"], t["p"], int(tam * pop), cor)
 
 
 func desenhar_kravenox(k: Vector2) -> void:
@@ -1890,8 +2537,17 @@ func desenhar_kravenox(k: Vector2) -> void:
 			var tam := 18.0 + 6 * minf(k_mult, 6.0) + (j % 2) * 8
 			var ini := k + Vector2(-k_dir * 18, y)
 			draw_line(ini, ini + Vector2(-k_dir * tam, 0), Color(laranja, 0.55), 3, true)
-	brilho_suave(k + Vector2(0, -4), 48, cor_forma(), 0.4)
+	brilho_suave(k + Vector2(0, -4), 48, cor_forma(), 0.4 + (0.6 * (0.5 + 0.5 * sin(tempo * 8)) if furia >= 100.0 else 0.0))
 	desenhar_arte(nome, base, 68, k_dir < 0)
+	var e := eco_atual()
+	if not e.is_empty():
+		var pe := pos_eco()
+		brilho_suave(pe, 22, e["cor"], 1.2)
+		draw_circle(pe, 5, e["cor"].lightened(0.3))
+		draw_circle(pe, 2.5, Color(1, 1, 1, 0.9))
+	if combo >= 3 and estado == "onda":
+		var tc := "COMBO x%d" % combo
+		escrever(tc, k + Vector2(0, -74), 15 + mini(combo, 12), OURO.lerp(VERMELHO, minf(1.0, combo / 15.0)), true, fonte_titulo)
 	if k_flash > 0:
 		desenhar_arte(nome, base, 68, k_dir < 0, Color(1, 0.3, 0.3, k_flash * 4), true)
 	if escudo > 0:
@@ -1933,10 +2589,25 @@ func desenhar_monstro(m: Dictionary, k: Vector2) -> void:
 		brilho_suave(p, alt * 0.9, ROXO if m["tipo"] != "thornox" else AZUL, 0.6 + 0.2 * sin(tempo * 2))
 	var mod: Color = info.get("tinta", Color.WHITE)
 	var luz := AZUL if m["tipo"] == "thornox" else ROXO
-	contorno(info["img"], base - Vector2(0, sobe), alt, virar, Color(luz, 0.75 if m["chefe"] else 0.5), giro, esmaga)
+	if m["filho"]:
+		alt *= 0.75
+	if m["traco"] != "":
+		luz = TRACOS[m["traco"]][1]
+		brilho_suave(p, alt * 0.8, luz, 0.6)
+	contorno(info["img"], base - Vector2(0, sobe), alt, virar, Color(luz, 0.9 if m["traco"] != "" else (0.75 if m["chefe"] else 0.5)), giro, esmaga)
 	var r := desenhar_arte(info["img"], base - Vector2(0, sobe), alt, virar, mod, false, giro, esmaga)
 	if m["flash"] > 0:
 		desenhar_arte(info["img"], base - Vector2(0, sobe), alt, virar, Color(1, 1, 1, 0.85), true, giro, esmaga)
+	if m["sangra"] > 0:
+		for j in 2:
+			var f := fmod(tempo * 2 + j * 0.5, 1.0)
+			draw_circle(p + Vector2(-6 + j * 12, -4 + f * 22), 2.5, Color(0.8, 0.05, 0.1, 1.0 - f))
+	if m["tonto"] > 0:
+		for j in 3:
+			var a := tempo * 6 + j * TAU / 3
+			draw_circle(Vector2(p.x, r.position.y - 4) + Vector2(cos(a) * 14, sin(a) * 4), 3, Color8(255, 230, 120))
+	if m["traco"] != "":
+		escrever(TRACOS[m["traco"]][0], Vector2(p.x, r.position.y - 18), 11, luz, true)
 	if m["hp"] < m["hp_max"] and not m["chefe"]:
 		var w := 34.0
 		var y := r.position.y - 8
@@ -1983,7 +2654,19 @@ func desenhar_loja() -> void:
 	botao(b["trocar"], t_trocar if ativa else "Trocar", AZUL, ativa)
 	botao(b["lixo"], "Vender", VERMELHO, ativa, vender)
 	var t_onda_b := ("Fase bônus" if bonus_pendente else "Iniciar onda %d" % (onda + 1)) if ativa else "Onda em andamento"
-	botao(b["onda"], t_onda_b, OURO, ativa, ativa)
+	if ativa and em_risco:
+		t_onda_b = "Onda de risco %d" % risco_n
+	if estado == "onda" and liberou("furia"):
+		var rf: Rect2 = b["onda"]
+		var cheia := furia >= 100.0
+		caixa(rf, Color(0.07, 0.04, 0.06, 0.95), 7, 2, cor_forma() if cheia else Color(cor_forma(), 0.5), true, 4)
+		var fr := rf.grow(-4)
+		degrade(Rect2(fr.position, Vector2(fr.size.x * furia / 100.0, fr.size.y)), cor_forma().lightened(0.2), cor_forma().darkened(0.4))
+		if cheia:
+			brilho_suave(rf.get_center(), 120, cor_forma(), 0.6 + 0.4 * sin(tempo * 8))
+		escrever("SOLTAR A FÚRIA!" if cheia else "Fúria %d%%" % int(furia), rf.get_center(), 18 if cheia else 16, BRANCO, true, fonte_titulo if cheia else null)
+	else:
+		botao(b["onda"], t_onda_b, OURO, ativa, ativa)
 	var dica := "Arraste o item até um quadro"
 	if estado == "onda":
 		dica = "Monstros: %d  ·  na fila: %d" % [monstros.size(), fila.size()]
@@ -1995,6 +2678,11 @@ func desenhar_loja() -> void:
 	elif not selec.is_empty() and selec[0] == "quadro" and quadros[selec[1]] != null:
 		var q: Dictionary = quadros[selec[1]]
 		dica = "%s nível %d: %s. Toque em outro quadro para mover." % [ITENS[q["id"]]["nome"], q["nv"], ITENS[q["id"]]["desc"]]
+		if q.get("lend", false):
+			dica = "LENDÁRIO %s: %s." % [LENDARIAS[q["id"]]["nome"], LENDARIAS[q["id"]]["desc"]]
+		var sins := sinergias_do(selec[1])
+		if not sins.is_empty():
+			dica = "Combina: %s. " % ", ".join(sins) + dica
 	desenhar_dica(dica, Vector2(LARG / 2, LOJA_Y + 32), LARG - 36)
 
 
@@ -2168,7 +2856,22 @@ func botoes_menu() -> Dictionary:
 	b["missoes"] = Rect2(LARG - 84, 296, 72, 74)
 	b["baus"] = Rect2(LARG - 84, 378, 72, 74)
 	b["fora"] = Rect2(12, 520, 84, 74)
-	var nomes := ["melhorias", "bestiario", "inicio", "mundos", "ajustes_aba"]
+	b["desafio"] = Rect2(12, 200, 72, 74)
+	b["abismo"] = Rect2(12, 280, 72, 74)
+	b["pactos"] = Rect2(12, 360, 72, 74)
+	b["kx_grimorio"] = Rect2(LARG - 86, 128, 74, 74)
+	b["kx_cronicas"] = Rect2(LARG - 86, 210, 74, 74)
+	b["kx_ecos"] = Rect2(LARG - 86, 292, 74, 74)
+	for i in CONSTRUCOES.size():
+		b["obra%d" % i] = Rect2(338, 146 + i * 84 + 16, 112, 44)
+	for i in PACTOS.size():
+		b["pacto%d" % i] = Rect2(LARG - 132, 176 + i * 66 + 12, 112, 40)
+	for i in ECOS.size():
+		b["eco%d" % i] = Rect2(LARG - 132, 150 + i * 120 + 40, 112, 44)
+	b["cr_ant"] = Rect2(16, ALT - 160, 64, 56)
+	b["cr_prox"] = Rect2(LARG - 80, ALT - 160, 64, 56)
+	b["vibracao"] = Rect2(330, 270, 120, 44)
+	var nomes := ["melhorias", "acampamento", "inicio", "mundos", "ajustes_aba"]
 	for i in 5:
 		b["aba_" + nomes[i]] = Rect2(i * 96, ALT - 82, 96, 82)
 	for i in MELHORIAS.size():
@@ -2177,7 +2880,7 @@ func botoes_menu() -> Dictionary:
 		b["missao%d" % i] = Rect2(338, 160 + i * 110 + 30, 112, 44)
 	b["musica"] = Rect2(330, 150, 120, 44)
 	b["efeitos"] = Rect2(330, 210, 120, 44)
-	b["apagar"] = Rect2(40, 330, 400, 50)
+	b["apagar"] = Rect2(40, 360, 400, 50)
 	b["popup_ok"] = Rect2(LARG / 2 - 90, ALT / 2 + 30, 180, 50)
 	return b
 
@@ -2194,8 +2897,11 @@ func abas(p: Vector2, b: Dictionary) -> bool:
 		return false
 	if b["aba_melhorias"].has_point(p):
 		ir_para("melhorias")
-	elif b["aba_bestiario"].has_point(p):
-		ir_para("bestiario")
+	elif b["aba_acampamento"].has_point(p):
+		if liberou("acampamento"):
+			ir_para("acampamento")
+		else:
+			popup = {"titulo": "ACAMPAMENTO", "texto": "Vença o capítulo 3 para montar o acampamento"}
 	elif b["aba_inicio"].has_point(p):
 		ir_para("inicio")
 	elif b["aba_mundos"].has_point(p):
@@ -2217,11 +2923,11 @@ func clique_menu(p: Vector2) -> void:
 				som("gema")
 				ir_para("inicio")
 			return
-		"mundos", "melhorias", "bestiario", "missoes", "ajustes", "kravenox":
+		"mundos", "melhorias", "missoes", "ajustes", "kravenox", "acampamento", "pactos":
 			if b["voltar"].has_point(p):
 				ir_para("inicio")
 				return
-		"formas", "conquistas":
+		"formas", "conquistas", "grimorio", "cronicas", "ecos", "bestiario":
 			if b["voltar"].has_point(p):
 				ir_para("kravenox")
 				return
@@ -2236,6 +2942,14 @@ func clique_menu(p: Vector2) -> void:
 			if b["jogar"].has_point(p):
 				som("gema")
 				comecar_capitulo(c)
+			elif b["desafio"].has_point(p) and liberou("desafio"):
+				som("gema")
+				comecar_desafio()
+			elif b["abismo"].has_point(p) and liberou("abismo"):
+				som("gema")
+				comecar_abismo()
+			elif b["pactos"].has_point(p) and liberou("pactos"):
+				ir_para("pactos")
 			elif b["ajustes"].has_point(p):
 				ir_para("ajustes")
 			elif b["normal"].has_point(p):
@@ -2262,8 +2976,13 @@ func clique_menu(p: Vector2) -> void:
 					cap_sel = c + 1
 			elif b["presente"].has_point(p):
 				if presente_disponivel():
+					# sequência de dias: cresce a cada dia seguido; faltar um dia volta duas casas
+					var seq := int(prog.get("seq", 0))
+					seq = (seq % 7) + 1 if prog.get("presente", "") == ontem() else maxi(1, seq - 1)
+					prog["seq"] = seq
 					prog["presente"] = hoje()
-					ganhar(valor_presente(), "PRESENTE DO DIA")
+					var v := int(round(valor_presente() * (1.0 + 0.25 * (seq - 1)))) + (30 if seq == 7 else 0)
+					ganhar(v, "PRESENTE · DIA %d DE 7" % seq)
 				else:
 					popup = {"titulo": "PRESENTE DO DIA", "texto": "Volte amanhã para outro presente"}
 			elif b["missoes"].has_point(p):
@@ -2278,6 +2997,12 @@ func clique_menu(p: Vector2) -> void:
 						prog["baus"] = {}
 					prog["baus"][str(w)] = true
 					ganhar(10 + 2 * w, "BAÚ DO MUNDO %d" % w)
+					for e in ECOS:
+						if int(e["bau"]) == w:
+							popup["extra"] = "Novo companheiro: %s!" % e["nome"]
+							if str(prog.get("eco", "")) == "":
+								prog["eco"] = e["id"]
+								salvar()
 			elif b["fora"].has_point(p):
 				var v := valor_fora()
 				if v > 0:
@@ -2303,7 +3028,14 @@ func clique_menu(p: Vector2) -> void:
 						som("dano")
 					return
 		"kravenox":
-			if b["kx_formas"].has_point(p):
+			if b["kx_grimorio"].has_point(p):
+				ir_para("grimorio")
+			elif b["kx_cronicas"].has_point(p):
+				cron_cap = 0
+				ir_para("cronicas")
+			elif b["kx_ecos"].has_point(p):
+				ir_para("ecos")
+			elif b["kx_formas"].has_point(p):
 				ir_para("formas")
 			elif b["kx_conquistas"].has_point(p):
 				ir_para("conquistas")
@@ -2334,8 +3066,56 @@ func clique_menu(p: Vector2) -> void:
 					m["pegas"].append(ms["id"])
 					ganhar(int(ms["premio"]) + mundo_de(int(prog["liberado"])) / 2, "MISSÃO CUMPRIDA")
 					return
+		"acampamento":
+			for i in CONSTRUCOES.size():
+				if b["obra%d" % i].has_point(p):
+					if not comprar_obra(i):
+						som("dano")
+					return
+		"pactos":
+			for i in PACTOS.size():
+				if b["pacto%d" % i].has_point(p):
+					var pc: Dictionary = prog.get("pactos", {})
+					pc[PACTOS[i]["id"]] = not bool(pc.get(PACTOS[i]["id"], false))
+					prog["pactos"] = pc
+					salvar()
+					som("gema")
+					return
+		"ecos":
+			for i in ECOS.size():
+				if b["eco%d" % i].has_point(p) and eco_liberado(ECOS[i]):
+					prog["eco"] = "" if str(prog.get("eco", "")) == ECOS[i]["id"] else ECOS[i]["id"]
+					salvar()
+					som("gema")
+					return
+		"cronicas":
+			var lista := cronicas()
+			if lista.is_empty():
+				return
+			var k := clampi(lista.find(cron_cap), 0, lista.size() - 1)
+			if b["cr_ant"].has_point(p):
+				cron_cap = lista[maxi(0, k - 1)]
+			elif b["cr_prox"].has_point(p):
+				cron_cap = lista[mini(lista.size() - 1, k + 1)]
+		"bestiario":
+			for i in ORDEM_BESTIARIO.size():
+				var tipo: String = ORDEM_BESTIARIO[i]
+				var r := Rect2(16 + (i % 2) * 228, TOPO_MUNDOS + 2 + (i / 2) * 154, 220, 146)
+				if r.has_point(p) and prog["vistos"].has(tipo):
+					var n := int(prog.get("abates", {}).get(tipo, 0))
+					var nv := nivel_caca(tipo)
+					var prox: int = [10, 50, 100, 100][nv]
+					popup = {"titulo": MONSTROS[tipo]["nome"].to_upper(), "texto": "%s Caça nível %d (+%d%% de dano contra ele) · %d espantados%s" % [
+						DESC_MONSTROS[tipo], nv, 2 * nv, n, "" if nv >= 3 else " · próximo nível: %d" % prox]}
+					return
 		"ajustes":
-			if b["musica"].has_point(p):
+			if b["vibracao"].has_point(p):
+				vibracao_ligada = not vibracao_ligada
+				prog["vibracao"] = vibracao_ligada
+				salvar()
+				if vibracao_ligada:
+					Input.vibrate_handheld(60)
+			elif b["musica"].has_point(p):
 				ligar_som(not som_ligado)
 			elif b["efeitos"].has_point(p):
 				efeitos_ligados = not efeitos_ligados
@@ -2394,6 +3174,41 @@ func botao_icone(r: Rect2, tipo: String, rotulo: String, alerta := false) -> voi
 			brilho_suave(c, 30, ROXO, 0.7)
 			poli([c + Vector2(-14, -11), c + Vector2(-1, -8), c + Vector2(-1, 13), c + Vector2(-14, 10)], Color8(90, 58, 140), 1.2)
 			poli([c + Vector2(14, -11), c + Vector2(1, -8), c + Vector2(1, 13), c + Vector2(14, 10)], Color8(110, 70, 160), 1.2)
+		"desafio":
+			brilho_suave(c, 30, Color8(255, 160, 60), 0.8)
+			draw_circle(c, 12, Color8(255, 170, 70))
+			for k in 8:
+				var a := k * TAU / 8 + tempo * 0.3
+				draw_line(c + Vector2.from_angle(a) * 14, c + Vector2.from_angle(a) * 19, Color8(255, 200, 100), 2.5)
+			draw_line(c + Vector2(-9, 9), c + Vector2(9, -9), Color8(40, 30, 40), 3)
+		"abismo":
+			brilho_suave(c, 32, ROXO, 1.0)
+			for k in 3:
+				draw_arc(c, 16 - k * 5, tempo * (1.0 + k * 0.5), tempo * (1.0 + k * 0.5) + 4.2, 16, Color(Color8(200, 150, 255), 1.0 - k * 0.25), 2.5, true)
+		"pactos":
+			brilho_suave(c, 30, VERMELHO, 0.8)
+			var e := []
+			for k in 5:
+				e.append(c + Vector2.from_angle(-PI / 2 + k * TAU * 2 / 5) * 16)
+			e.append(e[0])
+			draw_polyline(PackedVector2Array(e), Color8(230, 60, 70), 2.5, true)
+			draw_arc(c, 17, 0, TAU, 24, Color8(150, 30, 40), 1.5, true)
+		"grimorio":
+			brilho_suave(c, 30, ROXO, 0.8)
+			caixa(Rect2(c + Vector2(-14, -16), Vector2(28, 32)), Color8(70, 40, 100), 3, 1, TINTA)
+			cristal(c, 7, Color8(230, 200, 255))
+		"cronicas":
+			brilho_suave(c, 30, OURO, 0.7)
+			poli([c + Vector2(-16, -12), c + Vector2(-1, -9), c + Vector2(-1, 14), c + Vector2(-16, 11)], PAPEL_C, 1.2)
+			poli([c + Vector2(16, -12), c + Vector2(1, -9), c + Vector2(1, 14), c + Vector2(16, 11)], PAPEL_C.darkened(0.1), 1.2)
+			for k in 3:
+				draw_line(c + Vector2(-12, -5 + k * 6), c + Vector2(-4, -4 + k * 6), Color8(90, 70, 50), 1.5)
+		"ecos":
+			var e := eco_atual()
+			var ce: Color = e["cor"] if not e.is_empty() else Color8(200, 180, 255)
+			brilho_suave(c, 30, ce, 1.0)
+			draw_circle(c + Vector2(cos(tempo * 2) * 8, sin(tempo * 2) * 4), 7, ce)
+			draw_circle(c + Vector2(cos(tempo * 2) * 8, sin(tempo * 2) * 4), 3, Color(1, 1, 1, 0.9))
 		"engrenagem":
 			for k in 8:
 				var a := k * TAU / 8
@@ -2412,7 +3227,7 @@ func desenhar_abas() -> void:
 	draw_rect(Rect2(0, ALT - 82, LARG, 82), Color(0.03, 0.02, 0.05, 0.96))
 	draw_line(Vector2(0, ALT - 82), Vector2(LARG, ALT - 82), Color(OURO, 0.5), 2)
 	var b := botoes_menu()
-	var itens := [["aba_melhorias", "Melhorias", "melhorias"], ["aba_bestiario", "Bestiário", "bestiario"],
+	var itens := [["aba_melhorias", "Melhorias", "melhorias"], ["aba_acampamento", "Acampamento", "acampamento"],
 		["aba_inicio", "Batalha", "inicio"], ["aba_mundos", "Mundos", "mundos"], ["aba_ajustes_aba", "Ajustes", "ajustes"]]
 	for it in itens:
 		var r: Rect2 = b[it[0]]
@@ -2425,9 +3240,12 @@ func desenhar_abas() -> void:
 		match it[2]:
 			"melhorias":
 				poli([c + Vector2(0, -14), c + Vector2(12, 0), c + Vector2(5, 0), c + Vector2(5, 13), c + Vector2(-5, 13), c + Vector2(-5, 0), c + Vector2(-12, 0)], Color(VERMELHO, 0.9 if ativo else 0.6), 1.2)
-			"bestiario":
-				poli([c + Vector2(-14, -11), c + Vector2(-1, -8), c + Vector2(-1, 13), c + Vector2(-14, 10)], Color8(90, 58, 140) if ativo else Color8(60, 50, 80), 1.2)
-				poli([c + Vector2(14, -11), c + Vector2(1, -8), c + Vector2(1, 13), c + Vector2(14, 10)], Color8(110, 70, 160) if ativo else Color8(70, 58, 90), 1.2)
+			"acampamento":
+				# tenda com a porta escura
+				poli([c + Vector2(-15, 12), c + Vector2(0, -14), c + Vector2(15, 12)], Color8(150, 60, 50) if ativo else Color8(80, 60, 70), 1.2)
+				poli([c + Vector2(-4, 12), c + Vector2(0, 0), c + Vector2(4, 12)], Color8(20, 14, 20))
+				if not liberou("acampamento"):
+					draw_rect(Rect2(c + Vector2(9, -14), Vector2(10, 8)), CINZA)
 			"inicio":
 				for k in [-1.0, 1.0]:
 					draw_line(c + Vector2(-13 * k, 12), c + Vector2(12 * k, -13), cor, 4, true)
@@ -2446,6 +3264,8 @@ func desenhar_abas() -> void:
 		escrever(it[1], Vector2(r.get_center().x, r.end.y - 16), 13, BRANCO if ativo else CINZA, false)
 		if it[2] == "melhorias" and pode_melhorar():
 			draw_circle(r.position + Vector2(r.size.x - 22, 12), 6, VERMELHO)
+		if it[2] == "acampamento" and liberou("acampamento") and pode_construir():
+			draw_circle(r.position + Vector2(r.size.x - 22, 12), 6, VERMELHO)
 
 
 func desenhar_popup() -> void:
@@ -2462,8 +3282,10 @@ func desenhar_popup() -> void:
 		cristal(Vector2(LARG / 2 - 50, r.position.y + 96), 16 * a, VERMELHO)
 		escrever("+%d" % int(popup["valor"]), Vector2(LARG / 2 + 14, r.position.y + 96), 34, BRANCO)
 		escrever("fragmentos", Vector2(LARG / 2, r.position.y + 132), 15, CINZA, false)
+		if popup.has("extra"):
+			escrever(popup["extra"], Vector2(LARG / 2, r.position.y + 160), 15, Color8(200, 180, 255), false)
 	else:
-		desenhar_dica(popup["texto"], Vector2(LARG / 2, r.position.y + 100), r.size.x - 40)
+		texto_quebrado(popup["texto"], Vector2(r.position.x + 20, r.position.y + 62), r.size.x - 40, 15, BRANCO, 6, true)
 	escrever("Toque para continuar", Vector2(LARG / 2, r.end.y - 26), 14, Color(CINZA, 0.6 + 0.4 * sin(tempo * 4)), false)
 
 
@@ -2529,7 +3351,7 @@ func desenhar_inicio() -> void:
 	botao_icone(b["fora"], "fora", "+%d fora" % vf if vf > 0 else "Fora", vf >= 1)
 	# começar / continuar
 	var pt := partida_guardada()
-	var continua := not pt.is_empty() and int(pt["capitulo"]) == c and str(pt.get("modo", "normal")) == modo
+	var continua := not pt.is_empty() and int(pt["capitulo"]) == c and str(pt.get("modo", "normal")) == modo and str(pt.get("tipo", "capitulo")) == "capitulo"
 	botao(b["jogar"], "", VERMELHO, true, true)
 	escrever("CONTINUAR" if continua else "COMEÇAR", b["jogar"].get_center() + Vector2(0, -6 if continua else 0), 24, BRANCO, false, fonte_titulo)
 	if continua:
@@ -2537,6 +3359,18 @@ func desenhar_inicio() -> void:
 		escrever(fase_txt, b["jogar"].get_center() + Vector2(0, 17), 13, Color8(255, 210, 200), false)
 	if modo == "pesadelo":
 		escrever("Monstros mais fortes · fragmentos em dobro", Vector2(LARG / 2, 692), 13, Color8(255, 140, 130), false)
+	if pontos_pacto() > 0:
+		escrever("Pactos: %d pontos · fragmentos ×%s" % [pontos_pacto(), String.num(mult_pacto(), 2).replace(".", ",")], Vector2(LARG / 2, 710), 13, Color8(220, 150, 255), false)
+	if liberou("desafio"):
+		botao_icone(b["desafio"], "desafio", "Desafio", not desafio_feito_hoje())
+	if liberou("abismo"):
+		var ptb := partida_guardada()
+		var rot := "Rec. %d" % int(prog.get("abismo_rec", 0))
+		if not ptb.is_empty() and str(ptb.get("tipo", "")) == "abismo":
+			rot = "Onda %d" % (int(ptb["onda"]) + 1)
+		botao_icone(b["abismo"], "abismo", rot)
+	if liberou("pactos"):
+		botao_icone(b["pactos"], "pactos", "%d pts" % pontos_pacto() if pontos_pacto() > 0 else "Pactos")
 	desenhar_abas()
 	desenhar_popup()
 
@@ -2655,14 +3489,14 @@ func desenhar_ajustes() -> void:
 	cabecalho("AJUSTES")
 	var b := botoes_menu()
 	apagar_confirma = maxf(0.0, apagar_confirma - 0.016)
-	for it in [["Música", b["musica"], som_ligado], ["Efeitos sonoros", b["efeitos"], efeitos_ligados]]:
+	for it in [["Música", b["musica"], som_ligado], ["Efeitos sonoros", b["efeitos"], efeitos_ligados], ["Vibração (app)", b["vibracao"], vibracao_ligada]]:
 		var r: Rect2 = it[1]
 		escrever_esq(it[0], Vector2(40, r.get_center().y + 7), 20, BRANCO)
 		botao(r, "Ligado" if it[2] else "Desligado", VERDE if it[2] else CINZA, true, it[2])
-	draw_line(Vector2(30, 290), Vector2(LARG - 30, 290), Color(PEDRA_BORDA, 0.7), 1)
+	draw_line(Vector2(30, 334), Vector2(LARG - 30, 334), Color(PEDRA_BORDA, 0.7), 1)
 	botao(b["apagar"], "Toque de novo para apagar tudo" if apagar_confirma > 0 else "Apagar progresso", VERMELHO, true, apagar_confirma > 0)
-	escrever("Apaga capítulos, melhorias e fragmentos deste aparelho.", Vector2(LARG / 2, 400), 13, CINZA)
-	escrever("O jogo funciona sem internet depois de aberto uma vez.", Vector2(LARG / 2, 470), 14, Color8(150, 220, 170))
+	escrever("Apaga capítulos, melhorias e fragmentos deste aparelho.", Vector2(LARG / 2, 428), 13, CINZA)
+	escrever("O jogo funciona sem internet depois de aberto uma vez.", Vector2(LARG / 2, 490), 14, Color8(150, 220, 170))
 	escrever("Kravenox: Quadros do Cisma", Vector2(LARG / 2, 640), 15, OURO, true, fonte_titulo)
 	escrever("versão " + VERSAO, Vector2(LARG / 2, 664), 13, CINZA, false)
 	desenhar_abas()
@@ -2757,9 +3591,13 @@ func desenhar_bestiario() -> void:
 		desenhar_arte(info["img"], base, 82, false, mod)
 		escrever(info["nome"] if visto else "???", r.position + Vector2(r.size.x / 2, 118), 16, BRANCO if visto else CINZA, false)
 		var nota := "Chefe" if chefe else "Desde o capítulo %d" % MONSTRO_DESDE[tipo]
+		if visto:
+			nota += " · caça nv %d" % nivel_caca(tipo)
 		escrever(nota, r.position + Vector2(r.size.x / 2, 136), 13, Color8(200, 160, 255) if chefe else CINZA, false)
 	cabecalho("BESTIÁRIO")
+	texto_quebrado("Toque num monstro para ver a ficha e o nível de caça", Vector2(260, 640), 190, 14, CINZA, 3, true)
 	desenhar_abas()
+	desenhar_popup()
 
 
 # Dica da loja: cabe em até duas linhas pequenas.
@@ -2839,7 +3677,7 @@ func desenhar_arrasto() -> void:
 	if alvo >= 0 and not (arrasto["de"] == "quadro" and alvo == arrasto["i"]):
 		var q = quadros[alvo]
 		var funde: bool = q != null and q["id"] == item["id"] and q["nv"] == item["nv"] and q["nv"] < NIVEL_MAX
-		var ok: bool = q == null or funde or arrasto["de"] == "quadro"
+		var ok: bool = (q == null or funde or arrasto["de"] == "quadro") and terreno[alvo] != "maldita"
 		var cor := OURO if ok else VERMELHO
 		caixa(ret_quadro(alvo).grow(4), Color(0, 0, 0, 0), 9, 3, cor, false)
 		brilho_suave(ret_quadro(alvo).get_center(), 60, cor, 0.8)
@@ -2976,6 +3814,9 @@ func desenhar_kravenox_tela() -> void:
 	botao_icone(b["kx_formas"], "formas", "Formas")
 	botao_icone(b["kx_conquistas"], "conquistas", "Conquistas", conquistas_prontas() > 0)
 	botao_icone(b["kx_bestiario"], "bestiario", "Bestiário")
+	botao_icone(b["kx_grimorio"], "grimorio", "Grimório")
+	botao_icone(b["kx_cronicas"], "cronicas", "Crônicas")
+	botao_icone(b["kx_ecos"], "ecos", "Ecos")
 	# barra até a próxima forma
 	var ini := int(FORMAS_KX[f][0])
 	var prox := int(FORMAS_KX[f + 1][0]) if f + 1 < FORMAS_KX.size() else ini
@@ -3082,3 +3923,645 @@ func desenhar_conquistas() -> void:
 			escrever_esq(str(int(c["premio"])), bb.position + Vector2(36, 23), 16, BRANCO if pronta else CINZA)
 	desenhar_abas()
 	desenhar_popup()
+
+
+# ============================================================ evoluções de 9/11/2026
+# (ideias-evolucao.md: bênçãos, combinações, lendárias, terreno, elites, Fúria,
+# Ecos, acampamento, Abismo sem Fim, Desafio do Dia, Pactos, Crônicas)
+
+func nb(id: String) -> int:
+	return bencaos.count(id)
+
+
+func pacto(id: String) -> bool:
+	return tipo_partida != "desafio" and liberou("pactos") and bool(prog.get("pactos", {}).get(id, false))
+
+
+func pontos_pacto() -> int:
+	var n := 0
+	for pc in PACTOS:
+		if pacto(pc["id"]):
+			n += int(pc["pts"])
+	return n
+
+
+func mult_pacto() -> float:
+	return 1.0 + 0.15 * pontos_pacto()
+
+
+func pesadelo_ativo() -> bool:
+	return modo == "pesadelo" and tipo_partida == "capitulo"
+
+
+func liberou(id: String) -> bool:
+	for n in NOVIDADES:
+		if n["id"] == id:
+			return int(prog["liberado"]) >= int(n["desde"])
+	return true
+
+
+func nivel_obra(id: String) -> int:
+	return int(prog.get("obras", {}).get(id, 0))
+
+
+func nivel_caca(tipo: String) -> int:
+	var n := int(prog.get("abates", {}).get(tipo, 0))
+	return 3 if n >= 100 else (2 if n >= 50 else (1 if n >= 10 else 0))
+
+
+func regra_desafio() -> Dictionary:
+	return REGRAS_DESAFIO[clampi(int(desafio.get("regra", 0)), 0, REGRAS_DESAFIO.size() - 1)]
+
+
+func desafio_regra_ativa(id: String) -> bool:
+	return tipo_partida == "desafio" and regra_desafio()["id"] == id
+
+
+func chance_critico() -> float:
+	return 0.03 * nivel_melhoria("critico") + 0.08 * nb("certeiro")
+
+
+func mult_dano() -> float:
+	var m := (1.0 + 0.1 * nivel_melhoria("forca")) * (1.0 + 0.12 * nb("furia")) * pow(1.5, nb("pacto_sangue"))
+	if desafio_regra_ativa("vidro"):
+		m *= 1.4
+	return m * (1.0 + 0.02 * mini(combo, 10))
+
+
+func mult_quadro(i: int) -> float:
+	var m := 1.0
+	if terreno[i] == "fenda":
+		m *= 1.5
+	if nb("cantos") > 0 and canto(i):
+		m *= 1.0 + 0.3 * nb("cantos")
+	return m
+
+
+func mult_dano_recebido() -> float:
+	return (1.0 - 0.03 * nivel_melhoria("defesa")) * pow(1.2, nb("frenesi"))
+
+
+func calc_hp_max() -> float:
+	var v := 150.0 + 20 * nivel_melhoria("vida") + 30 * nb("couro")
+	v *= pow(0.7, nb("pacto_sangue"))
+	if pacto("fragil"):
+		v *= 0.7
+	if desafio_regra_ativa("vidro"):
+		v *= 0.6
+	return roundf(v)
+
+
+func calc_k_vel() -> float:
+	# em caminhos maiores ele anda um pouco mais rápido, para a volta não demorar demais
+	return 1.4 * (1.0 + 0.06 * nivel_melhoria("passo")) * sqrt(ANEL.size() / 12.0) * (1.0 + 0.12 * nb("ligeiro")) * pow(1.3, nb("frenesi"))
+
+
+func trocas_por_onda() -> int:
+	if desafio_regra_ativa("sem_trocas"):
+		return 0
+	return 1 + nivel_melhoria("sorte") + nb("troca")
+
+
+var ultima_vibra := 0
+
+
+func tremer(forca: float, ms: int) -> void:
+	tremor = maxf(tremor, forca)
+	if vibracao_ligada and not robo and ms > 0 and Time.get_ticks_msec() - ultima_vibra > 150:
+		ultima_vibra = Time.get_ticks_msec()
+		Input.vibrate_handheld(ms)
+
+
+# ------------------------------------------------------------ terreno
+func montar_terreno() -> void:
+	terreno = []
+	terreno.resize(ANEL.size())
+	terreno.fill("")
+	if not liberou("terreno") or mundo_de(capitulo) < 2:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = capitulo * 7919 + (17 if tipo_partida == "abismo" else 0) + (hash(str(desafio.get("dia", ""))) if tipo_partida == "desafio" else 0)
+	var n := 1 + (1 if mundo_de(capitulo) >= 6 else 0) + (1 if ANEL.size() >= 16 else 0)
+	var tipos := ["fenda", "altar", "maldita"]
+	for _k in n:
+		var i := rng.randi_range(1, ANEL.size() - 1)
+		if terreno[i] == "":
+			terreno[i] = tipos[rng.randi_range(0, 2)]
+
+
+func canto(i: int) -> bool:
+	var n := ANEL.size()
+	var a: Vector2i = ANEL[(i - 1 + n) % n]
+	var b: Vector2i = ANEL[i]
+	var c: Vector2i = ANEL[(i + 1) % n]
+	return (b - a) != (c - b)
+
+
+# ------------------------------------------------------------ combinações e lendárias
+func nome_sinergia(a: String, b: String) -> String:
+	if a == b:
+		return "Eco"
+	for sn in SINERGIAS:
+		if (sn["a"] == a and sn["b"] == b) or (sn["a"] == b and sn["b"] == a):
+			return sn["nome"]
+	return ""
+
+
+func sinergias_do(i: int) -> Array:
+	var v := []
+	var q = quadros[i]
+	if q == null or not liberou("sinergias"):
+		return v
+	var n := ANEL.size()
+	for j in [(i - 1 + n) % n, (i + 1) % n]:
+		var o = quadros[j]
+		if j == i or o == null:
+			continue
+		var nome := nome_sinergia(q["id"], o["id"])
+		if nome != "" and not nome in v:
+			v.append(nome)
+	return v
+
+
+func descobrir(chave: String, texto: String) -> void:
+	if robo:
+		return
+	var g: Dictionary = prog.get("grimorio", {})
+	if g.has(chave):
+		return
+	g[chave] = true
+	prog["grimorio"] = g
+	if texto != "":
+		aviso(texto, 3.0)
+		som("nivel")
+
+
+func evoluir_lendarias() -> void:
+	for i in ANEL.size():
+		var q = quadros[i]
+		if q == null or q.get("lend", false) or int(q["nv"]) < NIVEL_MAX or not LENDARIAS.has(q["id"]):
+			continue
+		var par: String = LENDARIAS[q["id"]]["par"]
+		if quadros.any(func(o): return o != null and o["id"] == par):
+			q["lend"] = true
+			anel(centro_quadro(i), 10, 140, 0.9, OURO)
+			tremer(0.5, 120)
+			som("chefe")
+			descobrir("L:" + str(q["id"]), "")
+			contar_total("lendarias")
+			aviso("LENDÁRIO: %s!" % LENDARIAS[q["id"]]["nome"], 3.5)
+
+
+# ------------------------------------------------------------ escolhas entre as ondas
+func oferecer_escolha() -> void:
+	if tipo_partida == "abismo":
+		if onda % 3 == 0 and liberou("bencaos"):
+			abrir_bencaos()
+		return
+	if onda == 2 and liberou("encruzilhada"):
+		escolha = {"tipo": "encruzilhada", "titulo": "ENCRUZILHADA", "texto": "Três caminhos se abrem no meio do capítulo.", "opcoes": [
+			{"id": "livro", "nome": "Trilha do Livro", "desc": "um trecho deste capítulo do livro e uma escolha"},
+			{"id": "elite", "nome": "Caminho da Elite", "desc": "a próxima onda é só de elites; vencendo, +25 de essência e +3 fragmentos"},
+			{"id": "fogueira", "nome": "Fogueira", "desc": "cura toda a vida e dá 20 de escudo"}]}
+	elif onda in [1, 3] and liberou("bencaos"):
+		abrir_bencaos()
+
+
+func abrir_bencaos() -> void:
+	# cada bênção vale no máximo 3 vezes na mesma partida
+	var boas := BENCAOS.filter(func(x): return not x.get("sombria", false) and nb(x["id"]) < 3)
+	boas.shuffle()
+	var ops := boas.slice(0, 3)
+	var sombrias := BENCAOS.filter(func(x): return x.get("sombria", false) and nb(x["id"]) < 3)
+	if not sombrias.is_empty():
+		if ops.size() < 3:
+			ops.append(sombrias.pick_random())
+		elif randf() < 0.3:
+			ops[2] = sombrias.pick_random()
+	if ops.is_empty():
+		return
+	escolha = {"tipo": "bencao", "titulo": "ESCOLHA UMA BÊNÇÃO", "texto": "Vale até o fim do capítulo.", "opcoes": ops}
+
+
+func trecho(c: int) -> String:
+	return str(trechos.get(str(c), ""))
+
+
+func escolher(i: int) -> void:
+	var op: Dictionary = escolha["opcoes"][i]
+	var tipo: String = escolha["tipo"]
+	escolha = {}
+	som("nivel")
+	match tipo:
+		"bencao":
+			aplicar_bencao(op["id"])
+		"encruzilhada":
+			match op["id"]:
+				"livro":
+					var t := trecho(capitulo)
+					if t == "":
+						t = "O caminho segue pelo capítulo %d." % capitulo
+					escolha = {"tipo": "evento", "titulo": CAPITULOS[capitulo - 1].to_upper(), "texto": "“%s”" % t, "opcoes": [
+						{"id": "descansar", "nome": "Descansar", "desc": "cura toda a vida"},
+						{"id": "vozes", "nome": "Ouvir a Essência", "desc": "ganha uma bênção ao acaso, mas perde 20% da vida"},
+						{"id": "seguir", "nome": "Seguir em frente", "desc": "+20 de essência"}]}
+				"elite":
+					onda_elite = true
+					aviso("A próxima onda é só de elites!", 3.0)
+				"fogueira":
+					hp = hp_max
+					escudo = maxf(escudo, 20.0)
+					aviso("A fogueira cura toda a vida", 2.5)
+		"evento":
+			match op["id"]:
+				"descansar":
+					hp = hp_max
+				"vozes":
+					var boas := BENCAOS.filter(func(x): return not x.get("sombria", false))
+					aplicar_bencao(boas.pick_random()["id"])
+					hp = maxf(1.0, hp * 0.8)
+				"seguir":
+					essencia += 20
+	salvar_partida()
+
+
+func aplicar_bencao(id: String) -> void:
+	bencaos.append(id)
+	var antes := hp_max
+	hp_max = calc_hp_max()
+	if hp_max > antes:
+		hp += hp_max - antes
+	hp = minf(hp, hp_max)
+	k_vel = calc_k_vel()
+	if id == "troca":
+		trocas_gratis += 1
+	for b in BENCAOS:
+		if b["id"] == id:
+			aviso("Bênção: %s" % b["nome"], 2.5)
+	contar_total("bencaos")
+
+
+# ------------------------------------------------------------ Fúria e Ecos
+func soltar_furia() -> void:
+	furia = 0.0
+	var f := forma_atual()
+	var dano := (30.0 + 22.0 * f) * (1.0 + 0.1 * nivel_melhoria("forca")) * (1.0 + 0.08 * capitulo)
+	for m in monstros.duplicate():
+		ferir(m, dano * (0.5 if m["chefe"] else 1.0))
+	hp = minf(hp_max, hp + hp_max * 0.1)
+	anel(k_vis, 20, 460, 0.7, cor_forma())
+	anel(k_vis, 10, 240, 0.5, BRANCO)
+	tremer(1.0, 160)
+	lento_t = 0.5
+	som("thornox")
+	texto_voa(k_vis + Vector2(0, -84), "FÚRIA: " + FORMAS_KX[f][1].to_upper(), cor_forma().lightened(0.35), 22)
+	contar_total("furias")
+
+
+func eco_liberado(e: Dictionary) -> bool:
+	return prog.get("baus", {}).has(str(e["bau"]))
+
+
+func eco_atual() -> Dictionary:
+	var id := str(prog.get("eco", ""))
+	for e in ECOS:
+		if e["id"] == id and eco_liberado(e):
+			return e
+	return {}
+
+
+func pos_eco() -> Vector2:
+	return k_vis + Vector2(cos(tempo * 2.2) * 40, sin(tempo * 2.2) * 14 - 44)
+
+
+func atualizar_eco(dt: float) -> void:
+	var e := eco_atual()
+	if e.is_empty():
+		return
+	eco_t -= dt
+	if eco_t > 0:
+		return
+	var f := 1.0 + 0.25 * nivel_obra("altar")
+	var pe := pos_eco()
+	match e["id"]:
+		"rubro":
+			eco_t = 2.0
+			var alvo = mais_perto(pe)
+			if alvo != null and alvo["pos"].distance_to(pe) < 280:
+				efeitos.append({"t": "raio", "a": pe, "b": alvo["pos"], "vida": 0.2})
+				ferir(alvo, (10.0 + 1.5 * capitulo) * f * (1.0 + 0.1 * nivel_melhoria("forca")))
+		"verde":
+			eco_t = 4.0
+			if hp < hp_max:
+				var c := 4.0 * f
+				hp = minf(hp_max, hp + c)
+				texto_voa(pe, "+%d" % int(c), VERDE, 15)
+		"dourado":
+			eco_t = 4.0
+			var g := int(round(f))
+			essencia += g
+			texto_voa(pe, "+%d" % g, OURO, 15)
+		"azul":
+			eco_t = 4.0
+			escudo = minf(60.0, escudo + 5.0 * f)
+
+
+# ------------------------------------------------------------ arriscar depois do bônus
+func pode_arriscar() -> bool:
+	return tipo_partida == "capitulo" and bonus_res in ["ok", "risco"]
+
+
+func arriscar() -> void:
+	em_risco = true
+	risco_n += 1
+	estado = "loja"
+	bonus_res = ""
+	limpar_partida()
+	monstros.clear()
+	fila.clear()
+	tiros.clear()
+	descanso_entre_ondas()
+	aviso("Mais uma onda! Se cair, fica com metade do pote", 3.0)
+
+
+func guardar_pote() -> void:
+	if risco_pote > 0:
+		prog["fragmentos"] = int(prog["fragmentos"]) + risco_pote
+		premio_fim += risco_pote
+		risco_pote = 0
+		salvar()
+	em_risco = false
+
+
+# ------------------------------------------------------------ Abismo sem Fim e Desafio do Dia
+var abismo_novo_rec := false
+
+
+func comecar_abismo() -> void:
+	tipo_partida = "abismo"
+	capitulo = clampi(int(prog["liberado"]), 4, TOTAL_CAPITULOS)
+	tela = "jogo"
+	novo_jogo()
+	retomar_partida()
+
+
+func fim_abismo() -> void:
+	var feitas := maxi(0, onda - 1)
+	var rec := int(prog.get("abismo_rec", 0))
+	abismo_novo_rec = feitas > rec
+	prog["abismo_rec"] = maxi(rec, feitas)
+	premio_fim = int(round(feitas * (0.5 + mundo_de(capitulo) / 8.0) * mult_pacto()))
+	prog["fragmentos"] = int(prog["fragmentos"]) + premio_fim
+	limpar_partida()
+	salvar()
+
+
+func gerar_desafio() -> Dictionary:
+	var dia := hoje()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("desafio " + dia)
+	var lib := clampi(int(prog["liberado"]), 2, TOTAL_CAPITULOS)
+	var cap := rng.randi_range(maxi(2, lib - 10), lib)
+	var regra := rng.randi_range(0, REGRAS_DESAFIO.size() - 1)
+	var ataques := ["garras", "espinhos", "raio", "esmagamento", "rasgo"].filter(func(k): return ITEM_DESDE[k] <= cap)
+	var armas := []
+	while armas.size() < mini(2, ataques.size()):
+		var a: String = ataques[rng.randi_range(0, ataques.size() - 1)]
+		if not a in armas:
+			armas.append(a)
+	return {"dia": dia, "regra": regra, "capitulo": cap, "armas": armas}
+
+
+func desafio_feito_hoje() -> bool:
+	return prog.get("desafio_dia", "") == hoje()
+
+
+func comecar_desafio() -> void:
+	desafio = gerar_desafio()
+	tipo_partida = "desafio"
+	capitulo = int(desafio["capitulo"])
+	tela = "jogo"
+	novo_jogo()
+	var pt := partida_guardada()
+	if not pt.is_empty() and str(pt.get("tipo", "")) == "desafio" and str(pt.get("desafio", {}).get("dia", "")) == hoje():
+		retomar_partida()
+
+
+func fim_desafio(venceu: bool) -> void:
+	if venceu and not desafio_feito_hoje():
+		premio_fim = 15 + 3 * mundo_de(capitulo)
+		prog["desafio_dia"] = hoje()
+		contar_total("desafios")
+	elif venceu:
+		premio_fim = 2
+	else:
+		premio_fim = maxi(0, onda - 1)
+	prog["fragmentos"] = int(prog["fragmentos"]) + premio_fim
+	limpar_partida()
+	salvar()
+
+
+# ============================================================ telas novas
+func ontem() -> String:
+	var bias := int(Time.get_time_zone_from_system().get("bias", 0))
+	return Time.get_date_string_from_unix_time(int(agora()) + bias * 60 - 86400)
+
+
+# Ao chegar à tela inicial: presente de quem voltou depois de muito tempo e
+# o aviso de cada novidade liberada (uma por vez).
+func checar_novidades() -> void:
+	if robo or not popup.is_empty():
+		return
+	if prog.get("volta_pendente", false):
+		prog.erase("volta_pendente")
+		ganhar(20 + 5 * mundo_de(int(prog["liberado"])), "BEM-VINDO DE VOLTA")
+		popup["extra"] = "Fúria pela metade nas próximas 3 partidas"
+		return
+	var vistas: Dictionary = prog.get("novidades", {})
+	for n in NOVIDADES:
+		if int(prog["liberado"]) >= int(n["desde"]) and not vistas.has(n["id"]):
+			vistas[n["id"]] = true
+			prog["novidades"] = vistas
+			salvar()
+			popup = {"titulo": "NOVO: " + n["titulo"], "texto": n["texto"]}
+			som("nivel")
+			return
+
+
+func custo_obra(o: Dictionary) -> int:
+	return int(o["custo"]) * (nivel_obra(o["id"]) + 1) * 2
+
+
+func comprar_obra(i: int) -> bool:
+	var o: Dictionary = CONSTRUCOES[i]
+	var lv := nivel_obra(o["id"])
+	var c := custo_obra(o)
+	if lv >= int(o["max"]) or int(prog["fragmentos"]) < c:
+		return false
+	prog["fragmentos"] = int(prog["fragmentos"]) - c
+	var ob: Dictionary = prog.get("obras", {})
+	ob[o["id"]] = lv + 1
+	prog["obras"] = ob
+	salvar()
+	som("nivel")
+	return true
+
+
+func pode_construir() -> bool:
+	for o in CONSTRUCOES:
+		if nivel_obra(o["id"]) < int(o["max"]) and int(prog["fragmentos"]) >= custo_obra(o):
+			return true
+	return false
+
+
+func desenhar_acampamento() -> void:
+	desenhar_fundo(0.62)
+	cabecalho("ACAMPAMENTO")
+	escrever("Construções que valem para todas as partidas.", Vector2(LARG / 2, 132), 14, CINZA)
+	var b := botoes_menu()
+	for i in CONSTRUCOES.size():
+		var o: Dictionary = CONSTRUCOES[i]
+		var r := Rect2(16, 146 + i * 84, LARG - 32, 78)
+		caixa(r, Color(0.06, 0.05, 0.08, 0.93), 10, 1, Color(PEDRA_BORDA, 0.9), true, 6)
+		var lv := nivel_obra(o["id"])
+		var mx := int(o["max"])
+		escrever_esq(o["nome"], r.position + Vector2(16, 26), 15, OURO, fonte_titulo)
+		escrever_esq(o["desc"], r.position + Vector2(16, 47), 13, CINZA)
+		for k in mx:
+			var pp := r.position + Vector2(22 + k * 15, 63)
+			draw_colored_polygon(PackedVector2Array([pp + Vector2(0, -5), pp + Vector2(4.5, 0), pp + Vector2(0, 5), pp + Vector2(-4.5, 0)]), Color8(255, 150, 60) if k < lv else PEDRA_CLARA)
+		var bb: Rect2 = b["obra%d" % i]
+		if lv >= mx:
+			botao(bb, "PRONTA", CINZA, false)
+		else:
+			var custo := custo_obra(o)
+			var pode := int(prog["fragmentos"]) >= custo
+			botao(bb, "", OURO if pode else CINZA, pode, pode)
+			cristal(bb.position + Vector2(36, 22), 8, VERMELHO)
+			escrever_esq(str(custo), bb.position + Vector2(50, 30), 20, BRANCO if pode else CINZA)
+	desenhar_abas()
+	desenhar_popup()
+
+
+func desenhar_pactos() -> void:
+	desenhar_fundo(0.7)
+	draw_rect(Rect2(0, 0, LARG, ALT), Color(0.25, 0.0, 0.03, 0.18))
+	cabecalho("PACTOS DO ABISMO")
+	escrever("Mais difícil, mais fragmentos. Valem nos capítulos e no Abismo.", Vector2(LARG / 2, 134), 14, CINZA)
+	escrever("%d pontos · fragmentos ×%s" % [pontos_pacto(), String.num(mult_pacto(), 2).replace(".", ",")], Vector2(LARG / 2, 160), 18, Color8(255, 150, 160), true)
+	var b := botoes_menu()
+	for i in PACTOS.size():
+		var pc: Dictionary = PACTOS[i]
+		var lig := pacto(pc["id"])
+		var r := Rect2(16, 176 + i * 66, LARG - 32, 60)
+		caixa(r, Color(0.12, 0.03, 0.05, 0.93) if lig else Color(0.06, 0.05, 0.08, 0.93), 10, 2 if lig else 1, VERMELHO if lig else Color(PEDRA_BORDA, 0.9), true, 4)
+		escrever_esq("%s  ·  %d pt%s" % [pc["nome"], int(pc["pts"]), "s" if int(pc["pts"]) > 1 else ""], r.position + Vector2(14, 26), 15, Color8(255, 150, 150) if lig else OURO, fonte_titulo)
+		escrever_esq(pc["desc"], r.position + Vector2(14, 48), 13, CINZA)
+		botao(b["pacto%d" % i], "Ligado" if lig else "Desligado", VERMELHO if lig else CINZA, true, lig)
+	desenhar_abas()
+
+
+func desenhar_grimorio() -> void:
+	desenhar_fundo(0.68)
+	cabecalho("GRIMÓRIO")
+	var g: Dictionary = prog.get("grimorio", {})
+	var y := TOPO_MUNDOS + 6
+	escrever_esq("COMBINAÇÕES (quadros vizinhos)", Vector2(18, y + 14), 13, Color8(200, 170, 255), fonte_titulo)
+	y += 22
+	for sn in SINERGIAS:
+		var tem := g.has("S:" + sn["nome"])
+		var r := Rect2(12, y, LARG - 24, 36)
+		caixa(r, Color(0.06, 0.05, 0.08, 0.9), 8, 1, Color(ROXO if tem else PEDRA_BORDA, 0.7))
+		var par := "dois poderes iguais" if sn["a"] == "*" else "%s + %s" % [ITENS[sn["a"]]["nome"], ITENS[sn["b"]]["nome"]]
+		if tem:
+			escrever_esq(sn["nome"], r.position + Vector2(10, 16), 14, OURO)
+			escrever_esq(encurtar(par + ": " + sn["desc"], fonte, 12, r.size.x - 20), r.position + Vector2(10, 32), 12, CINZA)
+		else:
+			escrever_esq("??? " + ("(secreta)" if sn.get("secreta", false) else ""), r.position + Vector2(10, 16), 14, CINZA)
+			escrever_esq("dica: " + ("descubra sozinho" if sn.get("secreta", false) else par), r.position + Vector2(10, 32), 12, Color(CINZA, 0.6))
+		y += 39
+	y += 6
+	escrever_esq("LENDÁRIAS (nível 5 + parceiro no caminho)", Vector2(18, y + 14), 13, OURO, fonte_titulo)
+	y += 22
+	for id in LENDARIAS:
+		var ld: Dictionary = LENDARIAS[id]
+		var tem := g.has("L:" + id)
+		var r := Rect2(12, y, LARG - 24, 36)
+		caixa(r, Color(0.06, 0.05, 0.08, 0.9), 8, 1, Color(OURO if tem else PEDRA_BORDA, 0.7))
+		escrever_esq(ld["nome"] if tem else "???", r.position + Vector2(10, 16), 14, OURO if tem else CINZA)
+		var t := "%s 5 + %s" % [ITENS[id]["nome"], ITENS[ld["par"]]["nome"]]
+		escrever_esq(encurtar(t + (": " + ld["desc"] if tem else ""), fonte, 12, r.size.x - 20), r.position + Vector2(10, 32), 12, CINZA)
+		y += 39
+	desenhar_abas()
+
+
+func cronicas() -> Array:
+	var v := []
+	for c in range(1, TOTAL_CAPITULOS + 1):
+		if feito(c):
+			v.append(c)
+	return v
+
+
+func desenhar_cronicas() -> void:
+	desenhar_fundo(0.75)
+	cabecalho("CRÔNICAS")
+	var lista := cronicas()
+	if lista.is_empty():
+		escrever("Vença um capítulo para liberar a primeira crônica.", Vector2(LARG / 2, 300), 15, CINZA)
+		desenhar_abas()
+		return
+	if not cron_cap in lista:
+		cron_cap = lista[-1]
+	var c := cron_cap
+	var w := mundo_de(c)
+	var tm := arte_mundo(w)
+	var ri := Rect2(16, TOPO_MUNDOS + 4, LARG - 32, 190)
+	var fr := Rect2(0, (tm.get_height() - tm.get_width() * ri.size.y / ri.size.x) / 2.0, tm.get_width(), tm.get_width() * ri.size.y / ri.size.x)
+	draw_texture_rect_region(tm, ri, fr)
+	degrade(Rect2(ri.position + Vector2(0, ri.size.y - 60), Vector2(ri.size.x, 60)), Color(0, 0, 0, 0), Color(0.03, 0.02, 0.05, 1))
+	caixa(ri, Color(0, 0, 0, 0), 8, 2, Color(OURO, 0.6), false)
+	escrever("CAPÍTULO %d" % c, Vector2(LARG / 2, ri.end.y + 26), 24, BRANCO, true, fonte_titulo)
+	escrever(CAPITULOS[c - 1], Vector2(LARG / 2, ri.end.y + 56), 18, OURO)
+	var t := trecho(c)
+	if t == "":
+		t = "(o trecho deste capítulo ainda não foi guardado)"
+	var papel := Rect2(24, ri.end.y + 76, LARG - 48, 230)
+	caixa(papel, Color8(36, 30, 26), 10, 1, Color(OURO, 0.4), true, 6)
+	texto_quebrado("“" + t + "”", papel.position + Vector2(18, 14), papel.size.x - 36, 17, PAPEL_C, 10)
+	var k := lista.find(c)
+	var b := botoes_menu()
+	for lado in [["cr_ant", -1.0, k > 0], ["cr_prox", 1.0, k < lista.size() - 1]]:
+		var r: Rect2 = b[lado[0]]
+		var cc := r.get_center()
+		var s: float = lado[1]
+		var cor := Color(OURO, 0.95 if lado[2] else 0.25)
+		draw_polyline(PackedVector2Array([cc + Vector2(-8 * s, -18), cc + Vector2(10 * s, 0), cc + Vector2(-8 * s, 18)]), cor, 5, true)
+	escrever("%d de %d" % [k + 1, lista.size()], Vector2(LARG / 2, ALT - 132), 14, CINZA)
+	escrever("Trechos do RPG do livro (kravenox-jogar/rpg)", Vector2(LARG / 2, ALT - 108), 11, Color(CINZA, 0.6), false)
+	desenhar_abas()
+
+
+func desenhar_ecos() -> void:
+	desenhar_fundo(0.68)
+	cabecalho("ECOS")
+	escrever("Luzes da Essência que seguem o Kravenox. Um por vez.", Vector2(LARG / 2, 134), 14, CINZA)
+	var b := botoes_menu()
+	var atual := str(prog.get("eco", ""))
+	for i in ECOS.size():
+		var e: Dictionary = ECOS[i]
+		var tem := eco_liberado(e)
+		var r := Rect2(16, 150 + i * 120, LARG - 32, 110)
+		caixa(r, Color(0.06, 0.05, 0.08, 0.93), 10, 2 if atual == e["id"] else 1, OURO if atual == e["id"] else Color(PEDRA_BORDA, 0.9), true, 6)
+		var c := r.position + Vector2(50, 55)
+		var cor: Color = e["cor"] if tem else PEDRA_CLARA
+		brilho_suave(c, 44, cor, 1.0 if tem else 0.2)
+		draw_circle(c + Vector2(cos(tempo * 2 + i) * 6, sin(tempo * 2 + i) * 3), 11, cor)
+		draw_circle(c + Vector2(cos(tempo * 2 + i) * 6, sin(tempo * 2 + i) * 3), 5, Color(1, 1, 1, 0.9 if tem else 0.2))
+		escrever_esq(e["nome"] if tem else "???", r.position + Vector2(96, 40), 17, OURO if tem else CINZA, fonte_titulo)
+		escrever_esq(e["desc"] if tem else "Abra o baú do Mundo %d" % int(e["bau"]), r.position + Vector2(96, 66), 14, CINZA)
+		if tem:
+			botao(b["eco%d" % i], "Em uso" if atual == e["id"] else "Usar", OURO, true, atual == e["id"])
+	if nivel_obra("altar") > 0:
+		escrever("Altar dos Ecos: +%d%% de força" % (25 * nivel_obra("altar")), Vector2(LARG / 2, 660), 14, Color8(200, 180, 255), false)
+	desenhar_abas()

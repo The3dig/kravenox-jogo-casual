@@ -5,6 +5,11 @@ pode virar coisa do universo Kravenox. Tudo aqui funciona **sem internet** e
 **sem dinheiro de verdade**. A regra continua: pegar a *ideia*, nunca a arte,
 os nomes ou o conteúdo de outro jogo.
 
+> **Feito em 9/11/2026 (versão 2026-11-09a).** Tudo abaixo entrou no jogo, com
+> duas diferenças: o Modo Pesadelo continua (os Pactos somam a ele) e o "mapa
+> com bifurcação" virou a **Encruzilhada** depois da fase 2. Detalhes em
+> `decisoes.md`.
+
 Complementa `ideias-futuras.md` (equipamento, relíquias, desejos e masmorra,
 vistos no Turnaround Adventure). Aqui não repeti esses.
 

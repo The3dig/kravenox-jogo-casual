@@ -6,7 +6,7 @@ name: App de iPhone
 on:
   workflow_dispatch:
   push:
-    branches: [claude/kravenox-ultima-fogueira, main]
+    branches: [claude/kravenox-ultima-fogueira, claude/new-session-7fm2ni, main]
     paths: ["godot/**", ".github/workflows/app-iphone.yml"]
 
 permissions:
