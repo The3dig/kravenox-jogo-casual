@@ -121,3 +121,14 @@
   invenção do jogo. Os textos das Crônicas e dos eventos saem do RPG
   (`kravenox-jogar/rpg/js`), que adapta o livro, pela ferramenta
   `godot/ferramentas/extrair_trechos.py`.
+
+## 2026-11-09: a versão nova aparece sozinha no ícone do iPhone
+
+- **Era:** o jogo abria sempre a página guardada e só buscava a nova "por
+  trás", para valer na abertura seguinte. No iPhone o ícone fixado quase
+  nunca fecha de verdade (fica suspenso), então a versão nova não aparecia.
+- **Passou a ser:** a página (pequena) é buscada primeiro, com prazo de
+  2,5 s; sem internet ou com internet lenta abre a guardada. Ao voltar para
+  o jogo depois de 5 minutos ou mais fora, ele confere se há versão nova e
+  recarrega. Os arquivos grandes continuam guardados (sem gastar internet).
+- **Por quê:** o Rone reclamou que a atualização automática não acontecia.
