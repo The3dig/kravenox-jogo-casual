@@ -163,3 +163,18 @@
 - **Por quê:** pedido do Rone, pensando em publicar o jogo. As ideias são de
   gênero (defesa de quarto, horda, chefe gigante, "Archero"); arte, nomes e
   conteúdo são do Kravenox.
+
+## 2026-11-09: Loja do Apoiador, modos mais espaçados e Horda com o que fazer
+
+- **Loja do Apoiador** (botão "Loja" na tela inicial): só visual e conforto,
+  **nada de pagar para ganhar** (pedido do Rone). Pacote do Apoiador (aura
+  Coroa Rubra, Eco Estelar, moldura dourada, selo), três auras, Moldura de
+  Brasa, Velocidade 3× e Coleta de 24 h. Pacotes de fragmentos e "fragmentos
+  em dobro" ficaram de fora de propósito. A compra de verdade ainda não está
+  ligada (liga quando o jogo for para a Apple ou o Google); para testar, em
+  Ajustes tocar 7 vezes na versão.
+- **Modos:** eram liberados nos capítulos 5, 6, 7 e 8; passaram a 5 (Horda),
+  10 (Colosso), 15 (Refúgio) e 20 (Caçada).
+- **Horda:** era só olhar (o Kravenox atirava sozinho em tudo). Passou a ser:
+  ele só alcança quem está perto, o jogador arrasta o Kravenox até a horda e
+  usa dois golpes com recarga (Esmagar e Espinhos).

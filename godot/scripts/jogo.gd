@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-09d"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-09e"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -176,7 +176,7 @@ const NOVIDADES := [
 	{"id": "terreno", "desde": 5, "titulo": "TERRENO", "texto": "Fendas dão +50% de dano, altares curam, pedras malditas não aceitam poder mas dão essência."},
 	{"id": "abismo", "desde": 5, "titulo": "ABISMO SEM FIM", "texto": "Ondas sem fim, cada vez mais fortes. Bata o seu recorde."},
 	{"id": "desafio", "desde": 6, "titulo": "DESAFIO DO DIA", "texto": "Um capítulo com regra especial, diferente a cada dia. Prêmio grande uma vez por dia."},
-	{"id": "modos", "desde": 5, "titulo": "MODOS", "texto": "Nova aba Modos, embaixo: Horda, Colosso, Refúgio e Caçada, além do Abismo e do Desafio. Cada um libera num capítulo."},
+	{"id": "modos", "desde": 5, "titulo": "MODOS", "texto": "Nova aba Modos, embaixo: a Horda já está aberta. Colosso abre no capítulo 10, Refúgio no 15 e Caçada no 20."},
 	{"id": "pactos", "desde": 9, "titulo": "PACTOS DO ABISMO", "texto": "Ligue maldições para deixar o jogo mais difícil e ganhar mais fragmentos."},
 ]
 const DESC_MONSTROS := {
@@ -1689,7 +1689,7 @@ func clique_jogo(p: Vector2) -> void:
 		ir_para("mundos")
 		return
 	if b["vel"].has_point(p):
-		vel_jogo = 2 if vel_jogo == 1 else 1
+		vel_jogo = vel_jogo + 1 if vel_jogo < (3 if tem("vel3") else 2) else 1
 		return
 	if b["som"].has_point(p):
 		ligar_som(not som_ligado)
@@ -2014,6 +2014,8 @@ func _draw() -> void:
 			desenhar_ecos()
 		"modos":
 			desenhar_modos()
+		"loja":
+			desenhar_loja_apoiador()
 		"especial":
 			desenhar_esp()
 		_:
@@ -2349,6 +2351,9 @@ func desenhar_quadro(i: int) -> void:
 	draw_texture_rect(textura_laje(q == null and terreno[i] != "maldita"), r.grow(3), false)
 	if terreno[i] != "":
 		desenhar_terreno(i, r)
+	var mol := cor_moldura()
+	if mol.a > 0 and q != null:
+		caixa(r.grow(2), Color(0, 0, 0, 0), 7, 2, Color(mol, 0.85 + 0.15 * sin(tempo * 3 + i)), false)
 	var lend: bool = q != null and q.get("lend", false)
 	if lend:
 		brilho_suave(r.get_center(), 62, OURO, 0.7 + 0.3 * sin(tempo * 3))
@@ -2568,6 +2573,10 @@ func desenhar_kravenox(k: Vector2) -> void:
 	var e := eco_atual()
 	if not e.is_empty():
 		var pe := pos_eco()
+		if eco_estelar():
+			for j in 4:
+				var a := tempo * 3 + j * TAU / 4
+				draw_line(pe + Vector2.from_angle(a) * 7, pe + Vector2.from_angle(a) * 13, Color(1, 1, 1, 0.8), 1.5, true)
 		brilho_suave(pe, 22, e["cor"], 1.2)
 		draw_circle(pe, 5, e["cor"].lightened(0.3))
 		draw_circle(pe, 2.5, Color(1, 1, 1, 0.9))
@@ -2807,7 +2816,7 @@ func valor_fora() -> int:
 	if ultimo <= 0:
 		prog["coleta_fora"] = agora()
 		return 0
-	var horas := clampf((agora() - ultimo) / 3600.0, 0.0, 12.0)
+	var horas := clampf((agora() - ultimo) / 3600.0, 0.0, 24.0 if tem("fora24") else 12.0)
 	return int(horas * (1.0 + mundo_de(int(prog["liberado"])) / 5.0))
 
 
@@ -2882,6 +2891,8 @@ func botoes_menu() -> Dictionary:
 	b["missoes"] = Rect2(LARG - 84, 296, 72, 74)
 	b["baus"] = Rect2(LARG - 84, 378, 72, 74)
 	b["fora"] = Rect2(12, 520, 84, 74)
+	b["loja"] = Rect2(222, 20, 94, 34)
+	b["versao"] = Rect2(120, 648, 240, 30)
 	b["desafio"] = Rect2(12, 200, 72, 74)
 	b["abismo"] = Rect2(12, 280, 72, 74)
 	b["pactos"] = Rect2(12, 360, 72, 74)
@@ -2954,7 +2965,7 @@ func clique_menu(p: Vector2) -> void:
 				som("gema")
 				ir_para("inicio")
 			return
-		"mundos", "melhorias", "missoes", "ajustes", "kravenox", "acampamento", "pactos", "modos":
+		"mundos", "melhorias", "missoes", "ajustes", "kravenox", "acampamento", "pactos", "modos", "loja":
 			if b["voltar"].has_point(p):
 				ir_para("inicio")
 				return
@@ -2970,7 +2981,9 @@ func clique_menu(p: Vector2) -> void:
 			if b["avatar"].has_point(p):
 				ir_para("kravenox")
 				return
-			if b["jogar"].has_point(p):
+			if b["loja"].has_point(p):
+				ir_para("loja")
+			elif b["jogar"].has_point(p):
 				som("gema")
 				comecar_capitulo(c)
 			elif b["desafio"].has_point(p) and liberou("desafio"):
@@ -3040,7 +3053,7 @@ func clique_menu(p: Vector2) -> void:
 					prog["coleta_fora"] = agora()
 					ganhar(v, "ENQUANTO VOCÊ ESTAVA FORA")
 				else:
-					popup = {"titulo": "ENQUANTO VOCÊ ESTAVA FORA", "texto": "O Kravenox junta fragmentos enquanto você está fora (até 12 horas)"}
+					popup = {"titulo": "ENQUANTO VOCÊ ESTAVA FORA", "texto": "O Kravenox junta fragmentos enquanto você está fora (até %d horas)" % (24 if tem("fora24") else 12)}
 		"mundos":
 			if p.y < TOPO_MUNDOS:
 				return
@@ -3097,6 +3110,8 @@ func clique_menu(p: Vector2) -> void:
 					m["pegas"].append(ms["id"])
 					ganhar(int(ms["premio"]) + mundo_de(int(prog["liberado"])) / 2, "MISSÃO CUMPRIDA")
 					return
+		"loja":
+			clique_loja(p)
 		"modos":
 			var lista := lista_modos()
 			for i in lista.size():
@@ -3150,7 +3165,14 @@ func clique_menu(p: Vector2) -> void:
 						DESC_MONSTROS[tipo], nv, 2 * nv, n, "" if nv >= 3 else " · próximo nível: %d" % prox]}
 					return
 		"ajustes":
-			if b["vibracao"].has_point(p):
+			if b["versao"].has_point(p):
+				toques_versao += 1
+				if toques_versao >= 7:
+					toques_versao = 0
+					prog["teste_compras"] = not bool(prog.get("teste_compras", false))
+					salvar()
+					popup = {"titulo": "MODO DE TESTE DA LOJA", "texto": "Ligado: tudo da loja liberado para testar." if prog["teste_compras"] else "Desligado."}
+			elif b["vibracao"].has_point(p):
 				vibracao_ligada = not vibracao_ligada
 				prog["vibracao"] = vibracao_ligada
 				salvar()
@@ -3362,6 +3384,7 @@ func desenhar_inicio() -> void:
 	escrever_esq(str(poder()), Vector2(148, 46), 18, OURO)
 	pilula_fragmentos(LARG - 14, 16)
 	var b := botoes_menu()
+	botao(b["loja"], "Loja", OURO, true, true)
 	botao_icone(b["ajustes"], "engrenagem", "")
 	# Normal / Pesadelo
 	var mp := pesadelo_liberado()
@@ -3546,6 +3569,8 @@ func desenhar_ajustes() -> void:
 	escrever("O jogo funciona sem internet depois de aberto uma vez.", Vector2(LARG / 2, 490), 14, Color8(150, 220, 170))
 	escrever("Kravenox: Quadros do Cisma", Vector2(LARG / 2, 640), 15, OURO, true, fonte_titulo)
 	escrever("versão " + VERSAO, Vector2(LARG / 2, 664), 13, CINZA, false)
+	if prog.get("compras", {}).has("apoiador"):
+		escrever("Apoiador ♥ obrigado!", Vector2(LARG / 2, 600), 15, Color8(255, 120, 110), true)
 	desenhar_abas()
 	desenhar_popup()
 
@@ -3799,6 +3824,9 @@ func forma_atual() -> int:
 
 
 func cor_forma() -> Color:
+	var a := cor_aura()
+	if a.a > 0:
+		return a
 	return CORES_FORMA[forma_atual()]
 
 
@@ -4622,10 +4650,10 @@ func desenhar_ecos() -> void:
 # forte), Refúgio (fechar-se num quarto e construir até o amanhecer) e Caçada
 # (andar pela sala com o dedo; parado, o Kravenox ataca sozinho).
 const MODOS := [
-	{"id": "horda", "nome": "Horda", "desc": "Multidões vêm de cima, de baixo e dos lados contra a torre. Aguente 10 ondas.", "desde": 5},
-	{"id": "colosso", "nome": "Colosso", "desc": "O Gigante do Vazio ataca sem parar. Arraste o Kravenox para desviar; o dano dele cresce com o tempo.", "desde": 6},
-	{"id": "refugio", "nome": "Refúgio", "desc": "Corra para o quarto e feche a porta. Construa torres e conserte a porta até o amanhecer.", "desde": 7},
-	{"id": "cacada", "nome": "Caçada", "desc": "Ande pela sala com o dedo; parado, o Kravenox ataca sozinho. Atravesse 10 salas.", "desde": 8},
+	{"id": "horda", "nome": "Horda", "desc": "Multidões atacam a torre. Arraste o Kravenox até elas e use Esmagar e Espinhos. Aguente 10 ondas.", "desde": 5},
+	{"id": "colosso", "nome": "Colosso", "desc": "O Gigante do Vazio ataca sem parar. Arraste o Kravenox para desviar; o dano dele cresce com o tempo.", "desde": 10},
+	{"id": "refugio", "nome": "Refúgio", "desc": "Corra para o quarto e feche a porta. Construa torres e conserte a porta até o amanhecer.", "desde": 15},
+	{"id": "cacada", "nome": "Caçada", "desc": "Ande pela sala com o dedo; parado, o Kravenox ataca sozinho. Atravesse 10 salas.", "desde": 20},
 ]
 const HABS := [
 	{"id": "multi", "nome": "Tiro Duplo", "desc": "+1 golpe por ataque", "icone": "espinhos"},
@@ -4785,7 +4813,9 @@ func comecar_modo(id: String) -> void:
 			torre_max = 420.0 * (1.0 + cresce_esp()) * (1.0 + 0.25 * nivel_obra("vigia"))
 			torre_hp = torre_max
 			k_vis = CENTRO + Vector2(0, 74)
-			aviso("Defenda a torre! A primeira onda vem de cima", 3.0)
+			esp["cd"] = {"esmagar": 0.0, "espinhos": 0.0}
+			esp["alvo"] = null
+			aviso("Arraste o Kravenox até a horda!", 3.0)
 		"cacada":
 			esp["sala"] = 0
 			proxima_sala()
@@ -4833,6 +4863,34 @@ func aplicar_hab(id: String) -> void:
 	for h in HABS:
 		if h["id"] == id:
 			aviso(h["nome"], 2.0)
+
+
+const GOLPES_HORDA := {"esmagar": ["Esmagar", 6.0], "espinhos": ["Espinhos", 5.0]}
+
+
+func botao_golpe(g: String) -> Rect2:
+	return Rect2(16, ALT - 94, 150, 82) if g == "esmagar" else Rect2(LARG - 166, ALT - 94, 150, 82)
+
+
+func usar_golpe(g: String) -> void:
+	if esp["cd"][g] > 0:
+		return
+	esp["cd"][g] = GOLPES_HORDA[g][1]
+	var k := k_vis
+	if g == "esmagar":
+		som("esmagamento")
+		tremer(0.4, 60)
+		anel(k + Vector2(0, 18), 20, 170, 0.4, Color8(200, 150, 90))
+		golpe = {"tonto": true}
+		for m in monstros:
+			if m["pos"].distance_to(k) < 170:
+				ferir(m, dano_base_esp() * 4.0)
+		golpe = {}
+	else:
+		som("corte")
+		for j in 18:
+			tiros.append({"p": k, "v": Vector2.from_angle(j * TAU / 18) * 360, "dano": dano_base_esp() * 1.6, "fura": 2,
+				"vida": 1.1, "cor": Color8(30, 30, 40), "r": 6.0, "acertos": [], "golpe": {"sangra": true}})
 
 
 func cadencia_esp() -> float:
@@ -5048,11 +5106,26 @@ func atualizar_horda(dt: float) -> void:
 			torre_flash = 0.15
 			som("esmagamento")
 			texto_voa(CENTRO + Vector2(0, -70), "-%d" % int(m["dano"]), VERMELHO)
+	# o Kravenox vai até onde o dedo está
+	var alvo_k = esp.get("alvo")
+	if alvo_k != null:
+		var d: Vector2 = Vector2(alvo_k.x, clampf(alvo_k.y - 40, 150, ALT - 120)) - k_vis
+		if d.length() > 4:
+			k_vis += d.normalized() * minf(d.length(), 270.0 * (1.0 + 0.06 * nivel_melhoria("passo")) * dt)
+			k_andando = true
+			k_anim += dt * 10
+			if absf(d.x) > 1:
+				k_dir = 1 if d.x > 0 else -1
+	for g in esp["cd"]:
+		esp["cd"][g] = maxf(0.0, esp["cd"][g] - dt)
 	var de := k_vis + Vector2(0, -22)
 	esp["t_tiro"] -= dt
 	if esp["t_tiro"] <= 0:
-		esp["t_tiro"] = cadencia_esp()
-		disparar(de)
+		# só alcança quem está perto: é preciso levar o Kravenox até a horda
+		var perto = mais_perto(de)
+		if perto != null and perto["pos"].distance_to(de) < 190:
+			esp["t_tiro"] = cadencia_esp()
+			disparar(de)
 	extras_esp(de, dt)
 	if torre_hp <= 0:
 		torre_hp = 0.0
@@ -5411,12 +5484,15 @@ func entrada_esp(ev: InputEvent) -> void:
 			toque_esp(p)
 		else:
 			esp["joy_ini"] = null
+			esp["alvo"] = null
 	elif ev is InputEventMouseMotion and (ev.button_mask & MOUSE_BUTTON_MASK_LEFT):
 		var p: Vector2 = make_input_local(ev).position
 		if esp.get("joy_ini") != null:
 			esp["joy"] = p
 		if esp.get("id", "") == "colosso":
 			esp["alvo_x"] = p.x
+		if esp.get("id", "") == "horda" and esp.get("alvo") != null:
+			esp["alvo"] = p
 
 
 func toque_esp(p: Vector2) -> void:
@@ -5437,6 +5513,12 @@ func toque_esp(p: Vector2) -> void:
 		ir_para("modos")
 		return
 	match esp["id"]:
+		"horda":
+			for g in GOLPES_HORDA:
+				if botao_golpe(g).has_point(p):
+					usar_golpe(g)
+					return
+			esp["alvo"] = p
 		"cacada":
 			esp["joy_ini"] = p
 			esp["joy"] = p
@@ -5485,6 +5567,21 @@ func desenhar_esp() -> void:
 	desenhar_topo_esp()
 	if id == "refugio":
 		desenhar_painel_refugio()
+	elif id == "horda" and esp["fim"] == "":
+		for g in GOLPES_HORDA:
+			var r := botao_golpe(g)
+			var cd: float = esp["cd"][g]
+			var pronto := cd <= 0
+			caixa(r, Color(0.07, 0.05, 0.09, 0.92), 12, 2, OURO if pronto else PEDRA_BORDA, true, 6)
+			if not pronto:
+				draw_rect(Rect2(r.position, Vector2(r.size.x * (1.0 - cd / GOLPES_HORDA[g][1]), r.size.y)), Color(OURO, 0.12))
+			else:
+				brilho_suave(r.get_center(), 70, OURO, 0.4 + 0.2 * sin(tempo * 5))
+			icone("esmagamento" if g == "esmagar" else "espinhos", r.position + Vector2(36, r.size.y / 2), 0.7)
+			escrever_esq(GOLPES_HORDA[g][0], r.position + Vector2(64, 38), 14, BRANCO if pronto else CINZA, fonte_titulo)
+			escrever_esq("pronto!" if pronto else "%.0f s" % ceilf(cd), r.position + Vector2(66, 60), 14, OURO if pronto else CINZA)
+		if esp["t"] < 7:
+			escrever("Arraste o dedo: o Kravenox vai até lá", Vector2(LARG / 2, 690), 15, BRANCO)
 	elif id == "cacada" and esp["fim"] == "" and esp.get("joy_ini") != null:
 		var c: Vector2 = esp["joy_ini"]
 		draw_arc(c, 50, 0, TAU, 32, Color(OURO, 0.5), 3, true)
@@ -5742,3 +5839,130 @@ func icone_modo(id: String, c: Vector2, ok: bool) -> void:
 			for k in 8:
 				var an := k * TAU / 8 + tempo * 0.3
 				draw_line(c + Vector2.from_angle(an) * 18, c + Vector2.from_angle(an) * 25, Color(1, 0.78, 0.4, a), 3)
+
+
+# ============================================================ Loja do Apoiador (9/11)
+# Só visual e conforto: nada aqui deixa o Kravenox mais forte (sem "pagar para
+# ganhar"). A compra de verdade ainda não está ligada: liga quando o jogo for
+# para a loja da Apple ou do Google. Para testar, em Ajustes toque 7 vezes na
+# versão (liga e desliga o "modo de teste da loja").
+const LOJA_ITENS := [
+	{"id": "apoiador", "nome": "Pacote do Apoiador", "preco": "R$ 9,90", "tipo": "pacote", "cor": Color8(255, 70, 50),
+		"desc": "Aura Coroa Rubra, Eco Estelar, moldura dourada e selo de Apoiador."},
+	{"id": "aura_gelo", "nome": "Aura do Gelo Azul", "preco": "R$ 3,90", "tipo": "aura", "cor": Color8(120, 200, 255), "desc": "a luz em volta do Kravenox fica azul-gelo"},
+	{"id": "aura_ouro", "nome": "Aura Dourada", "preco": "R$ 3,90", "tipo": "aura", "cor": Color8(255, 205, 90), "desc": "a luz em volta do Kravenox fica dourada"},
+	{"id": "aura_vazio", "nome": "Aura do Vazio", "preco": "R$ 3,90", "tipo": "aura", "cor": Color8(150, 60, 255), "desc": "a luz em volta do Kravenox fica roxa do Vazio"},
+	{"id": "moldura_brasa", "nome": "Moldura de Brasa", "preco": "R$ 2,90", "tipo": "moldura", "cor": Color8(255, 90, 40), "desc": "os quadros com poder ganham borda de brasa"},
+	{"id": "vel3", "nome": "Velocidade 3×", "preco": "R$ 4,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "o botão de velocidade ganha o 3×"},
+	{"id": "fora24", "nome": "Coleta de 24 horas", "preco": "R$ 2,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "o \"Fora\" junta fragmentos por até 24 h, e não 12 h"},
+]
+var toques_versao := 0
+
+
+func tem(id: String) -> bool:
+	return bool(prog.get("teste_compras", false)) or prog.get("compras", {}).has(id)
+
+
+func item_loja(id: String) -> Dictionary:
+	for it in LOJA_ITENS:
+		if it["id"] == id:
+			return it
+	return {}
+
+
+func cor_aura() -> Color:
+	var a := str(prog.get("aura", ""))
+	if a == "coroa" and tem("apoiador"):
+		return Color8(255, 70, 50)
+	if a != "" and a != "coroa" and tem(a):
+		return item_loja(a)["cor"]
+	return Color(0, 0, 0, 0)
+
+
+func cor_moldura() -> Color:
+	var m := str(prog.get("moldura", ""))
+	if m == "ouro" and tem("apoiador"):
+		return OURO
+	if m == "moldura_brasa" and tem(m):
+		return item_loja(m)["cor"]
+	return Color(0, 0, 0, 0)
+
+
+func eco_estelar() -> bool:
+	return tem("apoiador") and bool(prog.get("eco_estelar", false))
+
+
+func usando(it: Dictionary) -> bool:
+	match it["tipo"]:
+		"pacote":
+			return str(prog.get("aura", "")) == "coroa"
+		"aura":
+			return str(prog.get("aura", "")) == it["id"]
+		"moldura":
+			return str(prog.get("moldura", "")) == it["id"]
+	return true
+
+
+func clique_loja(p: Vector2) -> void:
+	for i in LOJA_ITENS.size():
+		if not Rect2(LARG - 128, 152 + i * 82 + 18, 108, 40).has_point(p):
+			continue
+		var it: Dictionary = LOJA_ITENS[i]
+		if not tem(it["id"]):
+			popup = {"titulo": it["nome"].to_upper(), "texto": "A compra ainda não está ligada. Ela começa a funcionar quando o jogo estiver na loja da Apple ou do Google. Obrigado pela vontade de apoiar!"}
+			return
+		var liga := not usando(it)
+		match it["tipo"]:
+			"pacote":
+				prog["aura"] = "coroa" if liga else ""
+				prog["moldura"] = "ouro" if liga else ""
+				prog["eco_estelar"] = liga
+			"aura":
+				prog["aura"] = it["id"] if liga else ""
+			"moldura":
+				prog["moldura"] = it["id"] if liga else ""
+		som("gema")
+		salvar()
+		return
+
+
+func desenhar_loja_apoiador() -> void:
+	desenhar_fundo(0.7)
+	cabecalho("LOJA")
+	texto_quebrado("Nada aqui deixa o Kravenox mais forte: é só visual e conforto, para apoiar o jogo.", Vector2(24, 116), LARG - 48, 13, Color8(200, 230, 200), 2, true)
+	for i in LOJA_ITENS.size():
+		var it: Dictionary = LOJA_ITENS[i]
+		var r := Rect2(14, 152 + i * 82, LARG - 28, 76)
+		var dono := tem(it["id"])
+		var pacote: bool = it["tipo"] == "pacote"
+		caixa(r, Color8(34, 20, 24) if pacote else Color(0.06, 0.05, 0.08, 0.93), 10, 2 if pacote else 1, Color(it["cor"], 0.8) if pacote else Color(PEDRA_BORDA, 0.9), true, 4)
+		var c := r.position + Vector2(38, 38)
+		match it["tipo"]:
+			"aura", "pacote":
+				brilho_suave(c, 40, it["cor"], 1.2 + 0.2 * sin(tempo * 3))
+				desenhar_arte("kravenox-passo-0", c + Vector2(0, 22), 44, false)
+			"moldura":
+				draw_texture_rect(textura_laje(false), Rect2(c - Vector2(22, 22), Vector2(44, 44)), false)
+				caixa(Rect2(c - Vector2(21, 21), Vector2(42, 42)), Color(0, 0, 0, 0), 5, 3, it["cor"], false)
+			"conforto":
+				brilho_suave(c, 34, OURO, 0.8)
+				if it["id"] == "vel3":
+					escrever("3×", c, 24, OURO, true, fonte_titulo)
+				else:
+					draw_circle(c, 15, Color8(30, 24, 44))
+					draw_arc(c, 15, 0, TAU, 24, OURO, 2, true)
+					draw_line(c, c + Vector2(0, -10), OURO, 2)
+					draw_line(c, c + Vector2(7, 3), OURO, 2)
+		escrever_esq(it["nome"], r.position + Vector2(76, 24), 15, OURO, fonte_titulo)
+		texto_quebrado(it["desc"], r.position + Vector2(76, 30), r.size.x - 200, 12, Color8(210, 200, 220), 3)
+		var bb := Rect2(LARG - 128, r.position.y + 18, 108, 40)
+		if not dono:
+			botao(bb, it["preco"], OURO, true, true)
+		elif it["tipo"] == "conforto":
+			botao(bb, "Ativo ✓", VERDE, true, false)
+		else:
+			botao(bb, "Em uso" if usando(it) else "Usar", VERDE, true, usando(it))
+	if prog.get("teste_compras", false):
+		escrever("modo de teste da loja: tudo liberado", Vector2(LARG / 2, ALT - 96), 12, Color8(255, 200, 120), false)
+	desenhar_abas()
+	desenhar_popup()
