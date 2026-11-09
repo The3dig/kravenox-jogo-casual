@@ -38,7 +38,7 @@ conversa nova sem perder nada. Leia inteiro antes de mexer.
 ## O jogo hoje
 
 Tudo em `godot/scripts/jogo.gd` (um nó só, desenho em `_draw()`).
-Versão atual em Ajustes: **2026-11-09h** (Loja do Apoiador: 7 toques na versão em Ajustes liberam tudo para testar) (constante `VERSAO`).
+Versão atual em Ajustes: **2026-11-09i** (Loja do Apoiador: 7 toques na versão em Ajustes liberam tudo para testar) (constante `VERSAO`).
 Branch de trabalho desde 9/11: `claude/new-session-7fm2ni` (saiu da
 `claude/kravenox-ultima-fogueira`).
 

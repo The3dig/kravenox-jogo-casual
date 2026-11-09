@@ -208,3 +208,11 @@
   e arrastar; ele anda na direção arrastada (com aceleração, poeira e a torre
   sólida da versão anterior).
 - **Por quê:** o Rone continuou achando a locomoção ruim.
+
+## 2026-11-09: o Kravenox obedece na hora na Horda e na Caçada
+
+- **Era:** aceleração lenta (~0,3 s até a velocidade cheia) e velocidade
+  máxima alta: "demora para responder e depois dá uma corrida".
+- **Passou a ser:** responde em ~0,1 s, para rápido ao soltar e a velocidade
+  máxima caiu de 230/220 para 195 (passo, não disparada).
+- **Por quê:** relato do Rone jogando a Horda.

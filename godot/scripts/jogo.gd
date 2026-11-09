@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-09h"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-09i"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -4999,7 +4999,8 @@ func ferir_kx(dano: float) -> void:
 # ritmo da velocidade e solta poeira a cada passo. Na Horda a torre é sólida.
 func andar_kx(desejada: Vector2, dt: float) -> void:
 	var v: Vector2 = esp.get("vel_k", Vector2.ZERO)
-	v = v.lerp(desejada, minf(1.0, dt * (9.0 if desejada.length() > v.length() else 12.0)))
+	# responde quase na hora (~0,1 s) e para rápido ao soltar
+	v = v.lerp(desejada, minf(1.0, dt * (24.0 if desejada.length() > v.length() else 28.0)))
 	esp["vel_k"] = v
 	var rapidez := v.length()
 	if rapidez < 8.0:
@@ -5017,7 +5018,7 @@ func andar_kx(desejada: Vector2, dt: float) -> void:
 			esp["vel_k"] = v.slide(fora.normalized()) * 0.9
 	k_vis = novo
 	k_andando = true
-	k_anim += dt * rapidez / 24.0
+	k_anim += dt * rapidez / 20.0
 	if absf(v.x) > 6:
 		k_dir = 1 if v.x > 0 else -1
 	esp["t_poeira"] = float(esp.get("t_poeira", 0.0)) - dt
@@ -5152,7 +5153,7 @@ func atualizar_horda(dt: float) -> void:
 	if esp.get("joy_ini") != null:
 		var mov: Vector2 = ((esp["joy"] - esp["joy_ini"]) / 50.0).limit_length(1.0)
 		if mov.length() > 0.15:
-			desejada = mov * 230.0 * (1.0 + 0.06 * nivel_melhoria("passo"))
+			desejada = mov * 195.0 * (1.0 + 0.06 * nivel_melhoria("passo"))
 	elif esp.get("alvo") != null:
 		# (teste automático) ir até um ponto
 		var d: Vector2 = esp["alvo"] - Vector2(0, 40) - k_vis
@@ -5207,7 +5208,7 @@ func atualizar_cacada(dt: float) -> void:
 	var mov := Vector2.ZERO
 	if esp.get("joy_ini") != null:
 		mov = ((esp["joy"] - esp["joy_ini"]) / 50.0).limit_length(1.0)
-	andar_kx(mov * 220.0 * (1.0 + 0.06 * nivel_melhoria("passo")) if mov.length() > 0.15 else Vector2.ZERO, dt)
+	andar_kx(mov * 195.0 * (1.0 + 0.06 * nivel_melhoria("passo")) if mov.length() > 0.15 else Vector2.ZERO, dt)
 	k_vis.x = clampf(k_vis.x, SALA.position.x + 22, SALA.end.x - 22)
 	k_vis.y = clampf(k_vis.y, SALA.position.y + 26, SALA.end.y - 24)
 	if mov.length() > 0.15:
