@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-09f"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-09g"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -2494,6 +2494,9 @@ func desenhar_efeitos() -> void:
 		draw_circle(t["p"], t["r"] * 0.5, Color(1, 0.9, 0.9, 0.9))
 	for e in efeitos:
 		match e["t"]:
+			"poeira":
+				var a := clampf(e["vida"] / 0.45, 0, 1)
+				draw_circle(e["p"], 3.0 + 4.0 * (1.0 - a), Color(0.55, 0.5, 0.6, 0.35 * a))
 			"part":
 				var a := clampf(e["vida"] / 0.6, 0, 1)
 				draw_circle(e["p"], 2.5, Color(ROXO.lightened(0.3), a))
@@ -3052,9 +3055,9 @@ func clique_menu(p: Vector2) -> void:
 				var v := valor_fora()
 				if v > 0:
 					prog["coleta_fora"] = agora()
-					ganhar(v, "ENQUANTO VOCÊ ESTAVA FORA")
+					ganhar(v, "VIGÍLIA DO KRAVENOX")
 				else:
-					popup = {"titulo": "ENQUANTO VOCÊ ESTAVA FORA", "texto": "O Kravenox junta fragmentos enquanto você está fora (até %d horas)" % (24 if tem("fora24") else 12)}
+					popup = {"titulo": "VIGÍLIA DO KRAVENOX", "texto": "Enquanto você está longe, o Kravenox fica de vigília e junta os fragmentos que encontra (até %d horas)." % (24 if tem("fora24") else 12)}
 		"mundos":
 			if p.y < TOPO_MUNDOS:
 				return
@@ -3423,7 +3426,7 @@ func desenhar_inicio() -> void:
 	botao_icone(b["missoes"], "missoes", "Missões", missoes_prontas() > 0)
 	botao_icone(b["baus"], "baus", "Baús", not baus_prontos().is_empty())
 	var vf := valor_fora()
-	botao_icone(b["fora"], "fora", "+%d fora" % vf if vf > 0 else "Fora", vf >= 1)
+	botao_icone(b["fora"], "fora", "Vigília +%d" % vf if vf > 0 else "Vigília", vf >= 1)
 	# começar / continuar
 	var pt := partida_guardada()
 	var continua := not pt.is_empty() and int(pt["capitulo"]) == c and str(pt.get("modo", "normal")) == modo and str(pt.get("tipo", "capitulo")) == "capitulo"
@@ -4992,6 +4995,38 @@ func ferir_kx(dano: float) -> void:
 		tremer(0.25, 40)
 
 
+# O Kravenox anda com o dedo: acelera e freia aos poucos, mexe as pernas no
+# ritmo da velocidade e solta poeira a cada passo. Na Horda a torre é sólida.
+func andar_kx(desejada: Vector2, dt: float) -> void:
+	var v: Vector2 = esp.get("vel_k", Vector2.ZERO)
+	v = v.lerp(desejada, minf(1.0, dt * (9.0 if desejada.length() > v.length() else 12.0)))
+	esp["vel_k"] = v
+	var rapidez := v.length()
+	if rapidez < 8.0:
+		return
+	var novo := k_vis + v * dt
+	if esp["id"] == "horda":
+		# a torre é sólida: o Kravenox desliza pela borda dela
+		var c := CENTRO + Vector2(0, 8)
+		var raio := 46.0
+		var d := novo - c
+		d.y *= 1.6   # a base da torre é mais larga que funda
+		if d.length() < raio:
+			var fora := d.normalized() if d.length() > 0.01 else Vector2.DOWN
+			novo = c + Vector2(fora.x * raio, fora.y * raio / 1.6)
+			esp["vel_k"] = v.slide(fora.normalized()) * 0.9
+	k_vis = novo
+	k_andando = true
+	k_anim += dt * rapidez / 24.0
+	if absf(v.x) > 6:
+		k_dir = 1 if v.x > 0 else -1
+	esp["t_poeira"] = float(esp.get("t_poeira", 0.0)) - dt
+	if esp["t_poeira"] <= 0 and rapidez > 80:
+		esp["t_poeira"] = 0.22
+		for j in 3:
+			efeitos.append({"t": "poeira", "p": k_vis + Vector2(randf_range(-10, 10), 28), "v": Vector2(-v.x * 0.15 + randf_range(-20, 20), randf_range(-24, -8)), "vida": 0.45})
+
+
 # Anda até o alvo; devolve true quando está perto e pode atacar.
 func mover_monstro(m: Dictionary, alvo: Vector2, dt: float, alcance := 34.0) -> bool:
 	m["anim"] += dt
@@ -5021,7 +5056,7 @@ func envelhecer_efeitos(dt: float) -> void:
 	var vivos := []
 	for e in efeitos:
 		e["vida"] -= dt
-		if e["t"] == "part":
+		if e["t"] == "part" or e["t"] == "poeira":
 			e["p"] += e["v"] * dt
 		if e["vida"] > 0:
 			vivos.append(e)
@@ -5113,14 +5148,13 @@ func atualizar_horda(dt: float) -> void:
 			texto_voa(CENTRO + Vector2(0, -70), "-%d" % int(m["dano"]), VERMELHO)
 	# o Kravenox vai até onde o dedo está
 	var alvo_k = esp.get("alvo")
+	var desejada := Vector2.ZERO
 	if alvo_k != null:
 		var d: Vector2 = Vector2(alvo_k.x, clampf(alvo_k.y - 40, 150, ALT - 120)) - k_vis
-		if d.length() > 4:
-			k_vis += d.normalized() * minf(d.length(), 270.0 * (1.0 + 0.06 * nivel_melhoria("passo")) * dt)
-			k_andando = true
-			k_anim += dt * 10
-			if absf(d.x) > 1:
-				k_dir = 1 if d.x > 0 else -1
+		var vmax := 250.0 * (1.0 + 0.06 * nivel_melhoria("passo"))
+		desejada = d.normalized() * vmax * clampf(d.length() / 60.0, 0.0, 1.0)   # freia ao chegar
+	andar_kx(desejada, dt)
+	k_vis.x = clampf(k_vis.x, 20, LARG - 20)
 	for g in esp["cd"]:
 		esp["cd"][g] = maxf(0.0, esp["cd"][g] - dt)
 	var de := k_vis + Vector2(0, -22)
@@ -5168,14 +5202,10 @@ func atualizar_cacada(dt: float) -> void:
 	var mov := Vector2.ZERO
 	if esp.get("joy_ini") != null:
 		mov = ((esp["joy"] - esp["joy_ini"]) / 50.0).limit_length(1.0)
+	andar_kx(mov * 220.0 * (1.0 + 0.06 * nivel_melhoria("passo")) if mov.length() > 0.15 else Vector2.ZERO, dt)
+	k_vis.x = clampf(k_vis.x, SALA.position.x + 22, SALA.end.x - 22)
+	k_vis.y = clampf(k_vis.y, SALA.position.y + 26, SALA.end.y - 24)
 	if mov.length() > 0.15:
-		k_vis += mov * 220.0 * (1.0 + 0.06 * nivel_melhoria("passo")) * dt
-		k_vis.x = clampf(k_vis.x, SALA.position.x + 22, SALA.end.x - 22)
-		k_vis.y = clampf(k_vis.y, SALA.position.y + 26, SALA.end.y - 24)
-		k_andando = true
-		k_anim += dt * 10
-		if absf(mov.x) > 0.1:
-			k_dir = 1 if mov.x > 0 else -1
 		esp["t_tiro"] = minf(esp["t_tiro"], 0.12)   # ataca logo que parar
 	else:
 		esp["t_tiro"] -= dt
@@ -5859,7 +5889,7 @@ const LOJA_ITENS := [
 	{"id": "aura_vazio", "nome": "Aura do Vazio", "preco": "R$ 3,90", "tipo": "aura", "cor": Color8(150, 60, 255), "desc": "a luz em volta do Kravenox fica roxa do Vazio"},
 	{"id": "moldura_brasa", "nome": "Moldura de Brasa", "preco": "R$ 2,90", "tipo": "moldura", "cor": Color8(255, 90, 40), "desc": "os quadros com poder ganham borda de brasa"},
 	{"id": "vel4", "nome": "Velocidade 4×", "preco": "R$ 4,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "o botão de velocidade ganha o 4×"},
-	{"id": "fora24", "nome": "Coleta de 24 horas", "preco": "R$ 2,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "o \"Fora\" junta fragmentos por até 24 h, e não 12 h"},
+	{"id": "fora24", "nome": "Vigília de 24 horas", "preco": "R$ 2,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "a Vigília junta fragmentos por até 24 h, e não 12 h"},
 ]
 var toques_versao := 0
 

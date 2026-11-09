@@ -188,3 +188,14 @@
   às vezes Fúria pela metade na próxima partida ou um monte grande de
   fragmentos, e raramente (5%) um visual da loja (aura ou moldura).
 - **Por quê:** pedido do Rone.
+
+## 2026-11-09: Horda com andar natural e torre sólida; "Fora" vira "Vigília"
+
+- **Era:** na Horda o Kravenox deslizava em linha reta, sempre na mesma
+  velocidade, e passava por dentro da torre. O bônus de tempo longe se
+  chamava "Fora".
+- **Passou a ser:** ele acelera e freia aos poucos, as pernas acompanham a
+  velocidade, solta poeira nos passos (vale também na Caçada) e a torre é
+  sólida: ele bate e desliza pela borda, tem que dar a volta. O bônus virou
+  **Vigília do Kravenox** (e o item da loja, "Vigília de 24 horas").
+- **Por quê:** o Rone achou a locomoção artificial e o nome "Fora" ruim.
