@@ -143,3 +143,23 @@
   continuam iguais; a abertura continua com "reino". Lista em
   `MUSICA_MUNDO` (`jogo.gd`). O jogo ficou ~11 MB maior (baixado uma vez).
 - **Por quê:** o Rone achou a música boa, mas repetitiva; escolheu uma por mundo.
+
+## 2026-11-09: aba Modos com quatro jeitos novos de jogar
+
+- **Era:** só capítulos, Abismo sem Fim e Desafio do Dia (estes dois em
+  botões na tela inicial). Barra de abas com 5 abas.
+- **Passou a ser:** aba **Modos** (6 abas na barra) com:
+  - **Horda:** multidões vêm de cima, de baixo e dos lados contra a torre;
+    o Kravenox ataca sozinho; 10 ondas, com um poder para escolher entre elas.
+  - **Colosso:** o "Gigante do Vazio" (nome do capítulo 17; arte da Sentinela
+    do Vazio, tingida) ataca marcando áreas vermelhas; o jogador arrasta o
+    Kravenox para desviar e o dano dele cresce com o tempo. 90 s, recorde de dano.
+  - **Refúgio:** o Kravenox corre para um quarto; o jogador constrói torre,
+    raio, cristal (conserta a porta) e fonte (essência) e reforça a porta até
+    o amanhecer (2:30).
+  - **Caçada:** anda pela sala arrastando o dedo; parado, ataca sozinho;
+    10 salas, chefe na 5 e na 10, poder para escolher a cada sala.
+  - A aba também abre o Abismo sem Fim e o Desafio do Dia.
+- **Por quê:** pedido do Rone, pensando em publicar o jogo. As ideias são de
+  gênero (defesa de quarto, horda, chefe gigante, "Archero"); arte, nomes e
+  conteúdo são do Kravenox.

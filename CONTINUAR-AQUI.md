@@ -38,7 +38,7 @@ conversa nova sem perder nada. Leia inteiro antes de mexer.
 ## O jogo hoje
 
 Tudo em `godot/scripts/jogo.gd` (um nó só, desenho em `_draw()`).
-Versão atual em Ajustes: **2026-11-09a** (constante `VERSAO`).
+Versão atual em Ajustes: **2026-11-09d** (constante `VERSAO`).
 Branch de trabalho desde 9/11: `claude/new-session-7fm2ni` (saiu da
 `claude/kravenox-ultima-fogueira`).
 
@@ -100,6 +100,16 @@ para Crônicas e eventos: `godot/dados/trechos.json`, gerado por
 `godot/ferramentas/extrair_trechos.py` a partir do RPG.
 Robô: `-- --robo --abismo --cap=20` e `-- --robo --desafio --cap=30` testam
 os modos novos.
+
+## Aba Modos (9/11)
+
+Horda, Colosso, Refúgio e Caçada: seção "modos especiais" no fim do
+`jogo.gd` (`comecar_modo`, `atualizar_esp`, `desenhar_esp`, `tela ==
+"especial"`, `tipo_partida == "especial"`). Recordes em `prog["modos"]`.
+Uma música do RPG por mundo: `MUSICA_MUNDO`.
+Sobre vender: a conta da Apple custa ~R$ 550/ano; precisa de ~130-150
+pessoas pagando R$ 5. Sugestão dada: testar antes no Google Play (US$ 25 uma
+vez) ou itch.io (grátis).
 
 ## Como trabalhar no jogo
 
