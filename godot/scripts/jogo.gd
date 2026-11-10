@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-09j"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-10a"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -368,6 +368,7 @@ func _ready() -> void:
 		var dt = JSON.parse_string(ft.get_as_text())
 		if dt is Dictionary:
 			trechos = dt
+	carregar_idioma()
 	carregar_progresso()
 	if robo:
 		tela = "jogo"
@@ -522,6 +523,8 @@ func carregar_progresso() -> void:
 	prog["fragmentos"] = int(prog["fragmentos"])
 	modo = str(prog.get("modo", "normal"))
 	vibracao_ligada = bool(prog.get("vibracao", true))
+	idioma = str(prog.get("idioma", idioma_padrao()))
+	cache_tx.clear()
 	var ultima := float(prog.get("ultima_visita", 0.0))
 	if ultima > 0 and agora() - ultima > 3 * 86400:
 		# ficou 3 dias ou mais fora: presente maior e Fúria adiantada nas próximas partidas
@@ -1910,6 +1913,7 @@ func brilho_suave(c: Vector2, r: float, cor: Color, forca := 1.0) -> void:
 
 
 func escrever(t: String, centro: Vector2, tam: int, cor: Color, contorno := true, f: Font = null) -> void:
+	t = tx(t)
 	if f == null:
 		f = fonte
 	var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x
@@ -1920,6 +1924,7 @@ func escrever(t: String, centro: Vector2, tam: int, cor: Color, contorno := true
 
 
 func escrever_esq(t: String, p: Vector2, tam: int, cor: Color, f: Font = null) -> void:
+	t = tx(t)
 	if f == null:
 		f = fonte
 	draw_string_outline(f, p, t, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, 6, Color(TINTA, 0.9))
@@ -2139,6 +2144,7 @@ func icone_escolha(id: String, c: Vector2) -> void:
 
 # Texto em várias linhas, alinhado à esquerda (ou centralizado). Devolve a altura usada.
 func texto_quebrado(t: String, p: Vector2, largura: float, tam: int, cor: Color, max_linhas := 12, centro := false) -> float:
+	t = tx(t)
 	var palavras := t.split(" ")
 	var linhas := []
 	var atual := ""
@@ -2224,7 +2230,7 @@ func desenhar_topo() -> void:
 	if tipo_partida == "abismo":
 		tit_txt = "ABISMO SEM FIM · RECORDE %d" % int(prog.get("abismo_rec", 0))
 	elif tipo_partida == "desafio":
-		tit_txt = "DESAFIO · " + regra_desafio()["nome"].to_upper()
+		tit_txt = tx("DESAFIO · ") + tx(regra_desafio()["nome"]).to_upper()
 	var tit := encurtar(tit_txt, fonte_titulo, 13, LARG - 80 - w)
 	escrever_esq(tit, Vector2(56, 31), 13, OURO, fonte_titulo)
 	# trilha das fases
@@ -2724,7 +2730,7 @@ func desenhar_loja() -> void:
 			dica = "LENDÁRIO %s: %s." % [LENDARIAS[q["id"]]["nome"], LENDARIAS[q["id"]]["desc"]]
 		var sins := sinergias_do(selec[1])
 		if not sins.is_empty():
-			dica = "Combina: %s. " % ", ".join(sins) + dica
+			dica = tx("Combina: %s. ") % ", ".join(sins.map(func(x): return tx(x))) + tx(dica)
 	desenhar_dica(dica, Vector2(LARG / 2, LOJA_Y + 32), LARG - 36)
 
 
@@ -2737,6 +2743,7 @@ const TOPO_MUNDOS := 118.0
 
 
 func encurtar(t: String, f: Font, tam: int, largura: float) -> String:
+	t = tx(t)
 	if f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x <= largura:
 		return t
 	while t.length() > 4 and f.get_string_size(t + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x > largura:
@@ -2914,7 +2921,7 @@ func botoes_menu() -> Dictionary:
 		b["eco%d" % i] = Rect2(LARG - 132, 150 + i * 120 + 40, 112, 44)
 	b["cr_ant"] = Rect2(16, ALT - 160, 64, 56)
 	b["cr_prox"] = Rect2(LARG - 80, ALT - 160, 64, 56)
-	b["vibracao"] = Rect2(330, 270, 120, 44)
+	b["vibracao"] = Rect2(330, 240, 120, 44)
 	var nomes := ["melhorias", "acampamento", "inicio", "modos", "mundos", "ajustes_aba"]
 	for i in 6:
 		b["aba_" + nomes[i]] = Rect2(i * 80, ALT - 82, 80, 82)
@@ -2922,8 +2929,9 @@ func botoes_menu() -> Dictionary:
 		b["melhoria%d" % i] = Rect2(338, 146 + i * 84 + 16, 112, 44)
 	for i in MISSOES.size():
 		b["missao%d" % i] = Rect2(338, 160 + i * 110 + 30, 112, 44)
-	b["musica"] = Rect2(330, 150, 120, 44)
-	b["efeitos"] = Rect2(330, 210, 120, 44)
+	b["musica"] = Rect2(330, 136, 120, 44)
+	b["idioma"] = Rect2(330, 292, 120, 44)
+	b["efeitos"] = Rect2(330, 188, 120, 44)
 	b["apagar"] = Rect2(40, 360, 400, 50)
 	b["copiar_prog"] = Rect2(40, 520, 195, 50)
 	b["colar_prog"] = Rect2(245, 520, 195, 50)
@@ -3174,7 +3182,9 @@ func clique_menu(p: Vector2) -> void:
 						DESC_MONSTROS[tipo], nv, 2 * nv, n, "" if nv >= 3 else " · próximo nível: %d" % prox]}
 					return
 		"ajustes":
-			if b["copiar_prog"].has_point(p):
+			if b["idioma"].has_point(p):
+				trocar_idioma()
+			elif b["copiar_prog"].has_point(p):
 				copiar_progresso()
 			elif b["colar_prog"].has_point(p):
 				colar_progresso()
@@ -3580,7 +3590,9 @@ func desenhar_ajustes() -> void:
 		var r: Rect2 = it[1]
 		escrever_esq(it[0], Vector2(40, r.get_center().y + 7), 20, BRANCO)
 		botao(r, "Ligado" if it[2] else "Desligado", VERDE if it[2] else CINZA, true, it[2])
-	draw_line(Vector2(30, 334), Vector2(LARG - 30, 334), Color(PEDRA_BORDA, 0.7), 1)
+	escrever_esq("Idioma / Language", Vector2(40, b["idioma"].get_center().y + 7), 20, BRANCO)
+	botao(b["idioma"], "Português" if idioma == "pt" else "English", OURO, true, true)
+	draw_line(Vector2(30, 346), Vector2(LARG - 30, 346), Color(PEDRA_BORDA, 0.7), 1)
 	botao(b["apagar"], "Toque de novo para apagar tudo" if apagar_confirma > 0 else "Apagar progresso", VERMELHO, true, apagar_confirma > 0)
 	escrever("Apaga capítulos, melhorias e fragmentos deste aparelho.", Vector2(LARG / 2, 428), 13, CINZA)
 	escrever("O jogo funciona sem internet depois de aberto uma vez.", Vector2(LARG / 2, 462), 14, Color8(150, 220, 170))
@@ -3589,7 +3601,7 @@ func desenhar_ajustes() -> void:
 	botao(b["copiar_prog"], "Copiar progresso", AZUL, true, false)
 	botao(b["colar_prog"], "Toque para trocar" if colar_confirma > 0 else "Colar progresso", VERMELHO if colar_confirma > 0 else AZUL, true, colar_confirma > 0)
 	escrever("Kravenox: Quadros do Cisma", Vector2(LARG / 2, 640), 15, OURO, true, fonte_titulo)
-	escrever("versão " + VERSAO, Vector2(LARG / 2, 664), 13, CINZA, false)
+	escrever(tx("versão ") + VERSAO, Vector2(LARG / 2, 664), 13, CINZA, false)
 	if prog.get("compras", {}).has("apoiador"):
 		escrever("Apoiador ♥ obrigado!", Vector2(LARG / 2, 600), 15, Color8(255, 120, 110), true)
 	desenhar_abas()
@@ -3695,6 +3707,7 @@ func desenhar_bestiario() -> void:
 
 # Dica da loja: cabe em até duas linhas pequenas.
 func desenhar_dica(t: String, c: Vector2, largura: float) -> void:
+	t = tx(t)
 	if fonte.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x <= largura:
 		escrever(t, c, 14, CINZA, false)
 		return
@@ -4312,7 +4325,7 @@ func soltar_furia() -> void:
 	tremer(1.0, 160)
 	lento_t = 0.5
 	som("thornox")
-	texto_voa(k_vis + Vector2(0, -84), "FÚRIA: " + FORMAS_KX[f][1].to_upper(), cor_forma().lightened(0.35), 22)
+	texto_voa(k_vis + Vector2(0, -84), tx("FÚRIA: ") + tx(FORMAS_KX[f][1]).to_upper(), cor_forma().lightened(0.35), 22)
 	contar_total("furias")
 
 
@@ -4481,7 +4494,7 @@ func checar_novidades() -> void:
 			vistas[n["id"]] = true
 			prog["novidades"] = vistas
 			salvar()
-			popup = {"titulo": "NOVO: " + n["titulo"], "texto": n["texto"]}
+			popup = {"titulo": tx("NOVO: ") + tx(n["titulo"]), "texto": n["texto"]}
 			som("nivel")
 			return
 
@@ -4570,13 +4583,13 @@ func desenhar_grimorio() -> void:
 		var tem := g.has("S:" + sn["nome"])
 		var r := Rect2(12, y, LARG - 24, 36)
 		caixa(r, Color(0.06, 0.05, 0.08, 0.9), 8, 1, Color(ROXO if tem else PEDRA_BORDA, 0.7))
-		var par := "dois poderes iguais" if sn["a"] == "*" else "%s + %s" % [ITENS[sn["a"]]["nome"], ITENS[sn["b"]]["nome"]]
+		var par := tx("dois poderes iguais") if sn["a"] == "*" else "%s + %s" % [tx(ITENS[sn["a"]]["nome"]), tx(ITENS[sn["b"]]["nome"])]
 		if tem:
 			escrever_esq(sn["nome"], r.position + Vector2(10, 16), 14, OURO)
-			escrever_esq(encurtar(par + ": " + sn["desc"], fonte, 12, r.size.x - 20), r.position + Vector2(10, 32), 12, CINZA)
+			escrever_esq(encurtar(par + ": " + tx(sn["desc"]), fonte, 12, r.size.x - 20), r.position + Vector2(10, 32), 12, CINZA)
 		else:
-			escrever_esq("??? " + ("(secreta)" if sn.get("secreta", false) else ""), r.position + Vector2(10, 16), 14, CINZA)
-			escrever_esq("dica: " + ("descubra sozinho" if sn.get("secreta", false) else par), r.position + Vector2(10, 32), 12, Color(CINZA, 0.6))
+			escrever_esq("??? " + (tx("(secreta)") if sn.get("secreta", false) else ""), r.position + Vector2(10, 16), 14, CINZA)
+			escrever_esq(tx("dica: ") + (tx("descubra sozinho") if sn.get("secreta", false) else par), r.position + Vector2(10, 32), 12, Color(CINZA, 0.6))
 		y += 39
 	y += 6
 	escrever_esq("LENDÁRIAS (nível 5 + parceiro no caminho)", Vector2(18, y + 14), 13, OURO, fonte_titulo)
@@ -4587,8 +4600,8 @@ func desenhar_grimorio() -> void:
 		var r := Rect2(12, y, LARG - 24, 36)
 		caixa(r, Color(0.06, 0.05, 0.08, 0.9), 8, 1, Color(OURO if tem else PEDRA_BORDA, 0.7))
 		escrever_esq(ld["nome"] if tem else "???", r.position + Vector2(10, 16), 14, OURO if tem else CINZA)
-		var t := "%s 5 + %s" % [ITENS[id]["nome"], ITENS[ld["par"]]["nome"]]
-		escrever_esq(encurtar(t + (": " + ld["desc"] if tem else ""), fonte, 12, r.size.x - 20), r.position + Vector2(10, 32), 12, CINZA)
+		var t := "%s 5 + %s" % [tx(ITENS[id]["nome"]), tx(ITENS[ld["par"]]["nome"])]
+		escrever_esq(encurtar(t + (": " + tx(ld["desc"]) if tem else ""), fonte, 12, r.size.x - 20), r.position + Vector2(10, 32), 12, CINZA)
 		y += 39
 	desenhar_abas()
 
@@ -4626,7 +4639,9 @@ func desenhar_cronicas() -> void:
 		t = "(o trecho deste capítulo ainda não foi guardado)"
 	var papel := Rect2(24, ri.end.y + 76, LARG - 48, 230)
 	caixa(papel, Color8(36, 30, 26), 10, 1, Color(OURO, 0.4), true, 6)
-	texto_quebrado("“" + t + "”", papel.position + Vector2(18, 14), papel.size.x - 36, 17, PAPEL_C, 10)
+	var alt_t := texto_quebrado("“" + t + "”", papel.position + Vector2(18, 14), papel.size.x - 36, 17, PAPEL_C, 9)
+	if idioma != "pt":
+		escrever(tx("(texto em português, a língua do livro)"), papel.position + Vector2(papel.size.x / 2, alt_t + 28), 12, CINZA, false)
 	var k := lista.find(c)
 	var b := botoes_menu()
 	for lado in [["cr_ant", -1.0, k > 0], ["cr_prox", 1.0, k < lista.size() - 1]]:
@@ -5147,7 +5162,7 @@ func atualizar_horda(dt: float) -> void:
 			esp["fila"] = fila
 			esp["t_spawn"] = 0.3
 			var nomes := {"cima": "de cima", "baixo": "de baixo", "esq": "da esquerda", "dir": "da direita"}
-			aviso("Onda %d de 10 · vem %s" % [w, " e ".join(lados.map(func(x): return nomes[x]))], 2.5)
+			aviso(tx("Onda %d de 10 · vem %s") % [w, (" e " if idioma == "pt" else " and ").join(lados.map(func(x): return tx(nomes[x])))], 2.5)
 		return
 	esp["t_spawn"] -= dt
 	if esp["t_spawn"] <= 0 and not esp["fila"].is_empty():
@@ -6119,7 +6134,7 @@ func copiar_progresso() -> void:
 	var c := codigo_progresso()
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("try{navigator.clipboard.writeText(%s)}catch(e){}" % JSON.stringify(c))
-		JavaScriptBridge.eval("window.prompt('Copie este código (toque nele, Selecionar Tudo, Copiar) e mande para o outro celular. Lá: Ajustes → Colar progresso.', %s)" % JSON.stringify(c))
+		JavaScriptBridge.eval("window.prompt(%s, %s)" % [JSON.stringify(tx("Copie este código (toque nele, Selecionar Tudo, Copiar) e mande para o outro celular. Lá: Ajustes → Colar progresso.")), JSON.stringify(c)])
 		popup = {"titulo": "CÓDIGO DO PROGRESSO", "texto": "Mande o código para o outro celular (WhatsApp, Notas, e-mail). Lá, em Ajustes, toque em Colar progresso."}
 	else:
 		DisplayServer.clipboard_set(c)
@@ -6142,7 +6157,7 @@ func colar_progresso() -> void:
 		return
 	var c := ""
 	if OS.has_feature("web"):
-		c = str(JavaScriptBridge.eval("window.prompt('Cole aqui o código do outro celular:', '') || ''"))
+		c = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Cole aqui o código do outro celular:"))))
 	else:
 		c = DisplayServer.clipboard_get()
 	if c.strip_edges() == "":
@@ -6231,3 +6246,135 @@ func desenhar_dica_tutorial(texto: String) -> void:
 	var r := Rect2(24, LOJA_Y - 60, LARG - 48, 44)
 	caixa(r, Color(0.08, 0.06, 0.12, 0.92), 10, 2, OURO, true, 4)
 	texto_quebrado(texto, r.position + Vector2(12, 4 if fonte.get_string_size(texto, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x > r.size.x - 24 else 12), r.size.x - 24, 14, BRANCO, 2, true)
+
+
+# ============================================================ idiomas (10/11)
+# Todo texto passa por tx() na hora de desenhar. O dicionário (dados/en.json)
+# vai do português para o inglês; textos com números ("Fase %d de %d") viram
+# moldes. Os trechos do livro ficam em português (a língua do livro).
+var idioma := "pt"
+var EN := {}
+var en_maiusc := {}
+var en_moldes := []   # [RegEx, molde em inglês, tipos dos buracos]
+var cache_tx := {}
+
+
+func carregar_idioma() -> void:
+	var f := FileAccess.open("res://dados/en.json", FileAccess.READ)
+	if f == null:
+		return
+	var d = JSON.parse_string(f.get_as_text())
+	if not (d is Dictionary):
+		return
+	EN = d
+	var lista := []
+	for k in EN:
+		en_maiusc[String(k).to_upper()] = String(EN[k]).to_upper()
+		if "%" in k:
+			lista.append(k)
+	# os moldes com mais texto fixo vêm primeiro (mais específicos)
+	lista.sort_custom(func(a, b): return molde_fixo(a) > molde_fixo(b))
+	for k in lista:
+		var tipos := []
+		var rx := "^"
+		var i := 0
+		while i < k.length():
+			var c: String = k[i]
+			if c == "%" and i + 1 < k.length():
+				var resto: String = k.substr(i + 1, 3)
+				if resto.begins_with("%"):
+					rx += "%"
+					i += 2
+					continue
+				if resto.begins_with("02d"):
+					rx += "(-?[0-9.,:]+)"
+					tipos.append("d")
+					i += 4
+					continue
+				if resto.begins_with("d"):
+					rx += "(-?[0-9.,:]+)"
+					tipos.append("d")
+					i += 2
+					continue
+				if resto.begins_with("s"):
+					rx += "(.*?)"
+					tipos.append("s")
+					i += 2
+					continue
+			rx += ("\\" + c) if c in "\\^$.|?*+()[]{}" else c
+			i += 1
+		rx += "$"
+		var re := RegEx.new()
+		if re.compile(rx) == OK:
+			en_moldes.append([re, EN[k], tipos])
+
+
+func molde_fixo(k: String) -> int:
+	return k.replace("%d", "").replace("%s", "").replace("%02d", "").length()
+
+
+func tx(s: String) -> String:
+	if idioma == "pt" or s == "":
+		return s
+	if cache_tx.has(s):
+		return cache_tx[s]
+	var r := traduzir(s)
+	if cache_tx.size() > 4000:
+		cache_tx.clear()
+	cache_tx[s] = r
+	return r
+
+
+func traduzir(s: String) -> String:
+	if EN.has(s):
+		return EN[s]
+	if en_maiusc.has(s):
+		return en_maiusc[s]
+	for e in en_moldes:
+		var m: RegExMatch = e[0].search(s)
+		if m != null:
+			var vals := []
+			for g in range(1, m.get_group_count() + 1):
+				var v := m.get_string(g)
+				vals.append(traduzir(v) if e[2][g - 1] == "s" else v)
+			return preencher(e[1], vals, s == s.to_upper())
+	if " · " in s:
+		var partes := s.split(" · ")
+		var saida := []
+		for p in partes:
+			saida.append(traduzir(p))
+		return " · ".join(saida)
+	return s
+
+
+func preencher(molde: String, vals: Array, maiusc: bool) -> String:
+	var out := ""
+	var i := 0
+	var n := 0
+	while i < molde.length():
+		var c: String = molde[i]
+		if c == "%" and i + 1 < molde.length():
+			if molde[i + 1] == "%":
+				out += "%"
+				i += 2
+				continue
+			var pulo := 4 if molde.substr(i + 1, 3) == "02d" else 2
+			if n < vals.size():
+				out += str(vals[n])
+			n += 1
+			i += pulo
+			continue
+		out += c
+		i += 1
+	return out.to_upper() if maiusc and out.to_upper() != out and molde.to_upper() == molde else out
+
+
+func idioma_padrao() -> String:
+	return "pt" if OS.get_locale_language() == "pt" else "en"
+
+
+func trocar_idioma() -> void:
+	idioma = "en" if idioma == "pt" else "pt"
+	prog["idioma"] = idioma
+	cache_tx.clear()
+	salvar()

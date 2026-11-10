@@ -229,3 +229,18 @@
   na segunda onda. O Rone pediu que não fosse longo.
 - **Política de privacidade:** `kravenox-jogar/privacidade.html` (exigida pela
   Apple e pelo Google): o jogo não coleta nada. Ainda falta um contato.
+
+## 2026-11-10: o jogo em inglês
+
+- **Era:** só em português.
+- **Passou a ser:** português e inglês (Ajustes → "Idioma / Language"; na
+  primeira vez segue o idioma do celular). Todo texto passa por `tx()` na
+  hora de desenhar, com o dicionário `godot/dados/en.json` (português →
+  inglês; textos com números viram moldes como "Fase %d de %d"). Nomes em
+  inglês: "Kravenox: Schism Tiles", Essence Larva, Void Sentinel, Toothed
+  Worm, Giant of the Void etc. Os títulos dos capítulos foram traduzidos
+  livremente.
+- **Ficou em português:** os trechos do livro (Crônicas e eventos), com o
+  aviso "text in Portuguese, the book's language". Traduzir o livro é decisão
+  do Rone.
+- **Por quê:** para o jogo chegar a mais gente se for para as lojas.
