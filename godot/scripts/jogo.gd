@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-12d"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-12f"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const VIDA_MONSTROS := 2.6  # 12/11: monstros mais duros (o jogo estava fácil demais)
@@ -2050,6 +2050,8 @@ func _draw() -> void:
 			desenhar_loja_apoiador()
 		"jogos":
 			desenhar_jogos()
+		"beta":
+			desenhar_beta()
 		"especial":
 			desenhar_esp()
 		_:
@@ -2936,7 +2938,8 @@ func botoes_menu() -> Dictionary:
 	b["fora"] = Rect2(12, 520, 84, 74)
 	b["loja"] = Rect2(222, 20, 94, 34)
 	b["jogos"] = Rect2(60, 96, 116, 34)
-	b["versao"] = Rect2(120, 648, 240, 30)
+	b["versao"] = Rect2(120, 668, 240, 30)
+	b["codigo"] = Rect2(120, 582, 240, 40)
 	b["desafio"] = Rect2(12, 200, 72, 74)
 	b["abismo"] = Rect2(12, 280, 72, 74)
 	b["pactos"] = Rect2(12, 360, 72, 74)
@@ -3161,6 +3164,8 @@ func clique_menu(p: Vector2) -> void:
 					return
 		"loja":
 			clique_loja(p)
+		"beta":
+			clique_beta(p)
 		"jogos":
 			for i in JOGOS_NOSSOS.size():
 				if Rect2(14, 152 + i * 132, LARG - 28, 122).has_point(p):
@@ -3220,7 +3225,9 @@ func clique_menu(p: Vector2) -> void:
 						DESC_MONSTROS[tipo], nv, 2 * nv, n, "" if nv >= 3 else " · próximo nível: %d" % prox]}
 					return
 		"ajustes":
-			if b["idioma"].has_point(p):
+			if b["codigo"].has_point(p):
+				pedir_codigo()
+			elif b["idioma"].has_point(p):
 				trocar_idioma()
 			elif b["copiar_prog"].has_point(p):
 				copiar_progresso()
@@ -3464,7 +3471,7 @@ func desenhar_inicio() -> void:
 	escrever(CAPITULOS[c - 1], Vector2(LARG / 2, 262), 18, OURO)
 	escrever("Mundo %d · %s" % [w, MUNDO_NOMES[w - 1]], Vector2(LARG / 2, 286), 14, CINZA)
 	if feito(c) and modo == "normal" or modo == "pesadelo" and prog.get("feitos_p", {}).has(str(c)):
-		escrever("✓ vencido", Vector2(LARG / 2, 306), 13, Color8(120, 230, 140), false)
+		escrever("vencido", Vector2(LARG / 2, 306), 13, Color8(120, 230, 140), false)
 	var pode_ant := c > 1
 	var pode_prox := c + 1 <= TOTAL_CAPITULOS and capitulo_disponivel(c + 1)
 	for lado in [["ant", -1.0, pode_ant], ["prox", 1.0, pode_prox]]:
@@ -3611,7 +3618,7 @@ func desenhar_missoes() -> void:
 		var pronto := feito_n >= int(ms["meta"])
 		var bb: Rect2 = b["missao%d" % i]
 		if pego:
-			botao(bb, "Pego ✓", CINZA, false)
+			botao(bb, "Pego", CINZA, false)
 		else:
 			botao(bb, "", OURO if pronto else CINZA, pronto, pronto)
 			cristal(bb.position + Vector2(34, 22), 8, VERMELHO)
@@ -3639,10 +3646,16 @@ func desenhar_ajustes() -> void:
 	escrever("Continuar em outro celular", Vector2(LARG / 2, 500), 15, OURO, true, fonte_titulo)
 	botao(b["copiar_prog"], "Copiar progresso", AZUL, true, false)
 	botao(b["colar_prog"], "Toque para trocar" if colar_confirma > 0 else "Colar progresso", VERMELHO if colar_confirma > 0 else AZUL, true, colar_confirma > 0)
-	escrever("Kravenox: Quadros do Cisma", Vector2(LARG / 2, 640), 15, OURO, true, fonte_titulo)
-	escrever(tx("versão ") + VERSAO, Vector2(LARG / 2, 664), 13, CINZA, false)
+	botao(b["codigo"], "Código de presente", OURO, true, false)
+	var selos := []
 	if prog.get("compras", {}).has("apoiador"):
-		escrever("Apoiador ♥ obrigado!", Vector2(LARG / 2, 600), 15, Color8(255, 120, 110), true)
+		selos.append(tx("Apoiador: obrigado!"))
+	if prog.get("beta", "") != "":
+		selos.append(tx("Beta Tester"))
+	if not selos.is_empty():
+		escrever("   ·   ".join(selos), Vector2(LARG / 2, 638), 15, Color8(170, 255, 200), true)
+	escrever("Kravenox: Quadros do Cisma", Vector2(LARG / 2, 662), 15, OURO, true, fonte_titulo)
+	escrever(tx("versão ") + VERSAO, Vector2(LARG / 2, 684), 13, CINZA, false)
 	desenhar_abas()
 	desenhar_popup()
 
@@ -4064,7 +4077,7 @@ func desenhar_conquistas() -> void:
 		escrever_esq("%d/%d" % [feito_n, int(c["meta"])], r.position + Vector2(242, 39), 12, CINZA)
 		var bb: Rect2 = b["conquista%d" % i]
 		if pega:
-			botao(bb, "Pega ✓", CINZA, false)
+			botao(bb, "Pega", CINZA, false)
 		else:
 			botao(bb, "", OURO if pronta else CINZA, pronta, pronta)
 			cristal(bb.position + Vector2(24, 16), 6, VERMELHO)
@@ -4522,6 +4535,9 @@ func ontem() -> String:
 func checar_novidades() -> void:
 	if robo or not popup.is_empty():
 		return
+	if prog.get("beta", "") == "escolher":
+		tela = "beta"
+		return
 	if prog.get("volta_pendente", false):
 		prog.erase("volta_pendente")
 		ganhar(20 + 5 * mundo_de(int(prog["liberado"])), "BEM-VINDO DE VOLTA")
@@ -4781,7 +4797,7 @@ func texto_rec(id: String) -> String:
 		"abismo":
 			return "Recorde: onda %d" % int(prog.get("abismo_rec", 0))
 		"desafio":
-			return "Feito hoje ✓" if desafio_feito_hoje() else "Ainda não feito hoje"
+			return "Feito hoje!" if desafio_feito_hoje() else "Ainda não feito hoje"
 	return ""
 
 
@@ -5963,6 +5979,7 @@ const LOJA_ITENS := [
 	{"id": "skin_ouro", "nome": "Kravenox Dourado", "preco": "R$ 4,90", "tipo": "skin", "skin": "ouro", "cor": Color8(255, 205, 90), "desc": "o corpo do Kravenox fica dourado"},
 	{"id": "skin_sombrio", "nome": "Kravenox do Vazio", "preco": "R$ 4,90", "tipo": "skin", "skin": "sombrio", "cor": Color8(170, 110, 255), "desc": "o corpo do Kravenox fica roxo do Vazio"},
 	{"id": "skin_brasa", "nome": "Kravenox de Brasa", "preco": "R$ 4,90", "tipo": "skin", "skin": "brasa", "cor": Color8(255, 140, 50), "desc": "o corpo do Kravenox fica cor de brasa"},
+	{"id": "skin_pioneiro", "nome": "Kravenox Pioneiro", "preco": "Beta", "tipo": "skin", "skin": "pioneiro", "cor": Color8(90, 255, 160), "desc": "exclusiva de quem testou o jogo antes de todo mundo", "exclusivo": true},
 	{"id": "moldura_brasa", "nome": "Moldura de Brasa", "preco": "R$ 2,90", "tipo": "moldura", "cor": Color8(255, 90, 40), "desc": "os quadros com poder ganham borda de brasa"},
 	{"id": "vel4", "nome": "Velocidade 4×", "preco": "R$ 4,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "o botão de velocidade ganha o 4×"},
 	{"id": "fora24", "nome": "Vigília de 24 horas", "preco": "R$ 2,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "a Vigília junta fragmentos por até 24 h, e não 12 h"},
@@ -6109,6 +6126,9 @@ func clique_loja(p: Vector2) -> void:
 		if not Rect2(LARG - 128, ret_loja(i).position.y + 14, 108, 40).has_point(p):
 			continue
 		var it: Dictionary = LOJA_ITENS[i]
+		if not tem(it["id"]) and it.get("exclusivo", false):
+			popup = {"titulo": tx(it["nome"]).to_upper(), "texto": "Exclusiva dos beta testers: abre com o código de presente (Ajustes → Código de presente)."}
+			return
 		if not tem(it["id"]):
 			popup = {"titulo": it["nome"].to_upper(), "texto": "A compra ainda não está ligada. Ela começa a funcionar quando o jogo estiver na loja da Apple ou do Google. Obrigado pela vontade de apoiar!"}
 			return
@@ -6164,7 +6184,7 @@ func desenhar_loja_apoiador() -> void:
 		if not dono:
 			botao(bb, it["preco"], OURO, true, true)
 		elif it["tipo"] == "conforto":
-			botao(bb, "Ativo ✓", VERDE, true, false)
+			botao(bb, "Ativo", VERDE, true, false)
 		else:
 			botao(bb, "Em uso" if usando(it) else "Usar", VERDE, true, usando(it))
 	# topo fixo (por cima da lista que rola)
@@ -6503,3 +6523,86 @@ func desenhar_jogos() -> void:
 		texto_quebrado(jg["desc"], r.position + Vector2(122, 40), r.size.x - 136, 14, Color8(220, 210, 230), 2)
 		botao(Rect2(r.end.x - 120, r.end.y - 50, 108, 40), "Jogar", VERMELHO, true, true)
 	desenhar_abas()
+
+
+# ============================================================ prêmio de beta tester (12/11)
+# Sem servidor: um código de presente (Ajustes → Código de presente) abre o
+# Baú do Beta Tester: a skin exclusiva Pioneiro, 1 skin da loja à escolha,
+# o selo "Beta Tester" e 100 fragmentos. Vale uma vez por aparelho.
+const CODIGOS_BETA := ["BETAKRAVENOX", "BETATESTER"]
+const SKINS_BETA := ["gelo", "ouro", "sombrio", "brasa"]
+
+
+func ret_skin_beta(i: int) -> Rect2:
+	return Rect2(24 + (i % 2) * 222, 430 + (i / 2) * 140, 210, 128)
+
+
+func pedir_codigo() -> void:
+	var c := ""
+	if OS.has_feature("web"):
+		c = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Digite o código de presente:"))))
+	else:
+		c = DisplayServer.clipboard_get()
+	c = c.strip_edges().to_upper().replace(" ", "").replace("-", "")
+	if c == "":
+		if not OS.has_feature("web"):
+			popup = {"titulo": "CÓDIGO DE PRESENTE", "texto": "Copie o código e depois toque aqui."}
+		return
+	if not c in CODIGOS_BETA:
+		popup = {"titulo": "CÓDIGO DE PRESENTE", "texto": "Esse código não existe. Confira as letras e tente de novo."}
+		som("dano")
+		return
+	if prog.get("beta", "") == "pronto":
+		popup = {"titulo": "CÓDIGO DE PRESENTE", "texto": "O Baú do Beta Tester já foi aberto neste aparelho. Obrigado por testar!"}
+		return
+	prog["beta"] = "escolher"
+	var cp: Dictionary = prog.get("compras", {})
+	cp["skin_pioneiro"] = "beta"
+	prog["compras"] = cp
+	if prog.get("beta_frag", false) == false:
+		prog["beta_frag"] = true
+		prog["fragmentos"] = int(prog["fragmentos"]) + 100
+	salvar()
+	som("chefe")
+	tremer(0.4, 200)
+	ir_para("beta")
+
+
+func clique_beta(p: Vector2) -> void:
+	for i in SKINS_BETA.size():
+		if ret_skin_beta(i).has_point(p):
+			var sk: String = SKINS_BETA[i]
+			var cp: Dictionary = prog.get("compras", {})
+			cp["skin_" + sk] = "beta"
+			prog["compras"] = cp
+			prog["skin"] = sk
+			prog["beta"] = "pronto"
+			salvar()
+			som("nivel")
+			ir_para("loja")
+			popup = {"titulo": "OBRIGADO, BETA TESTER!", "texto": tx("Você ganhou a skin %s e a Pioneiro. Troque quando quiser aqui na Loja.") % tx(item_loja("skin_" + sk)["nome"])}
+			return
+
+
+func desenhar_beta() -> void:
+	desenhar_fundo(0.6)
+	brilho_suave(Vector2(LARG / 2, 190), 200, Color8(90, 255, 160), 0.6 + 0.2 * sin(tempo * 2))
+	escrever("BAÚ DO BETA TESTER", Vector2(LARG / 2, 60), 24, OURO, true, fonte_titulo)
+	var c := Vector2(LARG / 2 - 90, 185)
+	brilho_suave(c, 70, OURO, 1.0 + 0.3 * sin(tempo * 4))
+	caixa(Rect2(c + Vector2(-44, -8), Vector2(88, 52)), Color8(110, 70, 36), 6, 2, TINTA)
+	caixa(Rect2(c + Vector2(-48, -40), Vector2(96, 34)), Color8(140, 90, 46), 10, 2, TINTA)
+	draw_rect(Rect2(c + Vector2(-8, -14), Vector2(16, 22)), OURO)
+	brilho_suave(Vector2(LARG / 2 + 90, 190), 70, Color8(90, 255, 160), 1.0)
+	draw_texture_rect(textura_skin("pioneiro", "kravenox"), Rect2(Vector2(LARG / 2 + 30, 100), Vector2(120, 150)), false)
+	var linhas := ["Skin exclusiva: Kravenox Pioneiro", "Selo de Beta Tester", "100 fragmentos", "1 skin da loja à sua escolha"]
+	for i in linhas.size():
+		escrever("+ " + tx(linhas[i]), Vector2(LARG / 2, 290 + i * 26), 16, Color8(170, 255, 200) if i < 3 else OURO, true)
+	escrever("Escolha a sua skin de presente:", Vector2(LARG / 2, 410), 17, BRANCO, true, fonte_titulo)
+	for i in SKINS_BETA.size():
+		var r := ret_skin_beta(i)
+		var it := item_loja("skin_" + SKINS_BETA[i])
+		caixa(r, Color(0.06, 0.05, 0.08, 0.95), 12, 2, Color(it["cor"], 0.9), true, 6)
+		brilho_suave(r.position + Vector2(r.size.x / 2, 52), 50, it["cor"], 0.7 + 0.2 * sin(tempo * 3 + i))
+		draw_texture_rect(textura_skin(SKINS_BETA[i], "kravenox-passo-0"), Rect2(r.position + Vector2(r.size.x / 2 - 40, 8), Vector2(80, 74)), false)
+		escrever(it["nome"], r.position + Vector2(r.size.x / 2, 104), 15, it["cor"].lightened(0.3), true)

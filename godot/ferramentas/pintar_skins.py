@@ -14,6 +14,7 @@ SKINS = {
     "ouro": ((60, 40, 10), (255, 220, 120), (255, 60, 40)),
     "sombrio": ((30, 10, 50), (190, 140, 255), (200, 120, 255)),
     "brasa": ((28, 16, 14), (205, 100, 50), (255, 190, 60)),
+    "pioneiro": ((10, 34, 28), (150, 255, 200), (90, 255, 160)),
 }
 FONTES = [("assets/arte/kravenox.png", "kravenox.png")] + [("assets/kravenox-passo-%d.png" % n, "kravenox-passo-%d.png" % n) for n in range(4)]
 

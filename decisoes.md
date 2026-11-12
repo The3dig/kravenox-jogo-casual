@@ -288,3 +288,17 @@
   loja passou a rolar com o dedo (o Baú do Dia fica fixo no alto).
 - **Por quê:** um amigo do Rone perguntou "tem skin?"; as auras só mudavam a
   luz em volta, não o corpo.
+
+## 2026-11-12: prêmio de beta tester
+
+- **Passou a ter:** em Ajustes, "Código de presente". O código **BETA-KRAVENOX**
+  (vale também BETATESTER, com ou sem hífen e espaços) abre o **Baú do Beta
+  Tester**: skin exclusiva **Kravenox Pioneiro** (verde-esmeralda, não é
+  vendida), 1 skin da loja à escolha (Gelo, Dourado, Vazio ou Brasa), selo
+  "Beta Tester ★" em Ajustes e +100 fragmentos. Vale uma vez por aparelho
+  (sem servidor, não dá para limitar por pessoa).
+- **Por quê:** o Rone quis premiar os amigos que testam o jogo, com skins
+  (o que o amigo mais gostou).
+- **Fontes:** ✓, ★ e ♥ não existem nas fontes do jogo (Alegreya Sans e
+  Cinzel) e apareciam como quadradinhos no navegador; foram trocados por
+  texto ("Ativo", "Pego", "vencido", "Beta Tester", "Apoiador: obrigado!").
