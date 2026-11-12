@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-12f"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-12g"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const VIDA_MONSTROS := 2.6  # 12/11: monstros mais duros (o jogo estava fácil demais)
@@ -3651,7 +3651,7 @@ func desenhar_ajustes() -> void:
 	if prog.get("compras", {}).has("apoiador"):
 		selos.append(tx("Apoiador: obrigado!"))
 	if prog.get("beta", "") != "":
-		selos.append(tx("Beta Tester"))
+		selos.append(tx("Beta Tester") + (": " + str(prog["beta_nome"]) if str(prog.get("beta_nome", "")) != "" else ""))
 	if not selos.is_empty():
 		escrever("   ·   ".join(selos), Vector2(LARG / 2, 638), 15, Color8(170, 255, 200), true)
 	escrever("Kravenox: Quadros do Cisma", Vector2(LARG / 2, 662), 15, OURO, true, fonte_titulo)
@@ -6529,7 +6529,12 @@ func desenhar_jogos() -> void:
 # Sem servidor: um código de presente (Ajustes → Código de presente) abre o
 # Baú do Beta Tester: a skin exclusiva Pioneiro, 1 skin da loja à escolha,
 # o selo "Beta Tester" e 100 fragmentos. Vale uma vez por aparelho.
-const CODIGOS_BETA := ["BETAKRAVENOX", "BETATESTER"]
+# Um código por pessoa. Aqui fica só a impressão digital (sha256 do código
+# sem hífen, em maiúsculas), para os códigos não aparecerem no repositório
+# público. Gerar novos com godot/ferramentas/codigo_beta.py.
+const CODIGOS_BETA := {
+	"6ecd6c57a6a636332edbc2a1389ccdccb0ccb6e04c2646b432df28a835139382": "Ludivicky",
+}
 const SKINS_BETA := ["gelo", "ouro", "sombrio", "brasa"]
 
 
@@ -6548,7 +6553,8 @@ func pedir_codigo() -> void:
 		if not OS.has_feature("web"):
 			popup = {"titulo": "CÓDIGO DE PRESENTE", "texto": "Copie o código e depois toque aqui."}
 		return
-	if not c in CODIGOS_BETA:
+	var nome_beta: String = CODIGOS_BETA.get(c.sha256_text(), "")
+	if nome_beta == "":
 		popup = {"titulo": "CÓDIGO DE PRESENTE", "texto": "Esse código não existe. Confira as letras e tente de novo."}
 		som("dano")
 		return
@@ -6556,6 +6562,7 @@ func pedir_codigo() -> void:
 		popup = {"titulo": "CÓDIGO DE PRESENTE", "texto": "O Baú do Beta Tester já foi aberto neste aparelho. Obrigado por testar!"}
 		return
 	prog["beta"] = "escolher"
+	prog["beta_nome"] = nome_beta
 	var cp: Dictionary = prog.get("compras", {})
 	cp["skin_pioneiro"] = "beta"
 	prog["compras"] = cp
@@ -6580,14 +6587,16 @@ func clique_beta(p: Vector2) -> void:
 			salvar()
 			som("nivel")
 			ir_para("loja")
-			popup = {"titulo": "OBRIGADO, BETA TESTER!", "texto": tx("Você ganhou a skin %s e a Pioneiro. Troque quando quiser aqui na Loja.") % tx(item_loja("skin_" + sk)["nome"])}
+			popup = {"titulo": (tx("OBRIGADO, %s!") % str(prog.get("beta_nome", "")).to_upper()) if str(prog.get("beta_nome", "")) != "" else "OBRIGADO, BETA TESTER!", "texto": tx("Você ganhou a skin %s e a Pioneiro. Troque quando quiser aqui na Loja.") % tx(item_loja("skin_" + sk)["nome"])}
 			return
 
 
 func desenhar_beta() -> void:
 	desenhar_fundo(0.6)
 	brilho_suave(Vector2(LARG / 2, 190), 200, Color8(90, 255, 160), 0.6 + 0.2 * sin(tempo * 2))
-	escrever("BAÚ DO BETA TESTER", Vector2(LARG / 2, 60), 24, OURO, true, fonte_titulo)
+	escrever("BAÚ DO BETA TESTER", Vector2(LARG / 2, 50), 24, OURO, true, fonte_titulo)
+	if str(prog.get("beta_nome", "")) != "":
+		escrever(tx("Para %s") % prog["beta_nome"], Vector2(LARG / 2, 84), 18, Color8(170, 255, 200), true)
 	var c := Vector2(LARG / 2 - 90, 185)
 	brilho_suave(c, 70, OURO, 1.0 + 0.3 * sin(tempo * 4))
 	caixa(Rect2(c + Vector2(-44, -8), Vector2(88, 52)), Color8(110, 70, 36), 6, 2, TINTA)

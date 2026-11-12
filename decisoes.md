@@ -302,3 +302,13 @@
 - **Fontes:** ✓, ★ e ♥ não existem nas fontes do jogo (Alegreya Sans e
   Cinzel) e apareciam como quadradinhos no navegador; foram trocados por
   texto ("Ativo", "Pego", "vencido", "Beta Tester", "Apoiador: obrigado!").
+
+## 2026-11-12: código de beta tester pessoal
+
+- **Era:** um código só para todo mundo (BETA-KRAVENOX), que podia circular.
+- **Passou a ser:** um código por pessoa. O baú mostra "Para <nome>" e o selo
+  em Ajustes fica "Beta Tester: <nome>". O código geral foi desligado. No
+  repositório (público) fica só a impressão digital (sha256) de cada código,
+  em `CODIGOS_BETA`; o código em si o Rone passa direto para a pessoa.
+  Primeiro código: para o Ludivicky. Novos: `python3 godot/ferramentas/codigo_beta.py Nome`.
+- **Por quê:** o Rone perguntou como saber que o prêmio é para aquele amigo.
