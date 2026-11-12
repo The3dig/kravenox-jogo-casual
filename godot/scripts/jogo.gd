@@ -18,14 +18,15 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-13b"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-13c"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const VIDA_MONSTROS := 2.6  # 12/11: monstros mais duros (o jogo estava fácil demais)
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
 var CENTRO := Vector2(240, 383)   # meio do anel: onde o Kravenox espera entre as ondas
-var ANEL: Array = []   # o caminho do mundo atual (montado em montar_caminho)
+var ANEL: Array = []   # as casas (quadros) do mundo atual, cada uma uma vez (montado em montar_caminho)
+var ROTA: Array = []   # a ordem em que o Kravenox anda: índices de ANEL; num cruzamento a mesma casa aparece 2 vezes
 
 # Caminhos dos mundos: voltas fechadas na grade (x, y), na ordem em que o
 # Kravenox anda. Começam pequenos e crescem ao longo dos mundos.
@@ -43,14 +44,16 @@ const FORMAS := {
 	"ampulheta": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [3, 1], [3, 2], [3, 3], [4, 3], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [1, 3], [1, 2], [1, 1], [0, 1]],
 	"H": [[0, 0], [1, 0], [1, 1], [2, 1], [3, 1], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [3, 4], [3, 3], [2, 3], [1, 3], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
 	"U": [[0, 0], [1, 0], [1, 1], [1, 2], [2, 2], [3, 2], [3, 1], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
+	"laço": [[2, 0], [2, 1], [2, 2], [2, 3], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [4, 1], [4, 0], [3, 0]],
+	"laço duplo": [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [2, 4], [3, 4], [4, 4], [4, 3], [4, 2], [4, 1], [4, 0], [5, 0], [5, 1], [5, 2], [4, 2], [3, 2], [2, 2], [1, 2], [0, 2], [0, 1], [0, 0]],
 	"U grande": [[0, 0], [1, 0], [1, 1], [1, 2], [2, 2], [3, 2], [4, 2], [4, 1], [4, 0], [5, 0], [5, 1], [5, 2], [5, 3], [5, 4], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
 }
 # Um caminho por mundo (19): "anel LxA" é um anel retangular. Espelhado = true vira de lado.
 const CAMINHO_DO_MUNDO := [
 	["anel 3x3", false], ["anel 4x3", false], ["L pequeno", false], ["anel 4x4", false], ["cruz", false],
-	["degrau", false], ["L", false], ["dente", false], ["cruz grande", false], ["escada", false],
-	["S", false], ["T", false], ["ampulheta", false], ["H", false], ["U", false],
-	["dois dentes", false], ["S", true], ["escada", true], ["U grande", false],
+	["degrau", false], ["L", false], ["laço", false], ["cruz grande", false], ["escada", false],
+	["S", false], ["T", false], ["laço duplo", false], ["H", false], ["U", false],
+	["ampulheta", false], ["laço", true], ["escada", true], ["U grande", false],
 ]
 # Os 76 capítulos do livro (títulos do RPG em kravenox-jogar/rpg/js)
 const CAPITULOS := [
@@ -749,11 +752,20 @@ func montar_caminho() -> void:
 	for c in forma:
 		cols = maxi(cols, c[0] + 1)
 		lins = maxi(lins, c[1] + 1)
-	ANEL = []
+	var seq := []
 	for c in forma:
-		ANEL.append(Vector2i(cols - 1 - c[0] if espelho else c[0], c[1]))
+		seq.append(Vector2i(cols - 1 - c[0] if espelho else c[0], c[1]))
 	if espelho:
-		ANEL.reverse()   # continua andando no sentido horário
+		seq.reverse()   # continua andando no sentido horário
+	# casas únicas (ANEL) e a ordem da caminhada (ROTA); num cruzamento a casa repete
+	ANEL = []
+	ROTA = []
+	for g in seq:
+		var k := ANEL.find(g)
+		if k < 0:
+			ANEL.append(g)
+			k = ANEL.size() - 1
+		ROTA.append(k)
 	PASSO_GRADE = minf(94.0, minf(460.0 / cols, 390.0 / lins))
 	TAM = PASSO_GRADE - 10.0
 	OX = (LARG - (cols - 1) * PASSO_GRADE - TAM) / 2.0
@@ -784,6 +796,18 @@ func montar_caminho() -> void:
 		soma = melhor
 		n = 1
 	CENTRO = soma / n
+	var cel := Vector2i(int((CENTRO.x - OX) / PASSO_GRADE), int((CENTRO.y - OY) / PASSO_GRADE))
+	if ANEL.has(cel):
+		var md2 := INF
+		var alvo := CENTRO
+		for y in lins:
+			for x in cols:
+				if not ANEL.has(Vector2i(x, y)):
+					var c2 := Vector2(OX + x * PASSO_GRADE + TAM / 2, OY + y * PASSO_GRADE + TAM / 2)
+					if c2.distance_to(CENTRO) < md2:
+						md2 = c2.distance_to(CENTRO)
+						alvo = c2
+		CENTRO = alvo
 
 
 func novo_jogo() -> void:
@@ -874,10 +898,14 @@ func ret_quadro(i: int) -> Rect2:
 
 
 func pos_kravenox() -> Vector2:
-	var a := int(k_pos) % ANEL.size()
-	var b := (a + 1) % ANEL.size()
+	var a := int(k_pos) % ROTA.size()
+	var b := (a + 1) % ROTA.size()
 	var f := k_pos - floorf(k_pos)
-	return centro_quadro(a).lerp(centro_quadro(b), f) + Vector2(0, -18)
+	return centro_quadro(ROTA[a]).lerp(centro_quadro(ROTA[b]), f) + Vector2(0, -18)
+
+
+func cruzamento(i: int) -> bool:
+	return ROTA.count(i) > 1
 
 
 # ------------------------------------------------------------ loja
@@ -1181,7 +1209,7 @@ func ativar(i: int, repete := false) -> void:
 				escudo = minf(20.0 + 20.0 * nv, escudo + cura)
 		"passo":
 			# salto: pula 2 quadros por nível sem ativar os do meio
-			k_salto = float(mini(2 * nv, ANEL.size() - 1))
+			k_salto = float(mini(2 * nv, ROTA.size() - 1))
 			k_bote = "Bote" in sins
 			texto_voa(k + Vector2(0, -44), "+%d quadros" % int(k_salto), VERDE)
 			anel(k + Vector2(0, 18), 10, 40, 0.25, VERDE)
@@ -1320,7 +1348,7 @@ func andar_no_anel(dt: float) -> void:
 		# no salto ele corre bem rápido e só o quadro onde cai dispara
 		var antes_s := pos_kravenox().x
 		var d := minf(k_salto, k_vel * 7.0 * dt)
-		k_pos = fmod(k_pos + d, float(ANEL.size()))
+		k_pos = fmod(k_pos + d, float(ROTA.size()))
 		k_salto -= d
 		k_anim += dt * k_vel * 14
 		var depois_s := pos_kravenox().x
@@ -1328,8 +1356,9 @@ func andar_no_anel(dt: float) -> void:
 			k_dir = 1 if depois_s > antes_s else -1
 		if k_salto <= 0.001:
 			k_salto = 0.0
-			var cai := int(k_pos + 0.5) % ANEL.size()
-			k_ultimo = cai
+			var cai_r := int(k_pos + 0.5) % ROTA.size()
+			k_ultimo = cai_r
+			var cai: int = ROTA[cai_r]
 			anel(centro_quadro(cai), 10, 50, 0.3, VERDE)
 			ativar(cai)
 			if k_bote:
@@ -1347,15 +1376,15 @@ func andar_no_anel(dt: float) -> void:
 			k_mult = 1.0
 			k_rastro = false
 	var antes := pos_kravenox().x
-	k_pos = fmod(k_pos + vel * dt, float(ANEL.size()))
+	k_pos = fmod(k_pos + vel * dt, float(ROTA.size()))
 	k_anim += dt * vel * 6
 	var depois := pos_kravenox().x
 	if absf(depois - antes) > 0.01:
 		k_dir = 1 if depois > antes else -1
-	var atual := int(k_pos + 0.5) % ANEL.size()   # o quadro em que ele está pisando
+	var atual := int(k_pos + 0.5) % ROTA.size()   # a posição da rota em que ele está pisando
 	if atual != k_ultimo:
 		k_ultimo = atual
-		ativar(atual)
+		ativar(ROTA[atual])
 		if k_rastro and k_rapido > 0:
 			for j in 4:
 				tiros.append({"p": pos_kravenox(), "v": Vector2.from_angle(j * TAU / 4 + PI / 4) * 300, "dano": 9 * mult_dano(),
@@ -1404,7 +1433,7 @@ func atualizar(dt: float) -> void:
 		k_pos += k_vel * 0.8 * dt
 		k_anim += dt * k_vel * 6
 		if k_pos >= alvo_k:
-			k_pos = fmod(alvo_k, float(ANEL.size()))
+			k_pos = fmod(alvo_k, float(ROTA.size()))
 			k_no_anel = false
 			k_pausa = 0.35
 		k_vis = pos_kravenox()
@@ -1425,7 +1454,7 @@ func atualizar(dt: float) -> void:
 			k_andando = false
 			if estado == "onda":
 				k_no_anel = true
-				k_ultimo = int(k_pos + 0.5) % ANEL.size()
+				k_ultimo = int(k_pos + 0.5) % ROTA.size()
 		else:
 			k_vis += d.normalized() * passo_px
 			k_anim += dt * k_vel * 6
@@ -1577,6 +1606,7 @@ func atualizar(dt: float) -> void:
 			estado = "vitoria"
 		elif bonus_ativo():
 			bonus_res = "ok"
+			bau_de_fase()
 			if not prog.has("bonus"):
 				prog["bonus"] = {}
 			prog["bonus"][str(capitulo)] = true
@@ -1610,6 +1640,7 @@ func atualizar(dt: float) -> void:
 
 # Entre as ondas: essência, cura (Fogueira), trocas e loja nova.
 func descanso_entre_ondas() -> int:
+	bau_de_fase()
 	var premio := 4 + mini(onda, 15) + capitulo / 4 + nivel_obra("poco")
 	if onda_elite:
 		onda_elite = false
@@ -1781,6 +1812,9 @@ func clique_jogo(p: Vector2) -> void:
 		return
 	for i in ANEL.size():
 		if ret_quadro(i).has_point(p):
+			if quadros[i] == null and cruzamento(i) and selec.is_empty() and not vender:
+				aviso("Cruzamento: o Kravenox passa aqui 2 vezes por volta, então o poder dispara 2 vezes", 3.5)
+				return
 			if quadros[i] == null and terreno[i] != "" and selec.is_empty() and not vender:
 				aviso({"fenda": "Fenda: o poder deste quadro dá +50% de dano", "altar": "Altar: cura 3 de vida a cada passo",
 					"maldita": "Pedra maldita: não aceita poder, mas dá 1 de essência a cada passo"}[terreno[i]], 3.0)
@@ -2100,6 +2134,7 @@ func desenhar_jogo() -> void:
 	desenhar_topo()   # por cima dos monstros que entram pelo alto
 	desenhar_loja()
 	desenhar_tutorial()
+	desenhar_skin_ganha()
 	desenhar_arrasto()
 	if msg_t > 0 and msg != "" and escolha.is_empty():
 		var w := fonte.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
@@ -2234,9 +2269,12 @@ func texto_quebrado(t: String, p: Vector2, largura: float, tam: int, cor: Color,
 func desenhar_sinergias() -> void:
 	if not liberou("sinergias"):
 		return
-	var n := ANEL.size()
-	for i in n:
-		var j := (i + 1) % n
+	var n := ROTA.size()
+	for p in n:
+		var i: int = ROTA[p]
+		var j: int = ROTA[(p + 1) % n]
+		if j == i:
+			continue
 		var a = quadros[i]
 		var b = quadros[j]
 		if a == null or b == null:
@@ -2422,6 +2460,12 @@ func desenhar_quadro(i: int) -> void:
 	draw_texture_rect(textura_laje(q == null and terreno[i] != "maldita"), r.grow(3), false)
 	if terreno[i] != "":
 		desenhar_terreno(i, r)
+	if cruzamento(i):
+		# cruzamento: o Kravenox passa aqui duas vezes por volta
+		draw_line(r.position + Vector2(6, r.size.y / 2), r.end - Vector2(6, r.size.y / 2), Color(OURO, 0.18), 3)
+		draw_line(r.position + Vector2(r.size.x / 2, 6), r.end - Vector2(r.size.x / 2, 6), Color(OURO, 0.18), 3)
+		caixa(Rect2(r.end - Vector2(30, r.size.y - 4), Vector2(26, 18)), Color(0.1, 0.07, 0.02, 0.9), 5, 1, OURO)
+		escrever("×2", r.end - Vector2(17, r.size.y - 13), 12, OURO, false)
 	var mol := cor_moldura()
 	if mol.a > 0 and q != null:
 		caixa(r.grow(2), Color(0, 0, 0, 0), 7, 2, Color(mol, 0.85 + 0.15 * sin(tempo * 3 + i)), false)
@@ -4217,7 +4261,7 @@ func calc_hp_max() -> float:
 
 func calc_k_vel() -> float:
 	# em caminhos maiores ele anda um pouco mais rápido, para a volta não demorar demais
-	return 1.4 * (1.0 + 0.06 * nivel_melhoria("passo")) * sqrt(ANEL.size() / 12.0) * (1.0 + 0.12 * nb("ligeiro")) * pow(1.3, nb("frenesi"))
+	return 1.4 * (1.0 + 0.06 * nivel_melhoria("passo")) * sqrt(ROTA.size() / 12.0) * (1.0 + 0.12 * nb("ligeiro")) * pow(1.3, nb("frenesi"))
 
 
 func trocas_por_onda() -> int:
@@ -4253,11 +4297,25 @@ func montar_terreno() -> void:
 			terreno[i] = tipos[rng.randi_range(0, 2)]
 
 
+func vizinhos(i: int) -> Array:
+	var v := []
+	var n := ROTA.size()
+	for p in n:
+		if ROTA[p] == i:
+			for q in [ROTA[(p - 1 + n) % n], ROTA[(p + 1) % n]]:
+				if q != i and not q in v:
+					v.append(q)
+	return v
+
+
 func canto(i: int) -> bool:
-	var n := ANEL.size()
-	var a: Vector2i = ANEL[(i - 1 + n) % n]
+	var n := ROTA.size()
+	var p := ROTA.find(i)
+	if p < 0 or cruzamento(i):
+		return false
+	var a: Vector2i = ANEL[ROTA[(p - 1 + n) % n]]
 	var b: Vector2i = ANEL[i]
-	var c: Vector2i = ANEL[(i + 1) % n]
+	var c: Vector2i = ANEL[ROTA[(p + 1) % n]]
 	return (b - a) != (c - b)
 
 
@@ -4276,10 +4334,9 @@ func sinergias_do(i: int) -> Array:
 	var q = quadros[i]
 	if q == null or not liberou("sinergias"):
 		return v
-	var n := ANEL.size()
-	for j in [(i - 1 + n) % n, (i + 1) % n]:
+	for j in vizinhos(i):
 		var o = quadros[j]
-		if j == i or o == null:
+		if o == null:
 			continue
 		var nome := nome_sinergia(q["id"], o["id"])
 		if nome != "" and not nome in v:
@@ -6351,8 +6408,10 @@ func desenhar_loja_apoiador() -> void:
 	draw_rect(Rect2(0, 0, LARG, TOPO_LOJA), Color8(16, 12, 22))
 	degrade(Rect2(0, TOPO_LOJA, LARG, 14), Color8(16, 12, 22), Color(0.06, 0.05, 0.09, 0.0))
 	cabecalho("LOJA")
-	texto_quebrado("Nada aqui deixa o Kravenox mais forte: é só visual e conforto, para apoiar o jogo.", Vector2(24, 112), LARG - 48, 13, Color8(200, 230, 200), 2, true)
+	texto_quebrado("Nada aqui deixa o Kravenox mais forte: é só visual e conforto, para apoiar o jogo.", Vector2(24, 106), LARG - 48, 12, Color8(200, 230, 200), 1, true)
 	desenhar_bau_loja()
+	if not skins_faltando().is_empty():
+		escrever(tx("Baús das fases: %d%% de chance de skin") % chance_skin(), Vector2(LARG / 2, 136), 12, OURO, true)
 	if rol_loja < rol_loja_max() - 4:
 		degrade(Rect2(0, ALT - 124, LARG, 42), Color(0.04, 0.03, 0.06, 0.0), Color(0.04, 0.03, 0.06, 0.95))
 		escrever("▼ arraste para ver mais", Vector2(LARG / 2, ALT - 94), 13, OURO, true)
@@ -6999,3 +7058,60 @@ func desenhar_duelo() -> void:
 			botao(ret_duelo(3), "Sair da sala", CINZA, true, false)
 	desenhar_abas()
 	desenhar_popup()
+
+
+# ============================================================ baú de cada fase (13/11)
+# No fim de cada fase dos capítulos: 1 ou 2 fragmentos e uma chance de skin
+# que começa em 1% e sobe 1% a cada baú sem skin; em 100% a skin é garantida.
+# A skin vem entre as da loja que a pessoa ainda não tem e já fica em uso.
+var skin_ganha := ""
+var skin_ganha_t := 0.0
+
+
+func chance_skin() -> int:
+	return clampi(int(prog.get("chance_skin", 1)), 1, 100)
+
+
+func skins_faltando() -> Array:
+	return ["gelo", "ouro", "sombrio", "brasa"].filter(func(sk): return not tem("skin_" + sk))
+
+
+func bau_de_fase() -> void:
+	if tipo_partida != "capitulo" or em_risco:
+		return
+	var frag := 1 + (1 if randf() < 0.3 else 0)
+	prog["fragmentos"] = int(prog["fragmentos"]) + frag
+	premio_fim += 0
+	var faltam := skins_faltando()
+	var ch := chance_skin()
+	if not faltam.is_empty() and (randi() % 100 < ch or ch >= 100):
+		var sk: String = faltam.pick_random()
+		var cp: Dictionary = prog.get("compras", {})
+		cp["skin_" + sk] = "bau"
+		prog["compras"] = cp
+		prog["skin"] = sk
+		prog["chance_skin"] = 1
+		skin_ganha = sk
+		skin_ganha_t = 4.5
+		som("chefe")
+		tremer(0.4, 200)
+	else:
+		if not faltam.is_empty():
+			prog["chance_skin"] = mini(100, ch + 1)
+		texto_voa(Vector2(LARG / 2, 150), tx("Baú da fase: +%d fragmentos") % frag, OURO, 16)
+	salvar()
+
+
+func desenhar_skin_ganha() -> void:
+	if skin_ganha_t <= 0 or skin_ganha == "":
+		return
+	skin_ganha_t -= 0.016
+	var a := clampf(skin_ganha_t * 2, 0, 1)
+	var it := item_loja("skin_" + skin_ganha)
+	var r := Rect2(40, 210, LARG - 80, 230)
+	caixa(r, Color(0.06, 0.04, 0.09, 0.95 * a), 14, 3, Color(OURO, a), true, 8)
+	brilho_suave(r.get_center() + Vector2(0, 10), 140, it["cor"], 1.2 * a)
+	escrever("BAÚ RARO!", r.position + Vector2(r.size.x / 2, 30), 24, Color(OURO, a), true, fonte_titulo)
+	draw_texture_rect(textura_skin(skin_ganha, "kravenox-passo-0"), Rect2(r.get_center() + Vector2(-50, -60), Vector2(100, 92)), false, Color(1, 1, 1, a))
+	escrever(tx("Você ganhou a skin %s!") % tx(it["nome"]), r.position + Vector2(r.size.x / 2, 180), 17, Color(BRANCO, a), true)
+	escrever("Já está em uso. Troque na Loja.", r.position + Vector2(r.size.x / 2, 206), 13, Color(CINZA, a), false)

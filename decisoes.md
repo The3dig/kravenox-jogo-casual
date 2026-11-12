@@ -348,3 +348,18 @@
   robô: ~30 derrotas espalhadas, no máximo 5 a 7 tentativas num capítulo, e
   chega ao fim.
 - O cartão do Duelo ao vivo fica escondido até o servidor estar no ar.
+
+## 2026-11-13: caminhos que se cruzam e baú de cada fase
+
+- **Caminhos que se cruzam:** dois formatos novos, **laço** (15 casas, 1
+  cruzamento) e **laço duplo** (20 casas, 2 cruzamentos), nos mundos 8, 13 e
+  17 (o 17 espelhado). No cruzamento o Kravenox passa 2 vezes por volta, então
+  o poder dali dispara 2 vezes, e a casa tem 4 vizinhas para as combinações; ela
+  tem a marca "×2". Para isso o código separou as casas (`ANEL`) da ordem da
+  caminhada (`ROTA`). A ampulheta foi para o mundo 16. Pedido do Rone ("pra
+  ficar mais difícil" de planejar).
+- **Baú de cada fase:** no fim de cada fase dos capítulos (e da fase bônus),
+  1 ou 2 fragmentos e uma chance de skin que começa em 1% e sobe 1% a cada baú
+  sem skin; em 100% é garantida. A skin vem entre as da loja que faltam e já
+  fica em uso ("BAÚ RARO!"). A chance aparece no alto da Loja. Pedido do Rone.
+- Robô: 19 derrotas, no máximo 4 tentativas, chega ao fim.
