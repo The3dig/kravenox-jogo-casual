@@ -264,3 +264,16 @@
   (`the3dig.github.io/kravenox-mmo/`), que só funciona depois que a conversa
   do MMO ligar o GitHub Pages daquele repositório.
 - **Por quê:** pedido do Rone.
+
+## 2026-11-12: o jogo fica mais difícil
+
+- **Era:** com bênçãos, acampamento, Fúria e lendárias o Kravenox ficava forte
+  rápido; o robô vencia os 76 capítulos perdendo poucas vezes, quase só no
+  chefe. Um amigo do Rone achou "muito fácil" e pediu monstros com mais vida.
+- **Passou a ser:** nos capítulos (não no Abismo nem nos Modos) os monstros
+  têm 2,6× a vida e 1,12× o dano (`VIDA_MONSTROS`, `DANO_MONSTROS`); entre as
+  ondas a essência caiu (4 + onda + capítulo/4) e a cura passou de 30 para 20.
+- **Resultado no robô:** 56 derrotas espalhadas do capítulo 3 ao 76 (máximo
+  de 5 tentativas num capítulo) e ainda chega ao fim. Testes: 1,45× e 1,9× de
+  vida mal mudaram (o Kravenox mata antes); 2,6× com 1,25× de dano travou o
+  robô no capítulo 52.

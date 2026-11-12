@@ -18,8 +18,10 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-12b"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-12c"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
+const DANO_MONSTROS := 1.12
+const VIDA_MONSTROS := 2.6  # 12/11: monstros mais duros (o jogo estava fácil demais)
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
 var CENTRO := Vector2(240, 383)   # meio do anel: onde o Kravenox espera entre as ondas
@@ -1013,10 +1015,14 @@ func criar_monstro(tipo: String, p = null) -> void:
 			vida *= 1.0 + 0.3 * risco_n
 	var forte := 1.8 if pesadelo_ativo() else 1.0
 	vida *= forte * (1.4 if pacto("robustos") else 1.0)
+	if tipo_partida != "abismo":
+		vida *= VIDA_MONSTROS
 	var vel: float = m["vel"] * (1.25 if pacto("velozes") else 1.0)
 	if tipo_partida == "desafio" and regra_desafio()["id"] == "pressa":
 		vel *= 1.3
 	var dano: float = m["dano"] * 0.7 * (1.0 + 0.03 * (capitulo - 1) + 0.05 * (onda if tipo_partida == "abismo" else mini(onda, 12))) * (1.4 if pesadelo_ativo() else 1.0) * (1.3 if pacto("furiosos") else 1.0)
+	if tipo_partida != "abismo":
+		dano *= DANO_MONSTROS
 	var premio: int = m["premio"] if not chefe else 10 + capitulo
 	# elite: um traço especial, o dobro de vida e de prêmio
 	var traco := ""
@@ -1573,7 +1579,7 @@ func atualizar(dt: float) -> void:
 
 # Entre as ondas: essência, cura (Fogueira), trocas e loja nova.
 func descanso_entre_ondas() -> int:
-	var premio := 5 + mini(onda, 15) + capitulo / 3 + nivel_obra("poco")
+	var premio := 4 + mini(onda, 15) + capitulo / 4 + nivel_obra("poco")
 	if onda_elite:
 		onda_elite = false
 		premio += 25
@@ -1581,7 +1587,7 @@ func descanso_entre_ondas() -> int:
 		aviso("Elites vencidas! +25 de essência e +3 fragmentos", 3.0)
 	essencia += premio
 	if not pacto("sem_cura"):
-		hp = minf(hp_max, hp + 30 + 5 * nivel_obra("fogueira"))
+		hp = minf(hp_max, hp + 20 + 5 * nivel_obra("fogueira"))
 	trocas_gratis = trocas_por_onda()
 	sortear_loja()
 	return premio
