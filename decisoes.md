@@ -363,3 +363,17 @@
   sem skin; em 100% é garantida. A skin vem entre as da loja que faltam e já
   fica em uso ("BAÚ RARO!"). A chance aparece no alto da Loja. Pedido do Rone.
 - Robô: 19 derrotas, no máximo 4 tentativas, chega ao fim.
+
+## 2026-11-13: Pesadelo com a mesma dificuldade e o mesmo prêmio
+
+- **Era:** o Pesadelo multiplicava a vida dos monstros por 1,8 e o dano por
+  1,4. Quem chegava a ele já tinha as melhorias no máximo e o robô vencia quase
+  sem perder (1 derrota). O baú de cada fase dava o mesmo que no Normal.
+- **Passou a ser:** vida ×2,7 e dano ×1,7 (`PESADELO_VIDA`, `PESADELO_DANO`),
+  além dos reforços do Normal. Os caminhos novos e os cruzamentos já valiam
+  (são os mesmos capítulos). Com as melhorias no máximo, o robô perde 16 vezes,
+  quase todas do capítulo 56 ao 76, e chega ao fim (com ×3,0 travava no 68). O
+  baú de cada fase no Pesadelo dá fragmentos em dobro e a chance de skin sobe
+  2% por baú.
+- **Por quê:** o Rone pediu que o Pesadelo tivesse a premiação e as mesmas
+  dificuldades.

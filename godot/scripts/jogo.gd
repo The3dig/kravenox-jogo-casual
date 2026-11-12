@@ -18,9 +18,11 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-13c"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-13d"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
+const PESADELO_VIDA := 2.7   # 13/11: era 1.8; quem chega ao Pesadelo já tem as melhorias no máximo
+const PESADELO_DANO := 1.7   # era 1.4
 const VIDA_MONSTROS := 2.6  # 12/11: monstros mais duros (o jogo estava fácil demais)
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -397,6 +399,12 @@ func _ready() -> void:
 					prog["melhorias"][m["id"]] = m["max"]
 				prog["liberado"] = capitulo
 		for a in OS.get_cmdline_user_args():
+			if a == "--pesadelo":
+				modo = "pesadelo"
+				prog["liberado"] = TOTAL_CAPITULOS
+				prog["liberado_p"] = TOTAL_CAPITULOS
+				for c in range(1, TOTAL_CAPITULOS + 1):
+					prog["feitos"][str(c)] = true
 			if a == "--abismo":
 				prog["liberado"] = maxi(capitulo, 8)
 				comecar_abismo()
@@ -1066,7 +1074,7 @@ func criar_monstro(tipo: String, p = null) -> void:
 			vida *= 1.0 + 0.5 * (onda / 5 - 1)
 		elif em_risco:
 			vida *= 1.0 + 0.3 * risco_n
-	var forte := 1.8 if pesadelo_ativo() else 1.0
+	var forte := PESADELO_VIDA if pesadelo_ativo() else 1.0
 	vida *= forte * (1.4 if pacto("robustos") else 1.0)
 	if tipo_partida != "abismo":
 		# o reforço diminui um pouco do capítulo 20 ao 50 (o meio do Livro II já é o trecho mais duro)
@@ -1074,7 +1082,7 @@ func criar_monstro(tipo: String, p = null) -> void:
 	var vel: float = m["vel"] * (1.25 if pacto("velozes") else 1.0)
 	if tipo_partida == "desafio" and regra_desafio()["id"] == "pressa":
 		vel *= 1.3
-	var dano: float = m["dano"] * 0.7 * (1.0 + 0.03 * (capitulo - 1) + 0.05 * (onda if tipo_partida == "abismo" else mini(onda, 12))) * (1.4 if pesadelo_ativo() else 1.0) * (1.3 if pacto("furiosos") else 1.0)
+	var dano: float = m["dano"] * 0.7 * (1.0 + 0.03 * (capitulo - 1) + 0.05 * (onda if tipo_partida == "abismo" else mini(onda, 12))) * (PESADELO_DANO if pesadelo_ativo() else 1.0) * (1.3 if pacto("furiosos") else 1.0)
 	if tipo_partida != "abismo":
 		dano *= lerpf(DANO_MONSTROS, 1.0, clampf((capitulo - 20) / 30.0, 0.0, 1.0))
 	var premio: int = m["premio"] if not chefe else 10 + capitulo
@@ -1908,6 +1916,11 @@ func passo_robo() -> bool:
 			"venceu" if venceu else "perdeu", onda, robo_tentativas + 1, bonus_res, int(prog["fragmentos"]), str(prog["melhorias"])])
 		if venceu:
 			robo_tentativas = 0
+			if capitulo >= TOTAL_CAPITULOS and modo == "normal" and "--depois-pesadelo" in OS.get_cmdline_user_args():
+				print("ROBO: venceu o normal; agora o Pesadelo, com o que juntou")
+				modo = "pesadelo"
+				comecar_capitulo(1)
+				return true
 			if capitulo >= TOTAL_CAPITULOS:
 				print("ROBO fim: venceu os %d capítulos" % TOTAL_CAPITULOS)
 				get_tree().quit()
@@ -3588,7 +3601,7 @@ func desenhar_inicio() -> void:
 		var fase_txt := "bônus" if pt.get("bonus_pendente", false) else "fase %d" % (int(pt["onda"]) + 1)
 		escrever(fase_txt, b["jogar"].get_center() + Vector2(0, 17), 13, Color8(255, 210, 200), false)
 	if modo == "pesadelo":
-		escrever("Monstros mais fortes · fragmentos em dobro", Vector2(LARG / 2, 692), 13, Color8(255, 140, 130), false)
+		escrever("Monstros bem mais fortes · fragmentos em dobro · chance de skin 2x mais rápida", Vector2(LARG / 2, 692), 12, Color8(255, 140, 130), false)
 	if pontos_pacto() > 0:
 		escrever("Pactos: %d pontos · fragmentos ×%s" % [pontos_pacto(), String.num(mult_pacto(), 2).replace(".", ",")], Vector2(LARG / 2, 710), 13, Color8(220, 150, 255), false)
 	if liberou("desafio"):
@@ -7080,6 +7093,8 @@ func bau_de_fase() -> void:
 	if tipo_partida != "capitulo" or em_risco:
 		return
 	var frag := 1 + (1 if randf() < 0.3 else 0)
+	if pesadelo_ativo():
+		frag *= 2   # Pesadelo: fragmentos em dobro também no baú
 	prog["fragmentos"] = int(prog["fragmentos"]) + frag
 	premio_fim += 0
 	var faltam := skins_faltando()
@@ -7097,7 +7112,7 @@ func bau_de_fase() -> void:
 		tremer(0.4, 200)
 	else:
 		if not faltam.is_empty():
-			prog["chance_skin"] = mini(100, ch + 1)
+			prog["chance_skin"] = mini(100, ch + (2 if pesadelo_ativo() else 1))   # no Pesadelo sobe 2% por baú
 		texto_voa(Vector2(LARG / 2, 150), tx("Baú da fase: +%d fragmentos") % frag, OURO, 16)
 	salvar()
 
