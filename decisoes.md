@@ -329,3 +329,22 @@
   funcionando sem ela.
 - **Por quê:** o Rone quis jogar contra o amigo ao mesmo tempo e topou ter
   uma parte online.
+
+## 2026-11-13: caminhos em formatos novos
+
+- **Era:** 9 dos 19 mundos usavam anéis retangulares; o amigo do Rone
+  (capítulo 26) reclamou que "só tem formato retangular".
+- **Passou a ser:** 9 formatos novos (L pequeno, L, escada, S, T, ampulheta,
+  H, U, U grande) e só os mundos 1, 2 e 4 continuam com anel simples. O
+  tamanho segue crescendo (8 quadros no mundo 1 até 22 no último). Quando o
+  formato não tem espaço dentro (o T), o Kravenox espera na casa vazia mais
+  perto do meio. Formatos gerados e conferidos por um script (cada casa encosta
+  na seguinte e o caminho fecha). Capítulo em andamento num mundo que mudou de
+  formato recomeça do começo.
+- **Ajuste de dificuldade junto:** com os formatos novos o robô voltou a
+  travar no meio do Livro II (capítulos 40 a 52, o trecho que sempre foi o
+  mais duro). O reforço dos monstros agora diminui aos poucos do capítulo 20
+  ao 50 (vida de 2,6× para 2,0×; dano de 1,12× para 1,0×). Duas rodadas do
+  robô: ~30 derrotas espalhadas, no máximo 5 a 7 tentativas num capítulo, e
+  chega ao fim.
+- O cartão do Duelo ao vivo fica escondido até o servidor estar no ar.

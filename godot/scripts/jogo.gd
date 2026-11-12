@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-13a"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-13b"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const VIDA_MONSTROS := 2.6  # 12/11: monstros mais duros (o jogo estava fácil demais)
@@ -35,13 +35,22 @@ const FORMAS := {
 	"dente": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [3, 3], [3, 2], [2, 2], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
 	"cruz grande": [[1, 0], [2, 0], [3, 0], [3, 1], [4, 1], [4, 2], [4, 3], [3, 3], [3, 4], [2, 4], [1, 4], [1, 3], [0, 3], [0, 2], [0, 1], [1, 1]],
 	"dois dentes": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [5, 1], [5, 2], [5, 3], [4, 3], [4, 2], [3, 2], [3, 3], [2, 3], [2, 2], [1, 2], [1, 3], [0, 3], [0, 2], [0, 1]],
+	"L pequeno": [[0, 0], [1, 0], [1, 1], [2, 1], [3, 1], [3, 2], [3, 3], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
+	"L": [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [3, 2], [4, 2], [4, 3], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
+	"escada": [[0, 0], [1, 0], [1, 1], [2, 1], [2, 2], [3, 2], [3, 3], [4, 3], [5, 3], [5, 4], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
+	"S": [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1], [4, 1], [5, 1], [5, 2], [5, 3], [5, 4], [4, 4], [3, 4], [2, 4], [2, 3], [1, 3], [0, 3], [0, 2], [0, 1]],
+	"T": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [5, 1], [4, 1], [3, 1], [3, 2], [3, 3], [3, 4], [2, 4], [2, 3], [2, 2], [2, 1], [1, 1], [0, 1]],
+	"ampulheta": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [3, 1], [3, 2], [3, 3], [4, 3], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [1, 3], [1, 2], [1, 1], [0, 1]],
+	"H": [[0, 0], [1, 0], [1, 1], [2, 1], [3, 1], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [3, 4], [3, 3], [2, 3], [1, 3], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
+	"U": [[0, 0], [1, 0], [1, 1], [1, 2], [2, 2], [3, 2], [3, 1], [3, 0], [4, 0], [4, 1], [4, 2], [4, 3], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
+	"U grande": [[0, 0], [1, 0], [1, 1], [1, 2], [2, 2], [3, 2], [4, 2], [4, 1], [4, 0], [5, 0], [5, 1], [5, 2], [5, 3], [5, 4], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1]],
 }
 # Um caminho por mundo (19): "anel LxA" é um anel retangular. Espelhado = true vira de lado.
 const CAMINHO_DO_MUNDO := [
-	["anel 3x3", false], ["anel 4x3", false], ["anel 4x4", false], ["anel 3x5", false], ["cruz", false],
-	["anel 5x4", false], ["degrau", false], ["dente", false], ["cruz grande", false], ["anel 5x5", false],
-	["anel 6x4", false], ["anel 6x5", false], ["dois dentes", false], ["degrau", true], ["dente", true],
-	["cruz grande", false], ["dois dentes", true], ["anel 6x5", false], ["dois dentes", false],
+	["anel 3x3", false], ["anel 4x3", false], ["L pequeno", false], ["anel 4x4", false], ["cruz", false],
+	["degrau", false], ["L", false], ["dente", false], ["cruz grande", false], ["escada", false],
+	["S", false], ["T", false], ["ampulheta", false], ["H", false], ["U", false],
+	["dois dentes", false], ["S", true], ["escada", true], ["U grande", false],
 ]
 # Os 76 capítulos do livro (títulos do RPG em kravenox-jogar/rpg/js)
 const CAPITULOS := [
@@ -758,9 +767,22 @@ func montar_caminho() -> void:
 				soma += Vector2(OX + x * PASSO_GRADE + TAM / 2, OY + y * PASSO_GRADE + TAM / 2)
 				n += 1
 	if n == 0:
+		# sem espaço dentro (ex.: o T): espera na casa vazia mais perto do meio
+		var meio := Vector2.ZERO
 		for i in ANEL.size():
-			soma += centro_quadro(i)
-		n = ANEL.size()
+			meio += centro_quadro(i)
+		meio /= ANEL.size()
+		var melhor := meio
+		var md := INF
+		for y in lins:
+			for x in cols:
+				if not ANEL.has(Vector2i(x, y)):
+					var c := Vector2(OX + x * PASSO_GRADE + TAM / 2, OY + y * PASSO_GRADE + TAM / 2)
+					if c.distance_to(meio) < md:
+						md = c.distance_to(meio)
+						melhor = c
+		soma = melhor
+		n = 1
 	CENTRO = soma / n
 
 
@@ -1019,13 +1041,14 @@ func criar_monstro(tipo: String, p = null) -> void:
 	var forte := 1.8 if pesadelo_ativo() else 1.0
 	vida *= forte * (1.4 if pacto("robustos") else 1.0)
 	if tipo_partida != "abismo":
-		vida *= VIDA_MONSTROS
+		# o reforço diminui um pouco do capítulo 20 ao 50 (o meio do Livro II já é o trecho mais duro)
+		vida *= lerpf(VIDA_MONSTROS, 2.0, clampf((capitulo - 20) / 30.0, 0.0, 1.0))
 	var vel: float = m["vel"] * (1.25 if pacto("velozes") else 1.0)
 	if tipo_partida == "desafio" and regra_desafio()["id"] == "pressa":
 		vel *= 1.3
 	var dano: float = m["dano"] * 0.7 * (1.0 + 0.03 * (capitulo - 1) + 0.05 * (onda if tipo_partida == "abismo" else mini(onda, 12))) * (1.4 if pesadelo_ativo() else 1.0) * (1.3 if pacto("furiosos") else 1.0)
 	if tipo_partida != "abismo":
-		dano *= DANO_MONSTROS
+		dano *= lerpf(DANO_MONSTROS, 1.0, clampf((capitulo - 20) / 30.0, 0.0, 1.0))
 	var premio: int = m["premio"] if not chefe else 10 + capitulo
 	# elite: um traço especial, o dobro de vida e de prêmio
 	var traco := ""
@@ -4796,7 +4819,8 @@ func lista_modos() -> Array:
 	var v := MODOS.duplicate()
 	v.append({"id": "abismo", "nome": "Abismo sem Fim", "desc": "Ondas sem fim no caminho de quadros, cada vez mais fortes.", "desde": 5})
 	v.append({"id": "desafio", "nome": "Desafio do Dia", "desc": "Um capítulo com regra especial, diferente a cada dia.", "desde": 6})
-	v.insert(0, {"id": "duelo", "nome": "Duelo ao vivo", "desc": "Você contra um amigo, cada um no seu celular, a mesma horda. Precisa de internet.", "desde": 5})
+	if not "SUBDOMINIO" in servidor_duelo:   # só aparece quando o servidor estiver no ar
+		v.insert(0, {"id": "duelo", "nome": "Duelo ao vivo", "desc": "Você contra um amigo, cada um no seu celular, a mesma horda. Precisa de internet.", "desde": 5})
 	return v
 
 
