@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-10a"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-12a"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -146,7 +146,7 @@ const REGRAS_DESAFIO := [
 	{"id": "duas_armas", "nome": "Só Dois Poderes", "desc": "a loja só vende dois poderes"},
 	{"id": "chefe_duplo", "nome": "Chefe Duplo", "desc": "a fase 4 tem dois chefes"},
 	{"id": "pressa", "nome": "Pressa", "desc": "monstros 30% mais rápidos"},
-	{"id": "sem_trocas", "nome": "Sem Trocas", "desc": "nenhuma troca grátis; trocar custa 4"},
+	{"id": "sem_trocas", "nome": "Sem Trocas", "desc": "a loja não troca: compre o que vier"},
 	{"id": "elites", "nome": "Só Elites", "desc": "todo monstro é de elite"},
 	{"id": "vidro", "nome": "Vidro", "desc": "−40% de vida, mas +40% de dano"},
 ]
@@ -1670,7 +1670,7 @@ func clique_jogo(p: Vector2) -> void:
 		elif b["mundos"].has_point(p):
 			guardar_pote()
 			if tipo_partida != "capitulo":
-				ir_para("inicio")
+				ir_para("modos")
 				return
 			destaque_cap = capitulo if estado == "vitoria" else 0
 			ir_para("mundos")
@@ -1711,7 +1711,10 @@ func clique_jogo(p: Vector2) -> void:
 			selec = [] if selec == ["loja", i] else ["loja", i]
 			return
 	if b["trocar"].has_point(p):
-		var custo := 0 if trocas_gratis > 0 else (4 if tipo_partida == "desafio" and regra_desafio()["id"] == "sem_trocas" else 2)
+		if desafio_regra_ativa("sem_trocas"):
+			aviso("Desafio Sem Trocas: a loja não troca")
+			return
+		var custo := 0 if trocas_gratis > 0 else 2
 		if essencia >= custo:
 			essencia -= custo
 			trocas_gratis = 0
@@ -2090,7 +2093,7 @@ func desenhar_fim() -> void:
 	elif bonus_res == "risco":
 		t_botao = "Guardar e seguir"
 	botao(botoes()["denovo"], t_botao, OURO, true, true)
-	botao(botoes()["mundos"], "Mundos" if tipo_partida == "capitulo" else "Início", AZUL)
+	botao(botoes()["mundos"], "Mundos" if tipo_partida == "capitulo" else "Modos", AZUL)
 	if venceu and pode_arriscar():
 		botao(botoes()["arriscar"], "Arriscar mais uma onda", VERMELHO)
 
@@ -2699,7 +2702,10 @@ func desenhar_loja() -> void:
 		if not ativa:
 			draw_rect(r, Color(0, 0, 0, 0.45))
 	var t_trocar := "Trocar grátis" if trocas_gratis > 0 else "Trocar (2)"
-	botao(b["trocar"], t_trocar if ativa else "Trocar", AZUL, ativa)
+	if desafio_regra_ativa("sem_trocas"):
+		botao(b["trocar"], "Sem trocas", CINZA, false)
+	else:
+		botao(b["trocar"], t_trocar if ativa else "Trocar", AZUL, ativa)
 	botao(b["lixo"], "Vender", VERMELHO, ativa, vender)
 	var t_onda_b := ("Fase bônus" if bonus_pendente else "Iniciar onda %d" % (onda + 1)) if ativa else "Onda em andamento"
 	if ativa and em_risco:

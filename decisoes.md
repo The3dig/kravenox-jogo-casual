@@ -244,3 +244,12 @@
   aviso "text in Portuguese, the book's language". Traduzir o livro é decisão
   do Rone.
 - **Por quê:** para o jogo chegar a mais gente se for para as lojas.
+
+## 2026-11-12: o desafio "Sem Trocas" passa a ser sem trocas de verdade
+
+- **Era:** tirava só a troca grátis; trocar custava 4 de essência (o Rone
+  trocou várias vezes e venceu, o que contradizia o nome). E na tela final do
+  Desafio e do Abismo os dois botões diziam "Início".
+- **Passou a ser:** no "Sem Trocas" a loja não troca (botão apagado: compre o
+  que vier). O segundo botão do fim do Desafio e do Abismo virou "Modos".
+- **Por quê:** relato do Rone com print.
