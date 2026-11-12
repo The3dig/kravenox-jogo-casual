@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-12a"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-12b"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const TOTAL_CAPITULOS := 76  # Livro I (35) + Livro II (41)
 const CAPS_POR_MUNDO := 4
@@ -2027,6 +2027,8 @@ func _draw() -> void:
 			desenhar_modos()
 		"loja":
 			desenhar_loja_apoiador()
+		"jogos":
+			desenhar_jogos()
 		"especial":
 			desenhar_esp()
 		_:
@@ -2912,6 +2914,7 @@ func botoes_menu() -> Dictionary:
 	b["baus"] = Rect2(LARG - 84, 378, 72, 74)
 	b["fora"] = Rect2(12, 520, 84, 74)
 	b["loja"] = Rect2(222, 20, 94, 34)
+	b["jogos"] = Rect2(60, 96, 116, 34)
 	b["versao"] = Rect2(120, 648, 240, 30)
 	b["desafio"] = Rect2(12, 200, 72, 74)
 	b["abismo"] = Rect2(12, 280, 72, 74)
@@ -2988,7 +2991,7 @@ func clique_menu(p: Vector2) -> void:
 				som("gema")
 				ir_para("inicio")
 			return
-		"mundos", "melhorias", "missoes", "ajustes", "kravenox", "acampamento", "pactos", "modos", "loja":
+		"mundos", "melhorias", "missoes", "ajustes", "kravenox", "acampamento", "pactos", "modos", "loja", "jogos":
 			if b["voltar"].has_point(p):
 				ir_para("inicio")
 				return
@@ -3006,6 +3009,8 @@ func clique_menu(p: Vector2) -> void:
 				return
 			if b["loja"].has_point(p):
 				ir_para("loja")
+			elif b["jogos"].has_point(p):
+				ir_para("jogos")
 			elif b["jogar"].has_point(p):
 				som("gema")
 				comecar_capitulo(c)
@@ -3135,6 +3140,12 @@ func clique_menu(p: Vector2) -> void:
 					return
 		"loja":
 			clique_loja(p)
+		"jogos":
+			for i in JOGOS_NOSSOS.size():
+				if Rect2(14, 152 + i * 132, LARG - 28, 122).has_point(p):
+					som("gema")
+					abrir_link(JOGOS_NOSSOS[i]["url"])
+					return
 		"modos":
 			var lista := lista_modos()
 			for i in lista.size():
@@ -3414,6 +3425,7 @@ func desenhar_inicio() -> void:
 	pilula_fragmentos(LARG - 14, 16)
 	var b := botoes_menu()
 	botao(b["loja"], "Loja", OURO, true, true)
+	botao(b["jogos"], "Mais jogos", ROXO, true, false)
 	if bau_loja_pronto():
 		var d: Vector2 = b["loja"].position + Vector2(b["loja"].size.x - 4, 2)
 		draw_circle(d, 7 + sin(tempo * 5), VERMELHO)
@@ -6384,3 +6396,40 @@ func trocar_idioma() -> void:
 	prog["idioma"] = idioma
 	cache_tx.clear()
 	salvar()
+
+
+# ============================================================ mais jogos nossos (12/11)
+const JOGOS_NOSSOS := [
+	{"nome": "Cratera do Cisma", "desc": "O primeiro jogo do Kravenox, na Cratera do Cisma.", "url": "https://the3dig.github.io/kravenox-jogar/", "img": "cratera"},
+	{"nome": "Reino Quebrado (RPG)", "desc": "O RPG da história do livro, capítulo por capítulo.", "url": "https://the3dig.github.io/kravenox-jogar/rpg/", "img": "rpg"},
+	{"nome": "Kravenox Plataforma", "desc": "Jogo de plataforma em 3D: corra, pule e lute pelas fases.", "url": "https://the3dig.github.io/kravenox-jogar/plataforma/", "img": "plataforma"},
+	{"nome": "Reino Quebrado Online", "desc": "O MMO em 3D: escolha um herói do livro e explore o reino.", "url": "https://the3dig.github.io/kravenox-mmo/", "img": "mmo"},
+]
+var tex_jogos := {}
+
+
+func abrir_link(url: String) -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("(function(u){var w=window.open(u,'_blank');if(!w){location.href=u;}})(%s)" % JSON.stringify(url))
+	else:
+		OS.shell_open(url)
+
+
+func desenhar_jogos() -> void:
+	desenhar_fundo(0.7)
+	cabecalho("MAIS JOGOS")
+	escrever("Outros jogos do universo Kravenox. Todos grátis.", Vector2(LARG / 2, 132), 14, CINZA)
+	for i in JOGOS_NOSSOS.size():
+		var jg: Dictionary = JOGOS_NOSSOS[i]
+		var r := Rect2(14, 152 + i * 132, LARG - 28, 122)
+		caixa(r, Color(0.06, 0.05, 0.08, 0.93), 12, 1, Color(OURO, 0.6), true, 6)
+		if not tex_jogos.has(jg["img"]):
+			tex_jogos[jg["img"]] = load("res://assets/jogos/%s.png" % jg["img"])
+		var ri := Rect2(r.position + Vector2(12, 13), Vector2(96, 96))
+		brilho_suave(ri.get_center(), 70, VERMELHO, 0.35)
+		draw_texture_rect(tex_jogos[jg["img"]], ri, false)
+		caixa(ri, Color(0, 0, 0, 0), 10, 2, Color(OURO, 0.7), false)
+		escrever_esq(jg["nome"], r.position + Vector2(122, 32), 17, OURO, fonte_titulo)
+		texto_quebrado(jg["desc"], r.position + Vector2(122, 40), r.size.x - 136, 14, Color8(220, 210, 230), 2)
+		botao(Rect2(r.end.x - 120, r.end.y - 50, 108, 40), "Jogar", VERMELHO, true, true)
+	desenhar_abas()

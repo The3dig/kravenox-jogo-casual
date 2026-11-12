@@ -253,3 +253,14 @@
 - **Passou a ser:** no "Sem Trocas" a loja não troca (botão apagado: compre o
   que vier). O segundo botão do fim do Desafio e do Abismo virou "Modos".
 - **Por quê:** relato do Rone com print.
+
+## 2026-11-12: botão "Mais jogos"
+
+- **Passou a ter:** na tela inicial, ao lado da engrenagem, o botão "Mais
+  jogos" abre uma tela com os outros jogos do universo (Cratera do Cisma, RPG,
+  Plataforma e o MMO), com o ícone de cada um e "Jogar" (abre o link). Os
+  ícones foram copiados dos próprios jogos para `godot/assets/jogos/`.
+- **Observação:** o MMO aponta para o endereço novo
+  (`the3dig.github.io/kravenox-mmo/`), que só funciona depois que a conversa
+  do MMO ligar o GitHub Pages daquele repositório.
+- **Por quê:** pedido do Rone.
