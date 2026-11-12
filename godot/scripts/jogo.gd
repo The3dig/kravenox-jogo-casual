@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-12c"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-12d"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const VIDA_MONSTROS := 2.6  # 12/11: monstros mais duros (o jogo estava fácil demais)
@@ -1621,6 +1621,9 @@ func _unhandled_input(ev: InputEvent) -> void:
 		if tela == "mundos" and ev.pressed and ev.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			rolagem = clampf(rolagem + (60.0 if ev.button_index == MOUSE_BUTTON_WHEEL_DOWN else -60.0), 0.0, rolagem_max())
 			return
+		if tela == "loja" and ev.pressed and ev.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			rol_loja = clampf(rol_loja + (60.0 if ev.button_index == MOUSE_BUTTON_WHEEL_DOWN else -60.0), 0.0, rol_loja_max())
+			return
 		if ev.button_index != MOUSE_BUTTON_LEFT:
 			return
 		if tela == "jogo":
@@ -1634,6 +1637,7 @@ func _unhandled_input(ev: InputEvent) -> void:
 		if ev.pressed:
 			toque_ini = p
 			toque_rola = rolagem
+			toque_rol_loja = rol_loja
 			arrastou = false
 		elif not arrastou:
 			clique_menu(p)
@@ -1648,6 +1652,13 @@ func _unhandled_input(ev: InputEvent) -> void:
 			arrastou = true
 		if arrastou:
 			rolagem = clampf(toque_rola - (p.y - toque_ini.y), 0.0, rolagem_max())
+	elif ev is InputEventMouseMotion and tela == "loja" and (ev.button_mask & MOUSE_BUTTON_MASK_LEFT):
+		# a lista da loja rola com o dedo
+		var p: Vector2 = make_input_local(ev).position
+		if p.distance_to(toque_ini) > 10:
+			arrastou = true
+		if arrastou:
+			rol_loja = clampf(toque_rol_loja - (p.y - toque_ini.y), 0.0, rol_loja_max())
 	elif ev is InputEventKey and ev.pressed and ev.keycode == KEY_SPACE and tela == "jogo" and estado == "loja":
 		iniciar_onda()
 
@@ -1965,6 +1976,10 @@ func cristal(c: Vector2, s: float, cor := Color(0, 0, 0, 0)) -> void:
 func desenhar_arte(nome: String, base: Vector2, alt: float, virar: bool, mod := Color.WHITE,
 		branco := false, giro := 0.0, esmaga := Vector2.ONE) -> Rect2:
 	var t: Texture2D = tex_branca[nome] if branco else tex[nome]
+	if not branco and nome.begins_with("kravenox"):
+		var sk := skin_atual()
+		if sk != "":
+			t = textura_skin(sk, nome)
 	var esc := alt / t.get_height()
 	var tam := t.get_size() * esc
 	draw_set_transform(base, giro, Vector2(-esmaga.x if virar else esmaga.x, esmaga.y))
@@ -3421,7 +3436,7 @@ func desenhar_inicio() -> void:
 	var av := Rect2(12, 12, 66, 66)
 	brilho_suave(av.get_center(), 50, cor_forma(), 0.6)
 	caixa(av, Color8(28, 20, 30), 10, 2, OURO, true, 6)
-	var tk: Texture2D = tex["kravenox"]
+	var tk: Texture2D = tex["kravenox"] if skin_atual() == "" else textura_skin(skin_atual(), "kravenox")
 	draw_texture_rect_region(tk, av.grow(-5), Rect2(0, 0, tk.get_width(), tk.get_width() * 0.92))
 	caixa(Rect2(60, 6, 34, 22), VERMELHO, 11, 1, TINTA)
 	escrever(str(prog["feitos"].size()), Vector2(77, 17), 13, BRANCO, false)
@@ -5944,6 +5959,10 @@ const LOJA_ITENS := [
 	{"id": "aura_gelo", "nome": "Aura do Gelo Azul", "preco": "R$ 3,90", "tipo": "aura", "cor": Color8(120, 200, 255), "desc": "a luz em volta do Kravenox fica azul-gelo"},
 	{"id": "aura_ouro", "nome": "Aura Dourada", "preco": "R$ 3,90", "tipo": "aura", "cor": Color8(255, 205, 90), "desc": "a luz em volta do Kravenox fica dourada"},
 	{"id": "aura_vazio", "nome": "Aura do Vazio", "preco": "R$ 3,90", "tipo": "aura", "cor": Color8(150, 60, 255), "desc": "a luz em volta do Kravenox fica roxa do Vazio"},
+	{"id": "skin_gelo", "nome": "Kravenox de Gelo", "preco": "R$ 4,90", "tipo": "skin", "skin": "gelo", "cor": Color8(120, 200, 255), "desc": "o corpo do Kravenox fica azul-gelo e os olhos, ciano"},
+	{"id": "skin_ouro", "nome": "Kravenox Dourado", "preco": "R$ 4,90", "tipo": "skin", "skin": "ouro", "cor": Color8(255, 205, 90), "desc": "o corpo do Kravenox fica dourado"},
+	{"id": "skin_sombrio", "nome": "Kravenox do Vazio", "preco": "R$ 4,90", "tipo": "skin", "skin": "sombrio", "cor": Color8(170, 110, 255), "desc": "o corpo do Kravenox fica roxo do Vazio"},
+	{"id": "skin_brasa", "nome": "Kravenox de Brasa", "preco": "R$ 4,90", "tipo": "skin", "skin": "brasa", "cor": Color8(255, 140, 50), "desc": "o corpo do Kravenox fica cor de brasa"},
 	{"id": "moldura_brasa", "nome": "Moldura de Brasa", "preco": "R$ 2,90", "tipo": "moldura", "cor": Color8(255, 90, 40), "desc": "os quadros com poder ganham borda de brasa"},
 	{"id": "vel4", "nome": "Velocidade 4×", "preco": "R$ 4,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "o botão de velocidade ganha o 4×"},
 	{"id": "fora24", "nome": "Vigília de 24 horas", "preco": "R$ 2,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "a Vigília junta fragmentos por até 24 h, e não 12 h"},
@@ -5984,8 +6003,30 @@ func eco_estelar() -> bool:
 	return tem("apoiador") and bool(prog.get("eco_estelar", false))
 
 
+func skin_atual() -> String:
+	var s := str(prog.get("skin", ""))
+	return s if s != "" and tem("skin_" + s) else ""
+
+
+var tex_skins := {}
+
+
+func textura_skin(sk: String, nome: String) -> Texture2D:
+	var chave := sk + "/" + nome
+	if not tex_skins.has(chave):
+		var t: Texture2D = load("res://assets/skins/%s/%s.png" % [sk, nome])
+		var img := t.get_image()
+		if img.is_compressed():
+			img.decompress()
+		img.generate_mipmaps()
+		tex_skins[chave] = ImageTexture.create_from_image(img)
+	return tex_skins[chave]
+
+
 func usando(it: Dictionary) -> bool:
 	match it["tipo"]:
+		"skin":
+			return str(prog.get("skin", "")) == it["skin"]
 		"pacote":
 			return str(prog.get("aura", "")) == "coroa"
 		"aura":
@@ -5995,8 +6036,17 @@ func usando(it: Dictionary) -> bool:
 	return true
 
 
+var rol_loja := 0.0
+var toque_rol_loja := 0.0
+const TOPO_LOJA := 210.0
+
+
+func rol_loja_max() -> float:
+	return maxf(0.0, TOPO_LOJA + LOJA_ITENS.size() * 73 + 8 - (ALT - 82))
+
+
 func ret_loja(i: int) -> Rect2:
-	return Rect2(14, 212 + i * 73, LARG - 28, 68)
+	return Rect2(14, TOPO_LOJA + 2 + i * 73 - rol_loja, LARG - 28, 68)
 
 
 func bau_loja_pronto() -> bool:
@@ -6053,6 +6103,8 @@ func clique_loja(p: Vector2) -> void:
 	if Rect2(14, 144, LARG - 28, 62).has_point(p):
 		abrir_bau_loja()
 		return
+	if p.y < TOPO_LOJA or p.y > ALT - 82:
+		return
 	for i in LOJA_ITENS.size():
 		if not Rect2(LARG - 128, ret_loja(i).position.y + 14, 108, 40).has_point(p):
 			continue
@@ -6070,6 +6122,8 @@ func clique_loja(p: Vector2) -> void:
 				prog["aura"] = it["id"] if liga else ""
 			"moldura":
 				prog["moldura"] = it["id"] if liga else ""
+			"skin":
+				prog["skin"] = it["skin"] if liga else ""
 		som("gema")
 		salvar()
 		return
@@ -6077,9 +6131,7 @@ func clique_loja(p: Vector2) -> void:
 
 func desenhar_loja_apoiador() -> void:
 	desenhar_fundo(0.7)
-	cabecalho("LOJA")
-	texto_quebrado("Nada aqui deixa o Kravenox mais forte: é só visual e conforto, para apoiar o jogo.", Vector2(24, 112), LARG - 48, 13, Color8(200, 230, 200), 2, true)
-	desenhar_bau_loja()
+	rol_loja = clampf(rol_loja, 0.0, rol_loja_max())
 	for i in LOJA_ITENS.size():
 		var it: Dictionary = LOJA_ITENS[i]
 		var r := ret_loja(i)
@@ -6091,6 +6143,9 @@ func desenhar_loja_apoiador() -> void:
 			"aura", "pacote":
 				brilho_suave(c, 40, it["cor"], 1.2 + 0.2 * sin(tempo * 3))
 				desenhar_arte("kravenox-passo-0", c + Vector2(0, 22), 44, false)
+			"skin":
+				brilho_suave(c, 34, it["cor"], 0.6)
+				draw_texture_rect(textura_skin(it["skin"], "kravenox-passo-0"), Rect2(c - Vector2(26, 24), Vector2(52, 48)), false)
 			"moldura":
 				draw_texture_rect(textura_laje(false), Rect2(c - Vector2(22, 22), Vector2(44, 44)), false)
 				caixa(Rect2(c - Vector2(21, 21), Vector2(42, 42)), Color(0, 0, 0, 0), 5, 3, it["cor"], false)
@@ -6112,8 +6167,17 @@ func desenhar_loja_apoiador() -> void:
 			botao(bb, "Ativo ✓", VERDE, true, false)
 		else:
 			botao(bb, "Em uso" if usando(it) else "Usar", VERDE, true, usando(it))
+	# topo fixo (por cima da lista que rola)
+	draw_rect(Rect2(0, 0, LARG, TOPO_LOJA), Color8(16, 12, 22))
+	degrade(Rect2(0, TOPO_LOJA, LARG, 14), Color8(16, 12, 22), Color(0.06, 0.05, 0.09, 0.0))
+	cabecalho("LOJA")
+	texto_quebrado("Nada aqui deixa o Kravenox mais forte: é só visual e conforto, para apoiar o jogo.", Vector2(24, 112), LARG - 48, 13, Color8(200, 230, 200), 2, true)
+	desenhar_bau_loja()
+	if rol_loja < rol_loja_max() - 4:
+		degrade(Rect2(0, ALT - 124, LARG, 42), Color(0.04, 0.03, 0.06, 0.0), Color(0.04, 0.03, 0.06, 0.95))
+		escrever("▼ arraste para ver mais", Vector2(LARG / 2, ALT - 94), 13, OURO, true)
 	if prog.get("teste_compras", false):
-		escrever("modo de teste da loja: tudo liberado", Vector2(LARG / 2, ALT - 96), 12, Color8(255, 200, 120), false)
+		escrever("modo de teste da loja: tudo liberado", Vector2(LARG / 2, ALT - 112), 12, Color8(255, 200, 120), false)
 	desenhar_abas()
 	desenhar_popup()
 

@@ -277,3 +277,14 @@
   de 5 tentativas num capítulo) e ainda chega ao fim. Testes: 1,45× e 1,9× de
   vida mal mudaram (o Kravenox mata antes); 2,6× com 1,25× de dano travou o
   robô no capítulo 52.
+
+## 2026-11-12: skins do Kravenox
+
+- **Passou a ter:** quatro skins na Loja do Apoiador (R$ 4,90 cada, só
+  visual): Kravenox de Gelo, Dourado, do Vazio e de Brasa. O corpo muda de cor
+  e os olhos e o contorno ganham a cor de destaque, no desenho grande e nos 4
+  passos. As imagens são pintadas por `godot/ferramentas/pintar_skins.py`
+  a partir das artes que o jogo já usa (`godot/assets/skins/`). A lista da
+  loja passou a rolar com o dedo (o Baú do Dia fica fixo no alto).
+- **Por quê:** um amigo do Rone perguntou "tem skin?"; as auras só mudavam a
+  luz em volta, não o corpo.
