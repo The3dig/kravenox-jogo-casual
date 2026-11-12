@@ -111,6 +111,14 @@ Sobre vender: a conta da Apple custa ~R$ 550/ano; precisa de ~130-150
 pessoas pagando R$ 5. Sugestão dada: testar antes no Google Play (US$ 25 uma
 vez) ou itch.io (grátis).
 
+## MMO (não é deste jogo)
+
+O MMO "Reino Quebrado Online" é de outra conversa. Em 10/11 ele foi copiado
+para o repositório próprio `The3dig/kravenox-mmo` (falta ligar o GitHub Pages
+e, depois, tirar a pasta `mmo/` do `kravenox-jogar`). **Isso fica com a
+conversa do MMO**: esta conversa não mexe mais nele. Ao publicar o Quadros,
+se a `main` do `kravenox-jogar` tiver mudado, juntar com merge (sem forçar).
+
 ## Como trabalhar no jogo
 
 Ferramentas usadas na nuvem (baixar de novo numa sessão nova):
