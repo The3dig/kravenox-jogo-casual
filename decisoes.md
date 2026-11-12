@@ -312,3 +312,20 @@
   em `CODIGOS_BETA`; o código em si o Rone passa direto para a pessoa.
   Primeiro código: para o Ludivicky. Novos: `python3 godot/ferramentas/codigo_beta.py Nome`.
 - **Por quê:** o Rone perguntou como saber que o prêmio é para aquele amigo.
+
+## 2026-11-13: Duelo ao vivo (o único modo online)
+
+- **Passou a ter:** na aba Modos, "Duelo ao vivo": dois jogadores, cada um no
+  seu celular, entram numa sala com código de 4 letras e enfrentam a mesma
+  horda (mesma semente) ao mesmo tempo, cada um com o seu nível. No alto
+  aparecem a torre e a onda do outro, ao vivo; a cada 12 monstros espantados,
+  2 vão para o outro; quem segurar a torre por mais tempo vence (e dá para
+  pedir revanche). A horda do duelo não tem fim e fica cada vez mais forte; o
+  poder vem sozinho a cada 2 ondas (o mesmo para os dois).
+- **Servidor:** `servidor-duelo/` (Cloudflare Workers + Durable Objects,
+  plano grátis). Só junta os dois, dá a largada e repassa vida, onda e
+  ataques; não guarda nada. O endereço vai em `SERVIDOR_DUELO` no `jogo.gd`.
+- **Só esse modo usa internet** (a tela avisa); o resto do jogo continua
+  funcionando sem ela.
+- **Por quê:** o Rone quis jogar contra o amigo ao mesmo tempo e topou ter
+  uma parte online.

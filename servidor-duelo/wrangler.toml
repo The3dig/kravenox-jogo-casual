@@ -1,0 +1,13 @@
+# Servidor do Duelo ao vivo (Cloudflare Workers, plano grátis).
+# Só o duelo usa internet; o resto do jogo continua offline.
+name = "kravenox-duelo"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+[[durable_objects.bindings]]
+name = "SALAS"
+class_name = "Sala"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Sala"]

@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-12g"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-13a"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const VIDA_MONSTROS := 2.6  # 12/11: monstros mais duros (o jogo estava fácil demais)
@@ -372,6 +372,9 @@ func _ready() -> void:
 			trechos = dt
 	carregar_idioma()
 	carregar_progresso()
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--servidor-duelo="):
+			servidor_duelo = a.substr(17)
 	if robo:
 		tela = "jogo"
 		# --cap=60 começa no capítulo 60 com as melhorias no máximo (para testar o fim)
@@ -454,7 +457,7 @@ func musica_certa() -> String:
 	if tela == "especial":
 		if esp.get("fim", "") != "":
 			return "vitoria" if esp["fim"] == "venceu" else "gameover"
-		return {"colosso": "chefe", "refugio": "espinhos"}.get(esp.get("id", ""), "batalha")
+		return {"colosso": "chefe", "refugio": "espinhos", "duelo": "chefe"}.get(esp.get("id", ""), "batalha")
 	if tela != "jogo":
 		return MUSICA_MUNDO[clampi(mundo_de(cap_atual()) - 1, 0, MUSICA_MUNDO.size() - 1)]
 	match estado:
@@ -1239,6 +1242,8 @@ func ferir(m: Dictionary, dano: float, critico_ok := true) -> void:
 			lento_t = 0.7
 		som("acerto")
 		mortes += 1
+		if m.get("extra", false) and esp.has("mortes_base"):
+			esp["mortes_base"] = int(esp["mortes_base"]) + 1
 		contar_missao("mortes")
 		var premio: int = (m["premio"] + nb("ganancia")) * int(pow(2, nb("avareza")))
 		essencia += premio
@@ -1264,6 +1269,9 @@ func _process(delta: float) -> void:
 			atualizar(1.0 / 60.0)
 		return
 	t_tela += delta
+	atualizar_duelo(delta)
+	if tela == "duelo":
+		atualizar_sala(delta)
 	if tela == "jogo" or tela == "especial":
 		if tela == "jogo":
 			# acelerado (2× ou 4×): vários passos pequenos, para os tiros não atravessarem os monstros
@@ -2052,6 +2060,8 @@ func _draw() -> void:
 			desenhar_jogos()
 		"beta":
 			desenhar_beta()
+		"duelo":
+			desenhar_duelo()
 		"especial":
 			desenhar_esp()
 		_:
@@ -3015,6 +3025,11 @@ func clique_menu(p: Vector2) -> void:
 				som("gema")
 				ir_para("inicio")
 			return
+		"duelo":
+			if b["voltar"].has_point(p):
+				sair_duelo()
+				ir_para("modos")
+				return
 		"mundos", "melhorias", "missoes", "ajustes", "kravenox", "acampamento", "pactos", "modos", "loja", "jogos":
 			if b["voltar"].has_point(p):
 				ir_para("inicio")
@@ -3166,6 +3181,8 @@ func clique_menu(p: Vector2) -> void:
 			clique_loja(p)
 		"beta":
 			clique_beta(p)
+		"duelo":
+			clique_duelo(p)
 		"jogos":
 			for i in JOGOS_NOSSOS.size():
 				if Rect2(14, 152 + i * 132, LARG - 28, 122).has_point(p):
@@ -3175,10 +3192,13 @@ func clique_menu(p: Vector2) -> void:
 		"modos":
 			var lista := lista_modos()
 			for i in lista.size():
-				if Rect2(14, 122 + i * 100, LARG - 28, 94).has_point(p):
+				if Rect2(14, 118 + i * 88, LARG - 28, 84).has_point(p):
 					if int(prog["liberado"]) >= int(lista[i]["desde"]):
 						som("gema")
-						comecar_modo(lista[i]["id"])
+						if lista[i]["id"] == "duelo":
+							ir_para("duelo")
+						else:
+							comecar_modo(lista[i]["id"])
 					else:
 						som("dano")
 					return
@@ -4776,6 +4796,7 @@ func lista_modos() -> Array:
 	var v := MODOS.duplicate()
 	v.append({"id": "abismo", "nome": "Abismo sem Fim", "desc": "Ondas sem fim no caminho de quadros, cada vez mais fortes.", "desde": 5})
 	v.append({"id": "desafio", "nome": "Desafio do Dia", "desc": "Um capítulo com regra especial, diferente a cada dia.", "desde": 6})
+	v.insert(0, {"id": "duelo", "nome": "Duelo ao vivo", "desc": "Você contra um amigo, cada um no seu celular, a mesma horda. Precisa de internet.", "desde": 5})
 	return v
 
 
@@ -4798,6 +4819,8 @@ func texto_rec(id: String) -> String:
 			return "Recorde: onda %d" % int(prog.get("abismo_rec", 0))
 		"desafio":
 			return "Feito hoje!" if desafio_feito_hoje() else "Ainda não feito hoje"
+		"duelo":
+			return "Vitórias: %d" % int(prog.get("modos", {}).get("duelo_vitorias", 0))
 	return ""
 
 
@@ -4898,15 +4921,21 @@ func comecar_modo(id: String) -> void:
 	hp = hp_max
 	tela = "especial"
 	t_tela = 0.0
+	if id == "duelo":
+		var rng := RandomNumberGenerator.new()
+		rng.seed = int(duelo.get("semente", 1))
+		esp["rng"] = rng
+		esp["t_envio"] = 0.0
+		esp["mortes_base"] = mortes
 	match id:
-		"horda":
+		"horda", "duelo":
 			CENTRO = Vector2(240, 470)
 			torre_max = 420.0 * (1.0 + cresce_esp()) * (1.0 + 0.25 * nivel_obra("vigia"))
 			torre_hp = torre_max
 			k_vis = CENTRO + Vector2(0, 74)
 			esp["cd"] = {"esmagar": 0.0, "espinhos": 0.0}
 			esp["alvo"] = null
-			aviso("Arraste o Kravenox até a horda!", 3.0)
+			aviso("Arraste o Kravenox até a horda!" if id == "horda" else "Duelo! Segure a torre mais tempo que o outro", 3.0)
 		"cacada":
 			esp["sala"] = 0
 			proxima_sala()
@@ -5167,7 +5196,7 @@ func atualizar_esp(dt: float) -> void:
 	esp["t"] += dt
 	k_andando = false
 	match esp["id"]:
-		"horda":
+		"horda", "duelo":
 			atualizar_horda(dt)
 		"cacada":
 			atualizar_cacada(dt)
@@ -5188,15 +5217,23 @@ func atualizar_esp(dt: float) -> void:
 # ------------------------------------------------------------ Horda
 func atualizar_horda(dt: float) -> void:
 	var w: int = esp["onda"]
-	if esp["fila"].is_empty() and monstros.is_empty():
+	if esp["fila"].is_empty() and monstros.all(func(m): return m.get("extra", false)):
 		if not esp["limpa"]:
 			esp["limpa"] = true
 			esp["pontos"] = w
-			if w >= 10:
+			var e_duelo: bool = esp["id"] == "duelo"
+			if w >= 10 and not e_duelo:
 				terminar_modo(true)
 				return
 			torre_hp = minf(torre_max, torre_hp + torre_max * 0.15)
-			abrir_habs()
+			if e_duelo:
+				# no duelo o poder vem sozinho (o mesmo para os dois, pela semente)
+				if w > 0 and w % 2 == 0:
+					var ops := HABS.filter(func(h): return (not h.has("modo") or h["modo"] == "horda") and hb(h["id"]) < 3)
+					if not ops.is_empty():
+						aplicar_hab(ops[esp["rng"].randi() % ops.size()]["id"])
+			else:
+				abrir_habs()
 			esp["pausa"] = 1.2
 			return
 		esp["pausa"] -= dt
@@ -5208,22 +5245,40 @@ func atualizar_horda(dt: float) -> void:
 			esp["lados"] = lados
 			var tipos := tipos_monstro()
 			var fila := []
-			for _i in 18 + 8 * w:
-				fila.append(tipos.pick_random())
-			if w == 5:
-				fila.insert(10, "larvamae")
-			if w == 10:
-				fila.insert(10, "thornox")
+			if esp["id"] == "duelo":
+				var rng: RandomNumberGenerator = esp["rng"]
+				lados = [["cima"], ["baixo"], ["esq", "dir"], ["cima", "baixo"], ["cima", "baixo", "esq", "dir"]][rng.randi() % 5]
+				esp["lados"] = lados
+				for _i in mini(90, 16 + 7 * w):
+					fila.append(tipos[rng.randi() % tipos.size()])
+				if w % 5 == 0:
+					fila.insert(8, ["larvamae", "semrosto", "thornox"][(w / 5 - 1) % 3])
+			else:
+				for _i in 18 + 8 * w:
+					fila.append(tipos.pick_random())
+				if w == 5:
+					fila.insert(10, "larvamae")
+				if w == 10:
+					fila.insert(10, "thornox")
 			esp["fila"] = fila
 			esp["t_spawn"] = 0.3
 			var nomes := {"cima": "de cima", "baixo": "de baixo", "esq": "da esquerda", "dir": "da direita"}
-			aviso(tx("Onda %d de 10 · vem %s") % [w, (" e " if idioma == "pt" else " and ").join(lados.map(func(x): return tx(nomes[x])))], 2.5)
+			var de_onde: String = (" e " if idioma == "pt" else " and ").join(lados.map(func(x): return tx(nomes[x])))
+			if esp["id"] == "duelo":
+				aviso(tx("Onda %d · vem %s") % [w, de_onde], 2.5)
+			else:
+				aviso(tx("Onda %d de 10 · vem %s") % [w, de_onde], 2.5)
 		return
 	esp["t_spawn"] -= dt
 	if esp["t_spawn"] <= 0 and not esp["fila"].is_empty():
 		esp["t_spawn"] = maxf(0.08, 0.34 - w * 0.022)
 		var tipo: String = esp["fila"].pop_front()
-		nasce(tipo, borda(esp["lados"].pick_random()), (1.0 if not MONSTROS[tipo].get("chefe", false) else 1.2) * (1.0 + 0.12 * w))
+		if esp["id"] == "duelo":
+			# no duelo a horda cresce sem parar: alguém cai em poucos minutos
+			var md := nasce(tipo, borda(esp["lados"].pick_random()), (1.0 if not MONSTROS[tipo].get("chefe", false) else 1.2) * 0.8 * pow(1.16, w - 1))
+			md["dano"] *= 1.0 + 0.12 * (w - 1)
+		else:
+			nasce(tipo, borda(esp["lados"].pick_random()), (1.0 if not MONSTROS[tipo].get("chefe", false) else 1.2) * (1.0 + 0.12 * w))
 	for m in monstros:
 		if mover_monstro(m, CENTRO + Vector2(0, -10), dt, 46.0):
 			torre_hp -= m["dano"]
@@ -5255,9 +5310,23 @@ func atualizar_horda(dt: float) -> void:
 			esp["t_tiro"] = cadencia_esp()
 			disparar(de)
 	extras_esp(de, dt)
+	if esp["id"] == "duelo":
+		# a cada 12 espantados, 2 monstros vão para o outro; e conta como estou
+		if mortes - int(esp["mortes_base"]) >= 12:
+			esp["mortes_base"] = int(esp["mortes_base"]) + 12
+			enviar_duelo({"t": "ataque", "n": 2})
+			texto_voa(k_vis + Vector2(0, -70), tx("Ataque enviado!"), Color8(255, 150, 140), 18)
+		esp["t_envio"] -= dt
+		if esp["t_envio"] <= 0:
+			esp["t_envio"] = 0.5
+			enviar_duelo({"t": "estado", "torre": int(100 * torre_hp / maxf(1.0, torre_max)), "onda": w, "mortes": mortes})
 	if torre_hp <= 0:
 		torre_hp = 0.0
 		esp["pontos"] = maxi(0, w - 1)
+		if esp["id"] == "duelo":
+			enviar_duelo({"t": "estado", "torre": 0, "onda": w, "mortes": mortes})
+			enviar_duelo({"t": "caiu", "tempo": esp["t"]})
+			esp["motivo"] = "eu_caiu"
 		terminar_modo(false)
 
 
@@ -5575,6 +5644,20 @@ func terminar_modo(venceu: bool) -> void:
 	esp["fim"] = "venceu" if venceu else "perdeu"
 	var id: String = esp["id"]
 	var pontos: int = esp["pontos"]
+	if id == "duelo":
+		pontos = int(esp["onda"])
+		var md0: Dictionary = prog.get("modos", {})
+		if venceu:
+			md0["duelo_vitorias"] = int(md0.get("duelo_vitorias", 0)) + 1
+		prog["modos"] = md0
+		esp["premio"] = (8 if venceu else 3) + mundo_de(nv_esp()) / 3
+		esp["pontos"] = pontos
+		esp["recorde"] = false
+		prog["fragmentos"] = int(prog["fragmentos"]) + int(esp["premio"])
+		duelo["fase"] = "fim"
+		som("nivel" if venceu else "dano")
+		salvar()
+		return
 	if id == "colosso":
 		pontos = int(esp["dano"])
 	if venceu and id in ["horda", "cacada"]:
@@ -5620,6 +5703,17 @@ func entrada_esp(ev: InputEvent) -> void:
 func toque_esp(p: Vector2) -> void:
 	var b := botoes()
 	if esp["fim"] != "":
+		if esp["id"] == "duelo":
+			if b["denovo"].has_point(p):
+				if ws != null:
+					duelo["fase"] = "dois" if Array(duelo.get("nomes", [])).size() == 2 else "esperando"
+				else:
+					duelo = {}
+				ir_para("duelo")
+			elif b["mundos"].has_point(p):
+				sair_duelo()
+				ir_para("modos")
+			return
 		if b["denovo"].has_point(p):
 			comecar_modo(esp["id"])
 		elif b["mundos"].has_point(p):
@@ -5632,10 +5726,16 @@ func toque_esp(p: Vector2) -> void:
 				return
 		return
 	if b["voltar"].has_point(p):
+		if esp["id"] == "duelo":
+			# sair no meio do duelo é desistir
+			enviar_duelo({"t": "caiu", "tempo": esp["t"]})
+			esp["motivo"] = "eu_caiu"
+			terminar_modo(false)
+			return
 		ir_para("modos")
 		return
 	match esp["id"]:
-		"horda":
+		"horda", "duelo":
 			for g in GOLPES_HORDA:
 				if botao_golpe(g).has_point(p):
 					usar_golpe(g)
@@ -5652,6 +5752,8 @@ func toque_esp(p: Vector2) -> void:
 
 
 func nome_modo(id: String) -> String:
+	if id == "duelo":
+		return "Duelo ao vivo"
 	for m in lista_modos():
 		if m["id"] == id:
 			return m["nome"]
@@ -5672,7 +5774,7 @@ func desenhar_esp() -> void:
 	for m in monstros:
 		itens.append([m["pos"].y, m])
 	itens.append([k_vis.y, null])
-	if id == "horda":
+	if id == "horda" or id == "duelo":
 		itens.append([CENTRO.y + 20, "torre"])
 	itens.sort_custom(func(a, b): return a[0] < b[0])
 	for it in itens:
@@ -5690,7 +5792,14 @@ func desenhar_esp() -> void:
 	desenhar_topo_esp()
 	if id == "refugio":
 		desenhar_painel_refugio()
-	if id == "horda" and esp["fim"] == "":
+	if id == "duelo" and not duelo.get("op", {}).is_empty():
+		var op: Dictionary = duelo["op"]
+		var r := Rect2(16, 132, LARG - 32, 30)
+		caixa(r, Color(0.08, 0.03, 0.05, 0.9), 8, 1, Color(VERMELHO, 0.7))
+		var fr := clampf(float(op.get("torre", 0)) / 100.0, 0, 1)
+		degrade(Rect2(r.position + Vector2(3, 3), Vector2((r.size.x - 6) * fr, r.size.y - 6)), Color8(150, 60, 70), Color8(80, 20, 30))
+		escrever(tx("%s · torre %d%% · onda %d") % [nome_op(), int(op.get("torre", 0)), int(op.get("onda", 0))], r.get_center(), 14, BRANCO, true)
+	if (id == "horda" or id == "duelo") and esp["fim"] == "":
 		for g in GOLPES_HORDA:
 			var r := botao_golpe(g)
 			var cd: float = esp["cd"][g]
@@ -5730,6 +5839,8 @@ func desenhar_topo_esp() -> void:
 	match id:
 		"horda":
 			dir = "ONDA %d/10" % maxi(1, int(esp["onda"]))
+		"duelo":
+			dir = "ONDA %d" % maxi(1, int(esp["onda"]))
 		"cacada":
 			dir = "SALA %d/10" % int(esp["sala"])
 		"colosso":
@@ -5747,7 +5858,7 @@ func desenhar_topo_esp() -> void:
 		"refugio":
 			cristal(Vector2(38, 104), 11)
 			escrever_esq(str(essencia), Vector2(58, 113), 24, BRANCO)
-		"horda":
+		"horda", "duelo":
 			escrever_esq("Torre %d%%" % int(100 * torre_hp / maxf(1.0, torre_max)), Vector2(26, 111), 18, Color8(200, 170, 255))
 		"colosso":
 			escrever_esq("Dano ×%s" % String.num(1.0 + esp["t"] / 15.0, 1).replace(".", ","), Vector2(24, 111), 17, OURO)
@@ -5890,8 +6001,22 @@ func desenhar_fim_esp() -> void:
 	brilho_suave(base + Vector2(0, -70), 120, OURO if venceu else VERMELHO, 0.7)
 	desenhar_arte("kravenox", base, 140, false, Color.WHITE if venceu else Color(0.45, 0.4, 0.5))
 	var titulo := "NOVO RECORDE!" if esp.get("recorde", false) else ("VITÓRIA!" if venceu else "FIM")
+	if id == "duelo":
+		titulo = "VOCÊ VENCEU!" if venceu else "VOCÊ PERDEU"
 	escrever(titulo, Vector2(LARG / 2, ALT / 2 - 76), 26, OURO if venceu or esp.get("recorde", false) else VERMELHO, true, fonte_titulo)
 	var t2 := ""
+	if id == "duelo":
+		titulo = "VOCÊ VENCEU!" if venceu else "VOCÊ PERDEU"
+		var op: Dictionary = duelo.get("op", {})
+		match str(esp.get("motivo", "")):
+			"op_caiu":
+				t2 = tx("A torre de %s caiu primeiro!") % nome_op()
+			"op_saiu":
+				t2 = tx("%s saiu do duelo.") % nome_op()
+			"conexao":
+				t2 = tx("A conexão caiu.")
+			_:
+				t2 = tx("Sua torre caiu primeiro.")
 	match id:
 		"horda":
 			t2 = "Aguentou %d de 10 ondas" % int(esp["pontos"])
@@ -5904,6 +6029,12 @@ func desenhar_fim_esp() -> void:
 	escrever(t2, Vector2(LARG / 2, ALT / 2 - 42), 17, BRANCO)
 	cristal(Vector2(LARG / 2 - 58, ALT / 2 - 8), 9, VERMELHO)
 	escrever_esq("+%d fragmentos" % int(esp["premio"]), Vector2(LARG / 2 - 42, ALT / 2), 19, Color8(255, 170, 160))
+	if id == "duelo":
+		var op: Dictionary = duelo.get("op", {})
+		escrever(tx("Você: onda %d  ·  %s: onda %d") % [int(esp["onda"]), nome_op(), int(op.get("onda", 0))], Vector2(LARG / 2, ALT / 2 + 18), 14, CINZA, false)
+		botao(botoes()["denovo"], "Revanche" if ws != null else "Nova sala", OURO, true, true)
+		botao(botoes()["mundos"], "Sair", AZUL)
+		return
 	escrever(texto_rec(id), Vector2(LARG / 2, ALT / 2 + 18), 14, CINZA, false)
 	botao(botoes()["denovo"], "Jogar de novo", OURO, true, true)
 	botao(botoes()["mundos"], "Modos", AZUL)
@@ -5915,17 +6046,17 @@ func desenhar_modos() -> void:
 	var lista := lista_modos()
 	for i in lista.size():
 		var m: Dictionary = lista[i]
-		var r := Rect2(14, 122 + i * 100, LARG - 28, 94)
+		var r := Rect2(14, 118 + i * 88, LARG - 28, 84)
 		var ok := int(prog["liberado"]) >= int(m["desde"])
 		caixa(r, Color(0.06, 0.05, 0.08, 0.93), 10, 1, Color(OURO if ok else PEDRA_BORDA, 0.8), true, 6)
-		var c := r.position + Vector2(44, 47)
+		var c := r.position + Vector2(44, 42)
 		icone_modo(m["id"], c, ok)
-		escrever_esq(m["nome"], r.position + Vector2(84, 26), 17, OURO if ok else CINZA, fonte_titulo)
+		escrever_esq(m["nome"], r.position + Vector2(84, 23), 16, OURO if ok else CINZA, fonte_titulo)
 		if ok:
-			texto_quebrado(m["desc"], r.position + Vector2(84, 32), r.size.x - 100, 13, Color8(220, 210, 230), 2)
-			escrever_esq(texto_rec(m["id"]), r.position + Vector2(84, 84), 12, Color8(200, 170, 255))
+			texto_quebrado(m["desc"], r.position + Vector2(84, 28), r.size.x - 100, 13, Color8(220, 210, 230), 2)
+			escrever_esq(texto_rec(m["id"]), r.position + Vector2(84, 77), 12, Color8(200, 170, 255))
 		else:
-			escrever_esq("Vença o capítulo %d para liberar" % (int(m["desde"]) - 1), r.position + Vector2(84, 52), 14, CINZA)
+			escrever_esq("Vença o capítulo %d para liberar" % (int(m["desde"]) - 1), r.position + Vector2(84, 48), 14, CINZA)
 	desenhar_abas()
 	desenhar_popup()
 
@@ -5956,6 +6087,11 @@ func icone_modo(id: String, c: Vector2, ok: bool) -> void:
 			brilho_suave(c, 36, ROXO, a)
 			for k in 3:
 				draw_arc(c, 22 - k * 7, tempo * (1.0 + k * 0.5), tempo * (1.0 + k * 0.5) + 4.2, 16, Color(0.8, 0.6, 1.0, a * (1.0 - k * 0.25)), 3, true)
+		"duelo":
+			brilho_suave(c, 36, VERMELHO, a)
+			for k in [-1.0, 1.0]:
+				draw_line(c + Vector2(-16 * k, 16), c + Vector2(14 * k, -16), Color(0.9, 0.9, 0.95, a), 5, true)
+				draw_line(c + Vector2(-11 * k, 4), c + Vector2(-3 * k, 12), Color(0.9, 0.3, 0.3, a), 4, true)
 		"desafio":
 			brilho_suave(c, 36, Color8(255, 160, 60), a)
 			draw_circle(c, 15, Color(1, 0.67, 0.27, a))
@@ -6615,3 +6751,227 @@ func desenhar_beta() -> void:
 		brilho_suave(r.position + Vector2(r.size.x / 2, 52), 50, it["cor"], 0.7 + 0.2 * sin(tempo * 3 + i))
 		draw_texture_rect(textura_skin(SKINS_BETA[i], "kravenox-passo-0"), Rect2(r.position + Vector2(r.size.x / 2 - 40, 8), Vector2(80, 74)), false)
 		escrever(it["nome"], r.position + Vector2(r.size.x / 2, 104), 15, it["cor"].lightened(0.3), true)
+
+
+# ============================================================ Duelo ao vivo (12/11)
+# O ÚNICO modo que usa internet. Dois jogadores entram numa sala (código de 4
+# letras) no servidor da Cloudflare (servidor-duelo/), começam juntos contra a
+# mesma horda (mesma semente), cada um com o seu nível, e veem a torre e a onda
+# do outro ao vivo. A cada 12 monstros espantados vão 2 monstros para o outro.
+# Quem tiver a torre de pé por mais tempo vence.
+const SERVIDOR_DUELO := "wss://kravenox-duelo.SUBDOMINIO.workers.dev"
+const LETRAS_SALA := "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+var ws: WebSocketPeer = null
+var duelo := {}          # {"codigo", "fase", "nomes", "voce", "op", "msg", "conta"}
+var servidor_duelo := SERVIDOR_DUELO
+
+
+func nome_duelo() -> String:
+	return str(prog.get("nome_duelo", ""))
+
+
+func pedir_nome_duelo() -> bool:
+	if nome_duelo() != "":
+		return true
+	var n := "Jogador"
+	if OS.has_feature("web"):
+		n = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Seu nome no duelo (o outro jogador vai ver):"))))
+	n = n.strip_edges().substr(0, 16)
+	if n == "":
+		return false
+	prog["nome_duelo"] = n
+	salvar()
+	return true
+
+
+func conectar_duelo(codigo: String) -> void:
+	sair_duelo()
+	if "SUBDOMINIO" in servidor_duelo:
+		duelo = {"fase": "erro", "msg": "O servidor do duelo ainda não está no ar."}
+		return
+	ws = WebSocketPeer.new()
+	var url := "%s/sala/%s?nome=%s" % [servidor_duelo, codigo, nome_duelo().uri_encode()]
+	if ws.connect_to_url(url) != OK:
+		ws = null
+		duelo = {"fase": "erro", "msg": "Sem internet: o Duelo ao vivo precisa de internet."}
+		return
+	duelo = {"codigo": codigo, "fase": "conectando", "nomes": [], "voce": 0, "op": {}, "msg": "", "t_conexao": 0.0}
+
+
+func criar_sala() -> void:
+	if not pedir_nome_duelo():
+		return
+	var c := ""
+	for _i in 4:
+		c += LETRAS_SALA[randi() % LETRAS_SALA.length()]
+	conectar_duelo(c)
+
+
+func entrar_sala() -> void:
+	if not pedir_nome_duelo():
+		return
+	var c := ""
+	if OS.has_feature("web"):
+		c = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Código da sala (4 letras):"))))
+	else:
+		c = DisplayServer.clipboard_get()
+	c = c.strip_edges().to_upper().replace(" ", "")
+	if c.length() != 4:
+		if c != "":
+			popup = {"titulo": "DUELO AO VIVO", "texto": "O código da sala tem 4 letras."}
+		return
+	conectar_duelo(c)
+
+
+func sair_duelo() -> void:
+	if ws != null:
+		ws.close()
+	ws = null
+	duelo = {}
+
+
+func enviar_duelo(m: Dictionary) -> void:
+	if ws != null and ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
+		ws.send_text(JSON.stringify(m))
+
+
+func nome_op() -> String:
+	var nomes: Array = duelo.get("nomes", [])
+	var v := int(duelo.get("voce", 0))
+	return str(nomes[1 - v]) if nomes.size() > 1 else tx("o outro")
+
+
+func atualizar_duelo(dt: float) -> void:
+	if ws == null:
+		return
+	ws.poll()
+	var st := ws.get_ready_state()
+	if st == WebSocketPeer.STATE_CONNECTING:
+		duelo["t_conexao"] = float(duelo.get("t_conexao", 0.0)) + dt
+		if duelo["t_conexao"] > 10.0:
+			sair_duelo()
+			duelo = {"fase": "erro", "msg": "Não deu para conectar. Confira a internet e tente de novo."}
+		return
+	if st == WebSocketPeer.STATE_CLOSED:
+		var jogando: bool = tela == "especial" and esp.get("id", "") == "duelo" and esp.get("fim", "") == ""
+		ws = null
+		if jogando:
+			duelo["fase"] = "fim"
+			terminar_modo(false)
+			esp["motivo"] = "conexao"
+		elif duelo.get("fase", "") != "erro":
+			duelo = {"fase": "erro", "msg": "A conexão caiu. Confira a internet e tente de novo."}
+		return
+	while ws.get_available_packet_count() > 0:
+		var m = JSON.parse_string(ws.get_packet().get_string_from_utf8())
+		if m is Dictionary:
+			mensagem_duelo(m)
+
+
+func mensagem_duelo(m: Dictionary) -> void:
+	match str(m.get("t", "")):
+		"sala":
+			duelo["nomes"] = m["nomes"]
+			duelo["voce"] = int(m["voce"])
+			if duelo.get("fase", "") in ["conectando", "esperando", "dois"]:
+				duelo["fase"] = "dois" if Array(m["nomes"]).size() == 2 else "esperando"
+				if duelo["fase"] == "dois":
+					som("gema")
+		"erro":
+			var msg := str(m.get("msg", ""))
+			sair_duelo()
+			duelo = {"fase": "erro", "msg": "Essa sala já está cheia." if msg == "sala cheia" else msg}
+		"comecar":
+			duelo["fase"] = "contagem"
+			duelo["conta"] = 3.0
+			duelo["semente"] = int(m["semente"])
+			duelo["op"] = {"torre": 100, "onda": 1, "mortes": 0}
+			som("chefe")
+		"op":
+			duelo["op"] = m
+		"ataque":
+			if tela == "especial" and esp.get("id", "") == "duelo" and esp["fim"] == "":
+				for _i in int(m.get("n", 1)):
+					var mx := nasce(["larva", "verme"][randi() % 2], borda(["cima", "baixo", "esq", "dir"].pick_random()), 0.8 * pow(1.16, int(esp["onda"]) - 1))
+					mx["extra"] = true   # veio do outro: não segura a onda nem conta para mandar de volta
+				aviso(tx("%s mandou monstros!") % nome_op(), 2.0)
+				tremer(0.2, 60)
+		"caiu":
+			if tela == "especial" and esp.get("id", "") == "duelo" and esp["fim"] == "":
+				esp["motivo"] = "op_caiu"
+				terminar_modo(true)
+		"saiu":
+			if tela == "especial" and esp.get("id", "") == "duelo" and esp["fim"] == "":
+				esp["motivo"] = "op_saiu"
+				terminar_modo(true)
+			else:
+				duelo["fase"] = "esperando"
+				duelo["nomes"] = [nome_duelo()]
+
+
+# Na tela da sala: a contagem 3, 2, 1 e a largada.
+func atualizar_sala(dt: float) -> void:
+	if duelo.get("fase", "") == "contagem":
+		duelo["conta"] -= dt
+		if duelo["conta"] <= 0:
+			duelo["fase"] = "jogando"
+			comecar_modo("duelo")
+
+
+func ret_duelo(n: int) -> Rect2:
+	return [Rect2(90, 380, 300, 58), Rect2(90, 452, 300, 58), Rect2(90, 560, 300, 58), Rect2(90, 632, 300, 50)][n]
+
+
+func clique_duelo(p: Vector2) -> void:
+	var fase := str(duelo.get("fase", ""))
+	if fase == "" or fase == "erro":
+		if ret_duelo(0).has_point(p):
+			criar_sala()
+		elif ret_duelo(1).has_point(p):
+			entrar_sala()
+		return
+	if fase == "dois" and ret_duelo(2).has_point(p):
+		enviar_duelo({"t": "pronto"})
+		duelo["fase"] = "pronto"
+		som("gema")
+	elif ret_duelo(3).has_point(p):
+		sair_duelo()
+
+
+func desenhar_duelo() -> void:
+	desenhar_fundo(0.65)
+	cabecalho("DUELO AO VIVO")
+	brilho_suave(Vector2(LARG / 2, 240), 160, VERMELHO, 0.5 + 0.1 * sin(tempo * 2))
+	escrever("Só este modo usa internet. O resto do jogo funciona sem ela.", Vector2(LARG / 2, 134), 13, Color8(150, 220, 170))
+	texto_quebrado("Os dois enfrentam a mesma horda ao mesmo tempo, cada um com o seu nível. A cada 12 monstros espantados, 2 vão para o outro. Quem segurar a torre por mais tempo vence.", Vector2(40, 160), LARG - 80, 15, BRANCO, 4, true)
+	var fase := str(duelo.get("fase", ""))
+	match fase:
+		"", "erro":
+			if fase == "erro":
+				texto_quebrado(str(duelo["msg"]), Vector2(40, 290), LARG - 80, 15, Color8(255, 150, 140), 3, true)
+			botao(ret_duelo(0), "Criar sala", VERMELHO, true, true)
+			botao(ret_duelo(1), "Entrar com código", AZUL, true, false)
+			if nome_duelo() != "":
+				escrever(tx("Seu nome: %s") % nome_duelo(), Vector2(LARG / 2, 540), 14, CINZA, false)
+		"conectando":
+			escrever("Conectando…", Vector2(LARG / 2, 400), 20, BRANCO, true)
+			botao(ret_duelo(3), "Sair", CINZA, true, false)
+		_:
+			escrever("CÓDIGO DA SALA", Vector2(LARG / 2, 300), 14, CINZA, true, fonte_titulo)
+			escrever(str(duelo.get("codigo", "")), Vector2(LARG / 2, 350), 56, OURO, true, fonte_titulo)
+			var nomes: Array = duelo.get("nomes", [])
+			if nomes.size() < 2:
+				escrever("Mande o código para o seu amigo e espere ele entrar…", Vector2(LARG / 2, 420), 15, BRANCO, true)
+				escrever(".".repeat(1 + int(tempo * 2) % 3), Vector2(LARG / 2, 450), 22, OURO, false)
+			else:
+				escrever("%s  ×  %s" % [nomes[0], nomes[1]], Vector2(LARG / 2, 430), 22, BRANCO, true, fonte_titulo)
+			match fase:
+				"dois":
+					botao(ret_duelo(2), "PRONTO!", VERMELHO, true, true)
+				"pronto":
+					escrever(tx("Esperando %s ficar pronto…") % nome_op(), Vector2(LARG / 2, 590), 16, OURO, true)
+				"contagem":
+					escrever(str(int(ceilf(duelo["conta"]))), Vector2(LARG / 2, 590), 64, VERMELHO, true, fonte_titulo)
+			botao(ret_duelo(3), "Sair da sala", CINZA, true, false)
+	desenhar_abas()
+	desenhar_popup()
