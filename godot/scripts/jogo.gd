@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-15b"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-15c"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -2344,19 +2344,45 @@ func desenhar_terreno(i: int, r: Rect2) -> void:
 	var c := r.get_center()
 	match terreno[i]:
 		"fenda":
-			var pts := PackedVector2Array([r.position + Vector2(10, 14), c + Vector2(-6, -4), c + Vector2(4, 6), r.end - Vector2(10, 12)])
-			draw_polyline(pts, Color(VERMELHO, 0.35), 7, true)
-			draw_polyline(pts, Color8(255, 120, 90), 2, true)
+			# rachadura em zigue-zague com lava por dentro e "+50%" (era um risco
+			# reto que parecia sinal de proibido)
+			var u0 := r.size.x / 76.0
+			var pts := PackedVector2Array([c + Vector2(-6, -28) * u0, c + Vector2(4, -14) * u0, c + Vector2(-6, -2) * u0,
+				c + Vector2(6, 10) * u0, c + Vector2(-2, 20) * u0, c + Vector2(4, 30) * u0])
+			var calor := 0.6 + 0.25 * sin(tempo * 3 + i)
+			brilho_suave(c, 30 * u0, Color8(255, 90, 40), 0.5 * calor)
+			draw_polyline(pts, Color8(30, 10, 10), 9 * u0, true)
+			draw_polyline(pts, Color(Color8(255, 90, 40), calor), 4 * u0, true)
+			draw_polyline(pts, Color8(255, 220, 140), 1.5, true)
+			escrever("+50%", c + Vector2(-14, -22) * u0 + Vector2(-4, 0), int(13 * u0), Color8(255, 170, 110), true)
 		"altar":
 			draw_arc(c, r.size.x * 0.36, 0, TAU, 30, Color(OURO, 0.45), 2, true)
 			for k in 4:
 				var a := k * TAU / 4 + tempo * 0.5
 				draw_circle(c + Vector2.from_angle(a) * r.size.x * 0.36, 2.5, Color(OURO, 0.8))
 		"maldita":
-			draw_rect(r.grow(-4), Color(0.1, 0.0, 0.15, 0.55))
-			draw_line(c + Vector2(-14, -14), c + Vector2(14, 14), Color(ROXO, 0.7), 4, true)
-			draw_line(c + Vector2(14, -14), c + Vector2(-14, 14), Color(ROXO, 0.7), 4, true)
-			draw_circle(c, 6, Color8(40, 20, 60))
+			# 15/11: era um X roxo, que parecia "erro" ou "bloqueado". Agora é
+			# uma pedra escura rachada com um cristal de essência e "+1".
+			var u := r.size.x / 76.0
+			var pedra := PackedVector2Array()
+			for k in 9:
+				var a := k * TAU / 9 - PI / 2
+				var raio := (27.0 + 4.0 * sin(k * 2.7)) * u
+				pedra.append(c + Vector2(0, 6 * u) + Vector2(cos(a) * raio * 1.1, sin(a) * raio * 0.8))
+			draw_colored_polygon(pedra, Color8(38, 30, 48))
+			var borda := pedra.duplicate()
+			borda.append(pedra[0])
+			draw_polyline(borda, Color8(70, 56, 86), 2, true)
+			# rachaduras com brilho roxo pulsando
+			var luz := 0.55 + 0.3 * sin(tempo * 2.5 + i)
+			var r1 := PackedVector2Array([c + Vector2(-8, -6) * u, c + Vector2(0, 4) * u, c + Vector2(-4, 14) * u, c + Vector2(4, 24) * u])
+			var r2 := PackedVector2Array([c + Vector2(0, 4) * u, c + Vector2(12, 8) * u, c + Vector2(20, 2) * u])
+			for rr in [r1, r2]:
+				draw_polyline(rr, Color(ROXO, luz * 0.5), 5, true)
+				draw_polyline(rr, Color8(210, 160, 255), 1.5, true)
+			# cristal de essência saindo da pedra, com "+1"
+			cristal(c + Vector2(-16, -20) * u, 10 * u)
+			escrever("+1", c + Vector2(18, -22) * u, int(16 * u), Color8(220, 180, 255), true)
 
 
 func desenhar_topo() -> void:

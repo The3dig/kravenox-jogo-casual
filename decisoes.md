@@ -483,3 +483,13 @@
 - **Por quê:** o Rone pediu para olhar os outros modos depois dos problemas
   do Abismo. A dificuldade desses modos não mudou: eles têm fim (10 ondas,
   10 salas, 1:30, 2:30) e balanço próprio.
+
+## 15/11/2026: desenho novo da Pedra maldita e da Fenda
+
+- **Era:** a Pedra maldita era um X roxo e a Fenda um risco vermelho reto;
+  os dois pareciam "erro" ou "proibido" (o Rone perguntou o que era o X).
+- **Passou a ser:** Pedra maldita = pedra escura rachada com brilho roxo, um
+  cristal de essência e "+1" (não aceita poder, dá 1 de essência a cada
+  passo). Fenda = rachadura em zigue-zague com lava e "+50%" (dano do poder
+  ali). O Altar continua igual. Versão 2026-11-15c.
+- **Por quê:** o desenho tem que dizer o que o quadro faz sem precisar tocar.
