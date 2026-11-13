@@ -455,3 +455,17 @@
 - **Mudou de novo (14/11, versão 2026-11-14e):** o anel também saiu. O
   escudo aparece só na barra de vida lá em cima (faixa azul e "+N"), que já
   existia. O Rone achou que não precisa de nada em volta do Kravenox.
+
+## 15/11/2026: botão Recomeçar e nova zerada do Abismo
+
+- **Era:** não havia jeito de largar uma partida e começar do zero; e a
+  partida do Abismo começada antes do reforço de 14/11 continuava salva e
+  subia o recorde de novo (o Rone viu "recorde 6" na onda 7 logo depois de
+  zerar).
+- **Passou a ser:** botão **Recomeçar** no alto da tela, à direita, entre as
+  ondas (capítulo, Abismo e Desafio do Dia). O primeiro toque vira
+  "Confirmar?" e o segundo, em até 3 s, recomeça. No Abismo conta como fim
+  de partida (recorde e fragmentos do que já fez). Além disso, uma vez só
+  (marca `abismo_v3`), o recorde do Abismo zera de novo e a partida antiga
+  do Abismo salva no aparelho é descartada.
+- **Por quê:** pedido do Rone ("não tá zerando, cria um botão reiniciar").

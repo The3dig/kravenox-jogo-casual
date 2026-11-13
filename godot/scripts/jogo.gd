@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-14e"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-15a"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -549,6 +549,15 @@ func carregar_progresso() -> void:
 	prog["fragmentos"] = int(prog["fragmentos"])
 	modo = str(prog.get("modo", "normal"))
 	vibracao_ligada = bool(prog.get("vibracao", true))
+	if not prog.get("abismo_v3", false):
+		# 15/11: a partida do Abismo começada antes do reforço continuava e
+		# subia o recorde de novo; agora ela é descartada e o recorde zera.
+		prog["abismo_v3"] = true
+		prog["abismo_v2"] = true
+		prog["abismo_rec"] = 0
+		var pa = prog.get("partida", null)
+		if pa is Dictionary and str(pa.get("tipo", "")) == "abismo":
+			prog.erase("partida")
 	if not prog.get("abismo_v2", false):
 		# 14/11: o Abismo ficou bem mais difícil; o recorde antigo foi zerado
 		prog["abismo_v2"] = true
@@ -1687,6 +1696,7 @@ func botoes() -> Dictionary:
 	b["vel"] = Rect2(LARG - 70, 92, 54, 36)
 	b["som"] = Rect2(LARG - 116, 92, 40, 36)
 	b["voltar"] = Rect2(10, 10, 36, 32)
+	b["reiniciar"] = Rect2(LARG - 126, 136, 110, 28)
 	b["denovo"] = Rect2(LARG / 2 - 120, ALT / 2 + 30, 240, 54)
 	b["mundos"] = Rect2(LARG / 2 - 120, ALT / 2 + 96, 240, 48)
 	b["arriscar"] = Rect2(LARG / 2 - 120, ALT / 2 + 156, 240, 48)
@@ -1785,6 +1795,12 @@ func clique_jogo(p: Vector2) -> void:
 	if estado == "onda" and b["onda"].has_point(p):
 		if furia >= 100.0:
 			soltar_furia()
+		return
+	if pode_reiniciar() and b["reiniciar"].has_point(p):
+		if tempo < reiniciar_ate:
+			reiniciar_partida()
+		else:
+			reiniciar_ate = tempo + 3.0   # segundo toque em até 3 s confirma
 		return
 	if b["voltar"].has_point(p):
 		if tipo_partida != "capitulo" or em_risco:
@@ -2427,6 +2443,11 @@ func desenhar_topo() -> void:
 		tv += "  +%d" % int(escudo)
 	escrever(tv, Vector2(bx + bw / 2, 103), 16, BRANCO)
 	botao(botoes()["vel"], "x%d" % vel_jogo, OURO)
+	if pode_reiniciar():
+		var br: Rect2 = botoes()["reiniciar"]
+		var conf := tempo < reiniciar_ate
+		caixa(br, Color(0.07, 0.06, 0.09, 0.92), 7, 2, Color(VERMELHO if conf else CINZA, 0.85), true, 4)
+		escrever("Confirmar?" if conf else "Recomeçar", br.get_center(), 14, VERMELHO if conf else BRANCO, false)
 	var bs: Rect2 = botoes()["som"]
 	botao(bs, "", OURO if som_ligado else CINZA)
 	var c := bs.get_center() + Vector2(-4, 0)
@@ -7573,3 +7594,29 @@ func desenhar_trilha_abismo() -> void:
 
 func recorde_abismo_ao_vivo() -> int:
 	return maxi(int(prog.get("abismo_rec", 0)), maxi(0, onda - 1) if estado == "onda" else onda)
+
+
+# Botão Recomeçar (15/11): entre as ondas, larga a partida e começa do zero.
+# No Abismo conta como fim de partida (recorde e fragmentos do que já fez).
+var reiniciar_ate := -1.0
+
+
+func pode_reiniciar() -> bool:
+	return tela == "jogo" and estado == "loja" and not em_risco and escolha.is_empty() \
+		and tipo_partida in ["capitulo", "abismo", "desafio"]
+
+
+func reiniciar_partida() -> void:
+	reiniciar_ate = -1.0
+	var tp := tipo_partida
+	if tp == "abismo":
+		fim_abismo()
+	limpar_partida()
+	match tp:
+		"abismo":
+			comecar_abismo()
+		"desafio":
+			comecar_desafio()
+		_:
+			comecar_capitulo(capitulo)
+	aviso("Partida recomeçada", 2.0)
