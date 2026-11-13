@@ -398,3 +398,13 @@
 - **Por quê:** pesquisa dos concorrentes (Archero 2 e Capybara Go têm ranking,
   arena e guildas com chefe semanal); escolhidos os que funcionam mesmo com
   poucos jogadores. Arena de "fantasmas" e amigos ficaram para depois.
+
+## 2026-11-13: servidor online no ar
+
+- O servidor (`servidor-duelo/`) foi publicado na conta Cloudflare do Rone em
+  `https://kravenox-duelo.kravenox.workers.dev` (plano grátis). Testado pela
+  internet: ranking, Ordem e Duelo (sala, largada e ataque). O jogo passou a
+  apontar para ele (`SERVIDOR_DUELO`), então o botão "Online" e o Duelo
+  aparecem. A chave da Cloudflare está guardada no ambiente "Kravenox jogos"
+  do Claude Code (não no repositório). Para publicar de novo:
+  `npx wrangler deploy` dentro de `servidor-duelo/`.

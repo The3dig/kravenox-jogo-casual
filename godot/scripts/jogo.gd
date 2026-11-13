@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-13e"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-13f"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const PESADELO_VIDA := 2.7   # 13/11: era 1.8; quem chega ao Pesadelo já tem as melhorias no máximo
@@ -6888,7 +6888,7 @@ func desenhar_beta() -> void:
 # mesma horda (mesma semente), cada um com o seu nível, e veem a torre e a onda
 # do outro ao vivo. A cada 12 monstros espantados vão 2 monstros para o outro.
 # Quem tiver a torre de pé por mais tempo vence.
-const SERVIDOR_DUELO := "wss://kravenox-duelo.SUBDOMINIO.workers.dev"
+const SERVIDOR_DUELO := "wss://kravenox-duelo.kravenox.workers.dev"
 const LETRAS_SALA := "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 var ws: WebSocketPeer = null
 var duelo := {}          # {"codigo", "fase", "nomes", "voce", "op", "msg", "conta"}

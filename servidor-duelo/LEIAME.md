@@ -12,7 +12,7 @@ cd servidor-duelo
 npx wrangler deploy        # precisa de CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID
 ```
 
-Depois, o endereço (`https://kravenox-duelo.<sua-conta>.workers.dev`) vai em
+No ar desde 13/11/2026 em `https://kravenox-duelo.kravenox.workers.dev` (conta Cloudflare do Rone). O endereço vai em
 `SERVIDOR_DUELO` no `godot/scripts/jogo.gd` (com `wss://`).
 
 ## Testar no computador

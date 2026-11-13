@@ -193,6 +193,7 @@ export class Ranking {
       const cat = String(c.cat || "");
       const valor = Math.floor(Number(c.valor) || 0);
       if (!id || !CATS.includes(cat) || valor <= 0 || valor > 1e12) return json({ erro: "dados inválidos" }, 400);
+      if (id.startsWith("teste")) return json({ ok: true, teste: true });   // testes não entram no ranking
       const chave = "s:" + semana() + ":" + cat;
       const tabela = (await this.storage.get(chave)) || {};
       const antigo = tabela[id];
@@ -221,7 +222,7 @@ export class Ranking {
   }
 
   ordenar(tabela) {
-    return Object.entries(tabela).sort((a, b) => b[1].valor - a[1].valor);
+    return Object.entries(tabela).filter(([i]) => !i.startsWith("teste")).sort((a, b) => b[1].valor - a[1].valor);
   }
 
   posicao(tabela, id) {
