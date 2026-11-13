@@ -426,3 +426,16 @@
   mesmo mundo. A Ordem pode ser a mesma em todos os jogos. Nada do que o
   Quadros usa mudou. Instruções: `servidor-duelo/PARA-OUTROS-JOGOS.md`.
 - Publicar agora usa o wrangler 4 (o 3 dava erro 10013 da Cloudflare).
+
+## 2026-11-14: Abismo com recorde ao vivo, trilha de ondas e mais difícil
+
+- **Era:** o recorde (e o ranking) só contava quando o Kravenox caía, então
+  aparecia "RECORDE 0" na onda 7; a trilha do alto mostrava as 4 fases dos
+  capítulos; o Abismo tinha ficado fora do reforço dos monstros (robô com
+  tudo no máximo ia até a onda 53).
+- **Passou a ser:** cada onda vencida já conta no recorde e vai para o
+  ranking; a trilha mostra as ondas de 5 em 5 com o número de cada uma e o
+  chefe a cada 5; monstros do Abismo com vida ×2,2 e crescendo 11% por onda
+  (era 9%). Robô com tudo no máximo: onda ~30, em qualquer capítulo.
+- **Por quê:** relato do Rone com print ("tem que ter fase até a pessoa
+  cansar e bem mais difíceis").

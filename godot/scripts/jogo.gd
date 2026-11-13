@@ -18,9 +18,10 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-14a"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-14b"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
+const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
 const PESADELO_VIDA := 2.7   # 13/11: era 1.8; quem chega ao Pesadelo já tem as melhorias no máximo
 const PESADELO_DANO := 1.7   # era 1.4
 const VIDA_MONSTROS := 2.6  # 12/11: monstros mais duros (o jogo estava fácil demais)
@@ -1066,7 +1067,7 @@ func criar_monstro(tipo: String, p = null) -> void:
 		som("thornox" if tipo == "thornox" else "chefe")
 	prog["vistos"][tipo] = true
 	var cresce := 0.10 * (capitulo - 1) - 0.035 * maxi(0, capitulo - 40)   # cresce mais devagar no Livro II
-	var esc := (1.0 + cresce) * (pow(1.09, onda - 1) if tipo_partida == "abismo" else 1.0 + 0.12 * (onda - 1))
+	var esc := (1.0 + cresce) * (pow(1.11, onda - 1) if tipo_partida == "abismo" else 1.0 + 0.12 * (onda - 1))
 	var vida: float = m["hp"] * esc
 	if chefe:
 		vida = 170.0 * (1.0 + 1.3 * cresce) * {"larvamae": 1.0, "semrosto": 1.4, "thornox": 1.8}[tipo]
@@ -1076,6 +1077,8 @@ func criar_monstro(tipo: String, p = null) -> void:
 			vida *= 1.0 + 0.3 * risco_n
 	var forte := PESADELO_VIDA if pesadelo_ativo() else 1.0
 	vida *= forte * (1.4 if pacto("robustos") else 1.0)
+	if tipo_partida == "abismo":
+		vida *= ABISMO_VIDA
 	if tipo_partida != "abismo":
 		# o reforço diminui um pouco do capítulo 20 ao 50 (o meio do Livro II já é o trecho mais duro)
 		vida *= lerpf(VIDA_MONSTROS, 2.0, clampf((capitulo - 20) / 30.0, 0.0, 1.0))
@@ -1640,6 +1643,12 @@ func atualizar(dt: float) -> void:
 			salvar_partida()
 		else:
 			estado = "loja"
+			if tipo_partida == "abismo":
+				# o recorde e o ranking já contam a cada onda vencida
+				if onda > int(prog.get("abismo_rec", 0)):
+					prog["abismo_rec"] = onda
+					aviso(tx("Novo recorde: onda %d!") % onda, 2.0)
+				enviar_recorde("abismo", onda)
 			var premio := descanso_entre_ondas()
 			aviso("Onda vencida! +%d de essência" % premio, 3.0)
 			oferecer_escolha()
@@ -2346,50 +2355,53 @@ func desenhar_topo() -> void:
 	escrever_esq(t, Vector2(LARG - 16 - w, 31), 14, BRANCO, fonte_titulo)
 	var tit_txt := ("PESADELO · " if pesadelo_ativo() else "") + "CAP. %d · %s" % [capitulo, CAPITULOS[capitulo - 1].to_upper()]
 	if tipo_partida == "abismo":
-		tit_txt = "ABISMO SEM FIM · RECORDE %d" % int(prog.get("abismo_rec", 0))
+		tit_txt = "ABISMO SEM FIM · RECORDE %d" % recorde_abismo_ao_vivo()
 	elif tipo_partida == "desafio":
 		tit_txt = tx("DESAFIO · ") + tx(regra_desafio()["nome"]).to_upper()
 	var tit := encurtar(tit_txt, fonte_titulo, 13, LARG - 80 - w)
 	escrever_esq(tit, Vector2(56, 31), 13, OURO, fonte_titulo)
-	# trilha das fases
-	var y := 60.0
-	var x0 := 70.0
-	var x1 := LARG - 70.0
-	draw_line(Vector2(x0, y), Vector2(x1, y), Color(0, 0, 0, 0.7), 5)
-	var feito_x := x0 + (x1 - x0) * clampf((onda - 1) / float(FASES - 1), 0, 1)
-	if onda > 1:
-		draw_line(Vector2(x0, y), Vector2(feito_x, y), SANGUE, 3)
-	# a estrela do bônus, depois da fase do chefe
-	var pe := Vector2(x1 + 34, y)
-	var no_bonus := onda > FASES or bonus_pendente
-	draw_line(Vector2(x1, y), pe, Color(0, 0, 0, 0.7), 3)
-	if onda > FASES and estado == "onda":
-		brilho_suave(pe, 24, OURO, 1.4)
-	var est := []
-	for k in 10:
-		est.append(pe + Vector2.from_angle(-PI / 2 + k * TAU / 10) * (9.0 if k % 2 == 0 else 4.0))
-	poli(est, OURO if no_bonus else PEDRA_CLARA, 1.2)
-	for o in range(1, FASES + 1):
-		var x := x0 + (x1 - x0) * (o - 1) / (FASES - 1)
-		var p := Vector2(x, y)
-		var feita := o < onda or (o == onda and estado != "onda")
-		var atual := o == onda and estado == "onda"
-		if o == FASES:
-			var r := 10.0
-			var cor := ROXO if not feita else SANGUE
-			if atual:
-				brilho_suave(p, 26, ROXO, 1.4)
-			var d := PackedVector2Array([p + Vector2(0, -r), p + Vector2(r, 0), p + Vector2(0, r), p + Vector2(-r, 0)])
-			draw_colored_polygon(d, PEDRA_ESC)
-			var d2 := d.duplicate()
-			d2.append(d[0])
-			draw_polyline(d2, cor, 2, true)
-			draw_circle(p, 3, cor)
-		else:
-			if atual:
-				brilho_suave(p, 20, VERMELHO, 1.5)
-			draw_circle(p, 8.5, TINTA)
-			draw_circle(p, 7, VERMELHO if atual else (SANGUE if feita else PEDRA_CLARA))
+	if tipo_partida == "abismo":
+		desenhar_trilha_abismo()
+	else:
+		# trilha das fases
+		var y := 60.0
+		var x0 := 70.0
+		var x1 := LARG - 70.0
+		draw_line(Vector2(x0, y), Vector2(x1, y), Color(0, 0, 0, 0.7), 5)
+		var feito_x := x0 + (x1 - x0) * clampf((onda - 1) / float(FASES - 1), 0, 1)
+		if onda > 1:
+			draw_line(Vector2(x0, y), Vector2(feito_x, y), SANGUE, 3)
+		# a estrela do bônus, depois da fase do chefe
+		var pe := Vector2(x1 + 34, y)
+		var no_bonus := onda > FASES or bonus_pendente
+		draw_line(Vector2(x1, y), pe, Color(0, 0, 0, 0.7), 3)
+		if onda > FASES and estado == "onda":
+			brilho_suave(pe, 24, OURO, 1.4)
+		var est := []
+		for k in 10:
+			est.append(pe + Vector2.from_angle(-PI / 2 + k * TAU / 10) * (9.0 if k % 2 == 0 else 4.0))
+		poli(est, OURO if no_bonus else PEDRA_CLARA, 1.2)
+		for o in range(1, FASES + 1):
+			var x := x0 + (x1 - x0) * (o - 1) / (FASES - 1)
+			var p := Vector2(x, y)
+			var feita := o < onda or (o == onda and estado != "onda")
+			var atual := o == onda and estado == "onda"
+			if o == FASES:
+				var r := 10.0
+				var cor := ROXO if not feita else SANGUE
+				if atual:
+					brilho_suave(p, 26, ROXO, 1.4)
+				var d := PackedVector2Array([p + Vector2(0, -r), p + Vector2(r, 0), p + Vector2(0, r), p + Vector2(-r, 0)])
+				draw_colored_polygon(d, PEDRA_ESC)
+				var d2 := d.duplicate()
+				d2.append(d[0])
+				draw_polyline(d2, cor, 2, true)
+				draw_circle(p, 3, cor)
+			else:
+				if atual:
+					brilho_suave(p, 20, VERMELHO, 1.5)
+				draw_circle(p, 8.5, TINTA)
+				draw_circle(p, 7, VERMELHO if atual else (SANGUE if feita else PEDRA_CLARA))
 	# essência
 	caixa(Rect2(16, 84, 122, 40), Color(0.05, 0.04, 0.07, 0.85), 8, 1, Color(ROXO, 0.5))
 	cristal(Vector2(38, 104), 11)
@@ -4597,7 +4609,11 @@ func guardar_pote() -> void:
 var abismo_novo_rec := false
 
 
+var abismo_rec_inicio := 0
+
+
 func comecar_abismo() -> void:
+	abismo_rec_inicio = int(prog.get("abismo_rec", 0))
 	tipo_partida = "abismo"
 	capitulo = clampi(int(prog["liberado"]), 4, TOTAL_CAPITULOS)
 	tela = "jogo"
@@ -4608,7 +4624,7 @@ func comecar_abismo() -> void:
 func fim_abismo() -> void:
 	var feitas := maxi(0, onda - 1)
 	var rec := int(prog.get("abismo_rec", 0))
-	abismo_novo_rec = feitas > rec
+	abismo_novo_rec = feitas > abismo_rec_inicio
 	prog["abismo_rec"] = maxi(rec, feitas)
 	enviar_recorde("abismo", feitas)
 	premio_fim = int(round(feitas * (0.5 + mundo_de(capitulo) / 8.0) * mult_pacto()))
@@ -7520,3 +7536,42 @@ func clique_ordem(p: Vector2) -> void:
 			sair_da_ordem()
 		else:
 			sair_ordem_confirma = 3.0
+
+
+
+# ============================================================ Abismo: trilha de 5 em 5 e recorde ao vivo (14/11)
+func desenhar_trilha_abismo() -> void:
+	var y := 60.0
+	var x0 := 70.0
+	var x1 := LARG - 70.0
+	var atual := onda if estado == "onda" else onda + 1
+	var bloco := ((atual - 1) / 5) * 5
+	draw_line(Vector2(x0, y), Vector2(x1, y), Color(0, 0, 0, 0.7), 5)
+	var feito := clampf((atual - bloco - 1) / 4.0, 0, 1)
+	if feito > 0:
+		draw_line(Vector2(x0, y), Vector2(x0 + (x1 - x0) * feito, y), SANGUE, 3)
+	for k in range(1, 6):
+		var n := bloco + k
+		var p := Vector2(x0 + (x1 - x0) * (k - 1) / 4.0, y)
+		var feita := n < atual
+		var e_atual := n == atual
+		if k == 5:
+			# a cada 5 ondas, um chefe
+			var r := 10.0
+			if e_atual:
+				brilho_suave(p, 26, ROXO, 1.4)
+			var d := PackedVector2Array([p + Vector2(0, -r), p + Vector2(r, 0), p + Vector2(0, r), p + Vector2(-r, 0)])
+			draw_colored_polygon(d, PEDRA_ESC)
+			var d2 := d.duplicate()
+			d2.append(d[0])
+			draw_polyline(d2, SANGUE if feita else ROXO, 2, true)
+		else:
+			if e_atual:
+				brilho_suave(p, 20, VERMELHO, 1.5)
+			draw_circle(p, 8.5, TINTA)
+			draw_circle(p, 7, VERMELHO if e_atual else (SANGUE if feita else PEDRA_CLARA))
+		escrever(str(n), p + Vector2(0, 19), 11, BRANCO if e_atual else CINZA, true)
+
+
+func recorde_abismo_ao_vivo() -> int:
+	return maxi(int(prog.get("abismo_rec", 0)), maxi(0, onda - 1) if estado == "onda" else onda)
