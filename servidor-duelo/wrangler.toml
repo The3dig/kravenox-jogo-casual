@@ -11,3 +11,16 @@ class_name = "Sala"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Sala"]
+
+# 13/11: ranking semanal e Ordens (clãs), guardados em Durable Objects (SQLite, plano grátis)
+[[durable_objects.bindings]]
+name = "RANKING"
+class_name = "Ranking"
+
+[[durable_objects.bindings]]
+name = "ORDENS"
+class_name = "Ordem"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Ranking", "Ordem"]

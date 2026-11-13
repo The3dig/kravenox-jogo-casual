@@ -377,3 +377,24 @@
   2% por baú.
 - **Por quê:** o Rone pediu que o Pesadelo tivesse a premiação e as mesmas
   dificuldades.
+
+## 2026-11-13: área Online (Ranking semanal e Ordem)
+
+- **Passou a ter** (escondido até o servidor da Cloudflare estar no ar): botão
+  "Online" na tela inicial, com:
+  - **Ranking semanal:** melhor onda no Abismo, maior dano no Colosso e
+    vitórias no Duelo. Toda segunda-feira (UTC) recomeça; o 1º da semana
+    passada vira "Soberano da Semana" (título em Ajustes). O recorde é mandado
+    sozinho no fim de cada partida; sem internet fica guardado e vai depois.
+  - **Ordem (clã):** criar com um nome ou entrar com o código de 5 letras (até
+    30 membros). Toda semana nasce um Gigante do Vazio da Ordem com 2500
+    golpes por membro; cada partida no Colosso manda golpes (o dano dividido
+    pelo dano básico do jogador, para o nível não pesar demais). Derrubado,
+    todos pegam 30+ fragmentos e +5% de chance de skin no baú das fases.
+  - **Duelo ao vivo** passou a ficar também nesta área.
+- **Servidor:** o mesmo `servidor-duelo/` (Durable Objects `Ranking` e
+  `Ordem`, plano grátis). Guarda só o nome escolhido no jogo e um número
+  aleatório do aparelho (`id_jogador`).
+- **Por quê:** pesquisa dos concorrentes (Archero 2 e Capybara Go têm ranking,
+  arena e guildas com chefe semanal); escolhidos os que funcionam mesmo com
+  poucos jogadores. Arena de "fantasmas" e amigos ficaram para depois.

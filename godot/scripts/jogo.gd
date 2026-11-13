@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-13d"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-13e"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const PESADELO_VIDA := 2.7   # 13/11: era 1.8; quem chega ao Pesadelo já tem as melhorias no máximo
@@ -2132,6 +2132,12 @@ func _draw() -> void:
 			desenhar_beta()
 		"duelo":
 			desenhar_duelo()
+		"online":
+			desenhar_online()
+		"ranking":
+			desenhar_ranking()
+		"ordem":
+			desenhar_ordem()
 		"especial":
 			desenhar_esp()
 		_:
@@ -3028,6 +3034,7 @@ func botoes_menu() -> Dictionary:
 	b["fora"] = Rect2(12, 520, 84, 74)
 	b["loja"] = Rect2(222, 20, 94, 34)
 	b["jogos"] = Rect2(60, 96, 116, 34)
+	b["online"] = Rect2(182, 96, 96, 34)
 	b["versao"] = Rect2(120, 668, 240, 30)
 	b["codigo"] = Rect2(120, 582, 240, 40)
 	b["desafio"] = Rect2(12, 200, 72, 74)
@@ -3108,9 +3115,13 @@ func clique_menu(p: Vector2) -> void:
 		"duelo":
 			if b["voltar"].has_point(p):
 				sair_duelo()
-				ir_para("modos")
+				ir_para("online" if online_disponivel() else "modos")
 				return
-		"mundos", "melhorias", "missoes", "ajustes", "kravenox", "acampamento", "pactos", "modos", "loja", "jogos":
+		"ranking", "ordem":
+			if b["voltar"].has_point(p):
+				ir_para("online")
+				return
+		"mundos", "melhorias", "missoes", "ajustes", "kravenox", "acampamento", "pactos", "modos", "loja", "jogos", "online":
 			if b["voltar"].has_point(p):
 				ir_para("inicio")
 				return
@@ -3130,6 +3141,9 @@ func clique_menu(p: Vector2) -> void:
 				ir_para("loja")
 			elif b["jogos"].has_point(p):
 				ir_para("jogos")
+			elif b["online"].has_point(p) and online_disponivel():
+				reenviar_pendentes()
+				ir_para("online")
 			elif b["jogar"].has_point(p):
 				som("gema")
 				comecar_capitulo(c)
@@ -3263,6 +3277,12 @@ func clique_menu(p: Vector2) -> void:
 			clique_beta(p)
 		"duelo":
 			clique_duelo(p)
+		"online":
+			clique_online(p)
+		"ranking":
+			clique_ranking(p)
+		"ordem":
+			clique_ordem(p)
 		"jogos":
 			for i in JOGOS_NOSSOS.size():
 				if Rect2(14, 152 + i * 132, LARG - 28, 122).has_point(p):
@@ -3554,6 +3574,8 @@ func desenhar_inicio() -> void:
 	var b := botoes_menu()
 	botao(b["loja"], "Loja", OURO, true, true)
 	botao(b["jogos"], "Mais jogos", ROXO, true, false)
+	if online_disponivel():
+		botao(b["online"], "Online", VERDE, true, false)
 	if bau_loja_pronto():
 		var d: Vector2 = b["loja"].position + Vector2(b["loja"].size.x - 4, 2)
 		draw_circle(d, 7 + sin(tempo * 5), VERMELHO)
@@ -3750,6 +3772,8 @@ func desenhar_ajustes() -> void:
 	var selos := []
 	if prog.get("compras", {}).has("apoiador"):
 		selos.append(tx("Apoiador: obrigado!"))
+	if str(prog.get("titulo", "")) != "":
+		selos.append(str(prog["titulo"]))
 	if prog.get("beta", "") != "":
 		selos.append(tx("Beta Tester") + (": " + str(prog["beta_nome"]) if str(prog.get("beta_nome", "")) != "" else ""))
 	if not selos.is_empty():
@@ -4586,6 +4610,7 @@ func fim_abismo() -> void:
 	var rec := int(prog.get("abismo_rec", 0))
 	abismo_novo_rec = feitas > rec
 	prog["abismo_rec"] = maxi(rec, feitas)
+	enviar_recorde("abismo", feitas)
 	premio_fim = int(round(feitas * (0.5 + mundo_de(capitulo) / 8.0) * mult_pacto()))
 	prog["fragmentos"] = int(prog["fragmentos"]) + premio_fim
 	limpar_partida()
@@ -5743,6 +5768,7 @@ func terminar_modo(venceu: bool) -> void:
 		var md0: Dictionary = prog.get("modos", {})
 		if venceu:
 			md0["duelo_vitorias"] = int(md0.get("duelo_vitorias", 0)) + 1
+			enviar_recorde("duelo", 1)
 		prog["modos"] = md0
 		esp["premio"] = (8 if venceu else 3) + mundo_de(nv_esp()) / 3
 		esp["pontos"] = pontos
@@ -5754,6 +5780,11 @@ func terminar_modo(venceu: bool) -> void:
 		return
 	if id == "colosso":
 		pontos = int(esp["dano"])
+		enviar_recorde("colosso", pontos)
+		esp["golpes_ordem"] = 0
+		if str(prog.get("ordem", "")) != "":
+			esp["golpes_ordem"] = golpes_colosso(esp["dano"])
+			enviar_online({"tipo": "ordem", "codigo": prog["ordem"], "golpes": esp["golpes_ordem"]})
 	if venceu and id in ["horda", "cacada"]:
 		pontos = 10
 	var rec := rec_modo(id)
@@ -6118,6 +6149,8 @@ func desenhar_fim_esp() -> void:
 			t2 = "Atravessou %d de 10 salas" % int(esp["pontos"])
 		"colosso":
 			t2 = ("Derrubou o Gigante! " if esp.get("matou", false) else "") + "Dano total: %d" % int(esp["pontos"])
+			if int(esp.get("golpes_ordem", 0)) > 0:
+				escrever(tx("+%d golpes no Gigante da Ordem") % int(esp["golpes_ordem"]), Vector2(LARG / 2, ALT / 2 + 290), 14, Color8(200, 170, 255), false)
 		"refugio":
 			t2 = "Chegou ao amanhecer!" if venceu else "Aguentou %d:%02d" % [int(esp["pontos"]) / 60, int(esp["pontos"]) % 60]
 	escrever(t2, Vector2(LARG / 2, ALT / 2 - 42), 17, BRANCO)
@@ -6871,7 +6904,7 @@ func pedir_nome_duelo() -> bool:
 		return true
 	var n := "Jogador"
 	if OS.has_feature("web"):
-		n = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Seu nome no duelo (o outro jogador vai ver):"))))
+		n = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Seu nome no online (os outros jogadores vão ver):"))))
 	n = n.strip_edges().substr(0, 16)
 	if n == "":
 		return false
@@ -7130,3 +7163,360 @@ func desenhar_skin_ganha() -> void:
 	draw_texture_rect(textura_skin(skin_ganha, "kravenox-passo-0"), Rect2(r.get_center() + Vector2(-50, -60), Vector2(100, 92)), false, Color(1, 1, 1, a))
 	escrever(tx("Você ganhou a skin %s!") % tx(it["nome"]), r.position + Vector2(r.size.x / 2, 180), 17, Color(BRANCO, a), true)
 	escrever("Já está em uso. Troque na Loja.", r.position + Vector2(r.size.x / 2, 206), 13, Color(CINZA, a), false)
+
+
+# ============================================================ online: ranking semanal e Ordem (13/11)
+# Usa o mesmo servidor da Cloudflare do Duelo. Só esta área usa internet; se
+# estiver sem internet, os recordes e os golpes ficam guardados e vão depois.
+const CATS_RANKING := [["abismo", "Abismo", "onda"], ["colosso", "Colosso", "dano"], ["duelo", "Duelo", "vitórias"]]
+var rank := {"cat": "abismo", "dados": {}, "carregando": false, "erro": ""}
+var ordem_dados := {}
+var ordem_estado := {"carregando": false, "erro": ""}
+var sair_ordem_confirma := 0.0
+
+
+func online_disponivel() -> bool:
+	return not "SUBDOMINIO" in servidor_duelo
+
+
+func url_api() -> String:
+	return servidor_duelo.replace("wss://", "https://").replace("ws://", "http://") + "/api"
+
+
+func id_jogador() -> String:
+	if str(prog.get("id_jogador", "")) == "":
+		var c := ""
+		for _i in 20:
+			c += "abcdefghijklmnopqrstuvwxyz0123456789"[randi() % 36]
+		prog["id_jogador"] = c
+		salvar()
+	return prog["id_jogador"]
+
+
+func nome_online() -> String:
+	return nome_duelo() if nome_duelo() != "" else "Jogador"
+
+
+func chamar_api(metodo: String, caminho: String, corpo := {}) -> Dictionary:
+	var h := HTTPRequest.new()
+	h.timeout = 8.0
+	add_child(h)
+	var post := metodo == "POST"
+	var err := h.request(url_api() + caminho, ["Content-Type: application/json"], HTTPClient.METHOD_POST if post else HTTPClient.METHOD_GET, JSON.stringify(corpo) if post else "")
+	if err != OK:
+		h.queue_free()
+		return {"erro": "sem internet"}
+	var r = await h.request_completed
+	h.queue_free()
+	if r[0] != HTTPRequest.RESULT_SUCCESS:
+		return {"erro": "sem internet"}
+	var d = JSON.parse_string(PackedByteArray(r[3]).get_string_from_utf8())
+	return d if d is Dictionary else {"erro": "resposta inválida"}
+
+
+func enviar_online(item: Dictionary) -> void:
+	if not online_disponivel() or robo:
+		return
+	var r: Dictionary
+	if item["tipo"] == "recorde":
+		r = await chamar_api("POST", "/recorde", {"id": id_jogador(), "nome": nome_online(), "cat": item["cat"], "valor": item["valor"], "skin": skin_atual()})
+	else:
+		r = await chamar_api("POST", "/ordem/%s/dano" % item["codigo"], {"id": id_jogador(), "dano": item["golpes"]})
+		if not r.has("erro") and tela == "ordem":
+			ordem_dados = r
+	if str(r.get("erro", "")) == "sem internet":
+		var pend: Array = prog.get("pendentes_online", [])
+		if pend.size() < 50:
+			pend.append(item)
+		prog["pendentes_online"] = pend
+		salvar()
+
+
+func reenviar_pendentes() -> void:
+	var pend: Array = prog.get("pendentes_online", [])
+	if pend.is_empty():
+		return
+	prog["pendentes_online"] = []
+	salvar()
+	for item in pend:
+		enviar_online(item)
+
+
+func enviar_recorde(cat: String, valor: int) -> void:
+	if valor > 0:
+		enviar_online({"tipo": "recorde", "cat": cat, "valor": valor})
+
+
+# Golpes no Gigante da Ordem: o dano do Colosso dividido pelo dano básico (o nível não pesa demais).
+func golpes_colosso(dano: float) -> int:
+	return int(dano / (14.0 * (1.0 + cresce_esp()) * mult_dano()))
+
+
+# ------------------------------------------------------------ telas
+func carregar_ranking() -> void:
+	rank["carregando"] = true
+	rank["erro"] = ""
+	reenviar_pendentes()
+	var r := await chamar_api("GET", "/ranking?cat=%s&id=%s" % [rank["cat"], id_jogador()])
+	rank["carregando"] = false
+	if r.has("erro"):
+		rank["erro"] = "Sem internet: o ranking precisa de internet." if r["erro"] == "sem internet" else str(r["erro"])
+		return
+	rank["dados"] = r
+	for c in r.get("campeoes", []):
+		if c.get("eu", false) and int(c["pos"]) == 1:
+			prog["titulo"] = tx("Soberano da Semana") + " (" + tx(nome_cat(rank["cat"])) + ")"
+			salvar()
+
+
+func nome_cat(cat: String) -> String:
+	for c in CATS_RANKING:
+		if c[0] == cat:
+			return c[1]
+	return cat
+
+
+func carregar_ordem() -> void:
+	var cod := str(prog.get("ordem", ""))
+	if cod == "":
+		return
+	ordem_estado["carregando"] = true
+	ordem_estado["erro"] = ""
+	reenviar_pendentes()
+	var r := await chamar_api("GET", "/ordem/%s?id=%s" % [cod, id_jogador()])
+	ordem_estado["carregando"] = false
+	if r.has("erro"):
+		if r["erro"] == "Ordem não encontrada":
+			prog.erase("ordem")
+			salvar()
+		ordem_estado["erro"] = "Sem internet: a Ordem precisa de internet." if r["erro"] == "sem internet" else str(r["erro"])
+		return
+	ordem_dados = r
+
+
+func criar_ordem() -> void:
+	if not pedir_nome_duelo():
+		return
+	var n := "Ordem do Cisma"
+	if OS.has_feature("web"):
+		n = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Nome da sua Ordem:"))))
+	n = n.strip_edges()
+	if n == "":
+		return
+	ordem_estado["carregando"] = true
+	var r := await chamar_api("POST", "/ordem/criar", {"id": id_jogador(), "nome": nome_online(), "ordem": n})
+	ordem_estado["carregando"] = false
+	if r.has("erro"):
+		ordem_estado["erro"] = "Sem internet: a Ordem precisa de internet." if r["erro"] == "sem internet" else str(r["erro"])
+		return
+	prog["ordem"] = r["codigo"]
+	salvar()
+	ordem_dados = r
+	som("nivel")
+
+
+func entrar_ordem() -> void:
+	if not pedir_nome_duelo():
+		return
+	var c := ""
+	if OS.has_feature("web"):
+		c = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Código da Ordem (5 letras):"))))
+	else:
+		c = DisplayServer.clipboard_get()
+	c = c.strip_edges().to_upper().replace(" ", "")
+	if c.length() != 5:
+		if c != "":
+			popup = {"titulo": "ORDEM", "texto": "O código da Ordem tem 5 letras."}
+		return
+	ordem_estado["carregando"] = true
+	var r := await chamar_api("POST", "/ordem/%s/entrar" % c, {"id": id_jogador(), "nome": nome_online()})
+	ordem_estado["carregando"] = false
+	if r.has("erro"):
+		ordem_estado["erro"] = "Sem internet: a Ordem precisa de internet." if r["erro"] == "sem internet" else str(r["erro"])
+		return
+	prog["ordem"] = c
+	salvar()
+	ordem_dados = r
+	som("nivel")
+
+
+func sair_da_ordem() -> void:
+	var cod := str(prog.get("ordem", ""))
+	prog.erase("ordem")
+	salvar()
+	ordem_dados = {}
+	sair_ordem_confirma = 0.0
+	if cod != "":
+		chamar_api("POST", "/ordem/%s/sair" % cod, {"id": id_jogador()})
+
+
+func pegar_premio_ordem() -> void:
+	var sem := str(ordem_dados.get("semana", ""))
+	if not ordem_dados.get("derrubado", false) or prog.get("ordem_premio", "") == sem:
+		return
+	prog["ordem_premio"] = sem
+	prog["chance_skin"] = mini(100, chance_skin() + 5)
+	ganhar(30 + 2 * mundo_de(int(prog["liberado"])), "GIGANTE DERRUBADO!")
+	popup["extra"] = tx("+5% de chance de skin no baú das fases")
+
+
+func ret_online(n: int) -> Rect2:
+	return Rect2(24, 200 + n * 130, LARG - 48, 116)
+
+
+func desenhar_online() -> void:
+	desenhar_fundo(0.65)
+	cabecalho("ONLINE")
+	escrever("Só esta área usa internet. O resto do jogo funciona sem ela.", Vector2(LARG / 2, 134), 13, Color8(150, 220, 170))
+	escrever(tx("Seu nome: %s") % nome_online() + "  ·  " + tx("toque para trocar"), Vector2(LARG / 2, 166), 14, CINZA, false)
+	var itens := [["ranking", "Ranking semanal", "Os melhores da semana no Abismo, no Colosso e no Duelo. Toda segunda recomeça; o 1º vira Soberano da Semana."],
+		["ordem", "Ordem", "O seu clã. Toda semana, derrubem juntos o Gigante do Vazio: cada partida no Colosso conta. Prêmio para todos."],
+		["duelo", "Duelo ao vivo", "Você contra um amigo, ao mesmo tempo, contra a mesma horda."]]
+	for i in itens.size():
+		var r := ret_online(i)
+		caixa(r, Color(0.06, 0.05, 0.08, 0.93), 12, 1, Color(OURO, 0.7), true, 6)
+		icone_modo({"ranking": "desafio", "ordem": "horda", "duelo": "duelo"}[itens[i][0]], r.position + Vector2(48, 58), true)
+		escrever_esq(itens[i][1], r.position + Vector2(92, 34), 18, OURO, fonte_titulo)
+		texto_quebrado(itens[i][2], r.position + Vector2(92, 42), r.size.x - 108, 13, Color8(220, 210, 230), 3)
+	desenhar_abas()
+	desenhar_popup()
+
+
+func clique_online(p: Vector2) -> void:
+	if p.y > 150 and p.y < 182:
+		prog["nome_duelo"] = ""
+		pedir_nome_duelo()
+		return
+	for i in 3:
+		if ret_online(i).has_point(p):
+			som("gema")
+			match i:
+				0:
+					ir_para("ranking")
+					carregar_ranking()
+				1:
+					ir_para("ordem")
+					carregar_ordem()
+				2:
+					ir_para("duelo")
+			return
+
+
+func desenhar_ranking() -> void:
+	desenhar_fundo(0.7)
+	cabecalho("RANKING SEMANAL")
+	for i in CATS_RANKING.size():
+		var r := Rect2(16 + i * 150, 118, 144, 40)
+		botao(r, CATS_RANKING[i][1], OURO, true, rank["cat"] == CATS_RANKING[i][0])
+	var d: Dictionary = rank["dados"]
+	if rank["carregando"]:
+		escrever("Carregando…", Vector2(LARG / 2, 300), 18, BRANCO, true)
+	elif rank["erro"] != "":
+		texto_quebrado(rank["erro"], Vector2(40, 280), LARG - 80, 16, Color8(255, 150, 140), 3, true)
+	elif not d.is_empty():
+		var unidade: String = CATS_RANKING[CATS_RANKING.map(func(c): return c[0]).find(rank["cat"])][2]
+		escrever(tx("Semana %s · %d jogadores") % [str(d.get("semana", "")).substr(6), int(d.get("total", 0))], Vector2(LARG / 2, 176), 13, CINZA, false)
+		var top: Array = d.get("top", [])
+		if top.is_empty():
+			escrever("Ninguém jogou esta semana ainda. Seja o primeiro!", Vector2(LARG / 2, 260), 15, BRANCO, true)
+		for k in mini(top.size(), 12):
+			var l: Dictionary = top[k]
+			var y := 192 + k * 36
+			var eu: bool = l.get("eu", false)
+			caixa(Rect2(16, y, LARG - 32, 32), Color8(50, 36, 20) if eu else Color(0.06, 0.05, 0.08, 0.9), 6, 1, OURO if eu else Color(PEDRA_BORDA, 0.8))
+			var cor_pos: Color = [OURO, Color8(200, 200, 215), Color8(205, 130, 70)][int(l["pos"]) - 1] if int(l["pos"]) <= 3 else CINZA
+			escrever_esq("%dº" % int(l["pos"]), Vector2(28, y + 22), 16, cor_pos, fonte_titulo)
+			escrever_esq(str(l["nome"]), Vector2(76, y + 22), 16, BRANCO)
+			var v := "%d %s" % [int(l["valor"]), tx(unidade)]
+			var wv := fonte.get_string_size(v, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+			escrever_esq(v, Vector2(LARG - 28 - wv, y + 22), 15, OURO)
+		var minha := int(d.get("minha_pos", 0))
+		escrever(tx("Sua posição: %dº") % minha if minha > 0 else tx("Você ainda não jogou esta categoria nesta semana"), Vector2(LARG / 2, 640), 15, OURO if minha > 0 else CINZA, true)
+		var camp: Array = d.get("campeoes", [])
+		if not camp.is_empty():
+			var nomes := []
+			for c in camp:
+				nomes.append("%dº %s" % [int(c["pos"]), c["nome"]])
+			escrever(tx("Semana passada: ") + "  ".join(nomes), Vector2(LARG / 2, 668), 13, Color8(200, 170, 255), false)
+	botao(Rect2(LARG / 2 - 70, 688, 140, 40), "Atualizar", AZUL, true, false)
+	desenhar_abas()
+
+
+func clique_ranking(p: Vector2) -> void:
+	for i in CATS_RANKING.size():
+		if Rect2(16 + i * 150, 118, 144, 40).has_point(p):
+			rank["cat"] = CATS_RANKING[i][0]
+			rank["dados"] = {}
+			carregar_ranking()
+			return
+	if Rect2(LARG / 2 - 70, 688, 140, 40).has_point(p):
+		carregar_ranking()
+
+
+func desenhar_ordem() -> void:
+	desenhar_fundo(0.68)
+	cabecalho("ORDEM")
+	sair_ordem_confirma = maxf(0.0, sair_ordem_confirma - 0.016)
+	var d := ordem_dados
+	if str(prog.get("ordem", "")) == "":
+		texto_quebrado("Uma Ordem é o seu clã. Toda semana nasce um Gigante do Vazio para a Ordem inteira: cada partida no Colosso conta golpes. Derrubando, todos ganham fragmentos e mais chance de skin.", Vector2(36, 140), LARG - 72, 15, BRANCO, 6, true)
+		botao(Rect2(90, 330, 300, 58), "Criar uma Ordem", VERMELHO, true, true)
+		botao(Rect2(90, 402, 300, 58), "Entrar com código", AZUL, true, false)
+	elif ordem_estado["carregando"] and d.is_empty():
+		escrever("Carregando…", Vector2(LARG / 2, 300), 18, BRANCO, true)
+	elif d.is_empty():
+		texto_quebrado(str(ordem_estado["erro"]), Vector2(40, 280), LARG - 80, 16, Color8(255, 150, 140), 3, true)
+		botao(Rect2(LARG / 2 - 70, 380, 140, 40), "Tentar de novo", AZUL, true, false)
+	else:
+		escrever(str(d["nome"]), Vector2(LARG / 2, 140), 24, OURO, true, fonte_titulo)
+		escrever(tx("Código para convidar: %s") % str(d["codigo"]), Vector2(LARG / 2, 172), 16, BRANCO, true)
+		# o Gigante da semana
+		var vida := float(d["gigante_vida"])
+		var feito := float(d["gigante_golpes"])
+		brilho_suave(Vector2(LARG / 2, 260), 80, ROXO, 0.6)
+		desenhar_arte("sentinela", Vector2(LARG / 2, 300), 96, false, Color(0.55, 0.38, 0.85) if not d["derrubado"] else Color(0.3, 0.3, 0.35))
+		var barra := Rect2(40, 312, LARG - 80, 18)
+		caixa(barra, Color8(20, 16, 26), 6, 1, Color(ROXO, 0.7))
+		degrade(Rect2(barra.position + Vector2(2, 2), Vector2((barra.size.x - 4) * clampf(1.0 - feito / vida, 0, 1), 14)), Color8(170, 90, 255), Color8(80, 30, 140))
+		escrever(tx("Gigante da semana: %d / %d golpes") % [int(feito), int(vida)] if not d["derrubado"] else tx("GIGANTE DERRUBADO!"), Vector2(LARG / 2, 346), 15, OURO if d["derrubado"] else BRANCO, true)
+		var membros: Array = d["membros"]
+		for k in mini(membros.size(), 8):
+			var m: Dictionary = membros[k]
+			var y := 366 + k * 30
+			escrever_esq(("➤ " if m.get("eu", false) else "") + str(m["nome"]), Vector2(48, y + 20), 15, OURO if m.get("eu", false) else BRANCO)
+			var g := tx("%d golpes") % int(m["golpes"])
+			escrever_esq(g, Vector2(LARG - 48 - fonte.get_string_size(g, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x, y + 20), 14, CINZA)
+		if membros.size() > 8:
+			escrever(tx("+ %d membros") % (membros.size() - 8), Vector2(LARG / 2, 612), 13, CINZA, false)
+		if d["derrubado"] and prog.get("ordem_premio", "") != str(d["semana"]):
+			botao(Rect2(90, 622, 300, 50), "Pegar a recompensa!", OURO, true, true)
+		else:
+			botao(Rect2(90, 622, 300, 50), "Lutar no Colosso", VERMELHO, true, true)
+		botao(Rect2(LARG / 2 - 90, 684, 180, 36), "Toque de novo para sair" if sair_ordem_confirma > 0 else "Sair da Ordem", CINZA, true, sair_ordem_confirma > 0)
+	desenhar_abas()
+	desenhar_popup()
+
+
+func clique_ordem(p: Vector2) -> void:
+	if str(prog.get("ordem", "")) == "":
+		if Rect2(90, 330, 300, 58).has_point(p):
+			criar_ordem()
+		elif Rect2(90, 402, 300, 58).has_point(p):
+			entrar_ordem()
+		return
+	if ordem_dados.is_empty():
+		if Rect2(LARG / 2 - 70, 380, 140, 40).has_point(p):
+			carregar_ordem()
+		return
+	if Rect2(90, 622, 300, 50).has_point(p):
+		if ordem_dados["derrubado"] and prog.get("ordem_premio", "") != str(ordem_dados["semana"]):
+			pegar_premio_ordem()
+		elif int(prog["liberado"]) >= 10:
+			comecar_modo("colosso")
+		else:
+			popup = {"titulo": "ORDEM", "texto": "O Colosso abre no capítulo 10. Até lá, ajude a Ordem avançando nos capítulos."}
+	elif Rect2(LARG / 2 - 90, 684, 180, 36).has_point(p):
+		if sair_ordem_confirma > 0:
+			sair_da_ordem()
+		else:
+			sair_ordem_confirma = 3.0
