@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-15a"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-15b"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -5863,6 +5863,9 @@ func entrada_esp(ev: InputEvent) -> void:
 func toque_esp(p: Vector2) -> void:
 	var b := botoes()
 	if esp["fim"] != "":
+		if b["voltar"].has_point(p) and esp["id"] != "duelo":
+			ir_para("modos")
+			return
 		if esp["id"] == "duelo":
 			if b["denovo"].has_point(p):
 				if ws != null:
@@ -5892,7 +5895,9 @@ func toque_esp(p: Vector2) -> void:
 			esp["motivo"] = "eu_caiu"
 			terminar_modo(false)
 			return
-		ir_para("modos")
+		# 15/11: sair no meio conta o que já fez (recorde e fragmentos), como no
+		# Abismo; antes saía sem guardar nada
+		terminar_modo(false)
 		return
 	match esp["id"]:
 		"horda", "duelo":
@@ -6011,7 +6016,11 @@ func desenhar_topo_esp() -> void:
 			dir = "AMANHECER %d:%02d" % [r / 60, r % 60]
 	var w := fonte_titulo.get_string_size(dir, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 	escrever_esq(dir, Vector2(LARG - 16 - w, 31), 14, BRANCO, fonte_titulo)
-	escrever_esq(nome_modo(id).to_upper(), Vector2(56, 31), 14, OURO, fonte_titulo)
+	var titulo := nome_modo(id).to_upper()
+	if id != "duelo":
+		# recorde ao vivo: sobe na hora em que passa o anterior
+		titulo += " · " + tx("REC.") + " " + formato_rec_esp(id, maxi(rec_modo(id), pontos_esp_ao_vivo()))
+	escrever_esq(titulo, Vector2(56, 31), 14, OURO, fonte_titulo)
 	# caixa da esquerda: o que importa em cada modo
 	caixa(Rect2(16, 84, 122, 40), Color(0.05, 0.04, 0.07, 0.85), 8, 1, Color(ROXO, 0.5))
 	match id:
@@ -7620,3 +7629,15 @@ func reiniciar_partida() -> void:
 		_:
 			comecar_capitulo(capitulo)
 	aviso("Partida recomeçada", 2.0)
+
+
+func pontos_esp_ao_vivo() -> int:
+	if esp.get("id", "") == "colosso":
+		return int(esp.get("dano", 0.0))
+	return int(esp.get("pontos", 0))
+
+
+func formato_rec_esp(id: String, v: int) -> String:
+	if id == "refugio":
+		return "%d:%02d" % [v / 60, v % 60]
+	return str(v)

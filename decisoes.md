@@ -469,3 +469,17 @@
   (marca `abismo_v3`), o recorde do Abismo zera de novo e a partida antiga
   do Abismo salva no aparelho é descartada.
 - **Por quê:** pedido do Rone ("não tá zerando, cria um botão reiniciar").
+
+## 15/11/2026: os outros modos com as mesmas correções do Abismo
+
+- **Era:** na Horda, Caçada, Colosso e Refúgio, tocar em voltar no meio da
+  partida saía sem guardar nada (nem recorde nem fragmentos), e o recorde só
+  aparecia no menu dos modos.
+- **Passou a ser:** voltar no meio encerra a partida e conta o que já fez
+  (recorde e fragmentos), mostrando a tela de fim com "Jogar de novo" (que
+  serve de recomeçar). O título no alto mostra o recorde ao vivo
+  ("HORDA · REC. 3"), que sobe na hora em que passa o anterior. Versão
+  2026-11-15b.
+- **Por quê:** o Rone pediu para olhar os outros modos depois dos problemas
+  do Abismo. A dificuldade desses modos não mudou: eles têm fim (10 ondas,
+  10 salas, 1:30, 2:30) e balanço próprio.
