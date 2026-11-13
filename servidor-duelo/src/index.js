@@ -32,6 +32,12 @@ export default {
     if (partes.length === 0) {
       return new Response("Kravenox Duelo: ok", { headers: { "content-type": "text/plain; charset=utf-8" } });
     }
+    if (partes[0] === "sala-livre" && partes.length >= 2) {
+      const cod = partes[1].toUpperCase();
+      if (!/^[A-Z0-9_-]{3,32}$/.test(cod)) return new Response("código inválido", { status: 400 });
+      if (req.headers.get("Upgrade") !== "websocket") return new Response("use WebSocket", { status: 426 });
+      return env.SALAS_LIVRES.get(env.SALAS_LIVRES.idFromName(cod)).fetch(req);
+    }
     if (partes[0] !== "sala" || partes.length < 2) return new Response("não encontrado", { status: 404 });
     const codigo = partes[1].toUpperCase();
     if (!CODIGO.test(codigo)) return new Response("código inválido", { status: 400 });
@@ -124,6 +130,8 @@ export class Sala {
 // Não guarda nada além do nome escolhido no jogo e de um número aleatório do aparelho.
 
 const CATS = ["abismo", "colosso", "duelo"];
+// outros jogos do Kravenox: categoria com o nome do jogo na frente (ex.: "mmo-nivel")
+const catValida = (c) => CATS.includes(c) || /^[a-z0-9]{2,12}-[a-z0-9_]{2,20}$/.test(c);
 const LETRAS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
 function json(obj, status = 200) {
@@ -192,20 +200,22 @@ export class Ranking {
       const id = limpaId(c.id);
       const cat = String(c.cat || "");
       const valor = Math.floor(Number(c.valor) || 0);
-      if (!id || !CATS.includes(cat) || valor <= 0 || valor > 1e12) return json({ erro: "dados inválidos" }, 400);
+      if (!id || !catValida(cat) || valor <= 0 || valor > 1e12) return json({ erro: "dados inválidos" }, 400);
       if (id.startsWith("teste")) return json({ ok: true, teste: true });   // testes não entram no ranking
       const chave = "s:" + semana() + ":" + cat;
       const tabela = (await this.storage.get(chave)) || {};
       const antigo = tabela[id];
       // duelo soma vitórias; os outros guardam o melhor da semana
-      const novo = cat === "duelo" ? (antigo ? antigo.valor : 0) + 1 : Math.max(antigo ? antigo.valor : 0, valor);
+      // "soma": cada envio soma (vitórias); senão guarda o melhor da semana
+      const soma = cat === "duelo" || c.soma === true;
+      const novo = soma ? (antigo ? antigo.valor : 0) + (cat === "duelo" ? 1 : valor) : Math.max(antigo ? antigo.valor : 0, valor);
       tabela[id] = { nome: limpaNome(c.nome), valor: novo, skin: String(c.skin || "").slice(0, 12) };
       await this.storage.put(chave, tabela);
       return json({ ok: true, valor: novo, ...this.posicao(tabela, id) });
     }
     if (acao === "ranking") {
       const cat = url.searchParams.get("cat") || "abismo";
-      if (!CATS.includes(cat)) return json({ erro: "categoria inválida" }, 400);
+      if (!catValida(cat)) return json({ erro: "categoria inválida" }, 400);
       const id = limpaId(url.searchParams.get("id"));
       const tabela = (await this.storage.get("s:" + semana() + ":" + cat)) || {};
       const passada = (await this.storage.get("s:" + semanaPassada() + ":" + cat)) || {};
@@ -300,5 +310,53 @@ export class Ordem {
       await this.storage.put("ordem", d);
     }
     return json(this.vista(d, codigo, id));
+  }
+}
+
+
+// ------------------------------------------------------------ sala livre (14/11), para outros jogos
+// wss://.../sala-livre/CODIGO?nome=X : até 8 jogadores. Tudo o que um manda
+// (JSON com "t") vai para os outros, com "de" (número do jogador) e "nome".
+// O servidor avisa {t:"sala", voce, nomes} quando alguém entra ou sai.
+export class SalaLivre {
+  constructor(state) {
+    this.jogadores = [];
+    this.proximo = 0;
+  }
+
+  async fetch(req) {
+    const url = new URL(req.url);
+    const nome = (url.searchParams.get("nome") || "Jogador").replace(/[<>]/g, "").slice(0, 16);
+    const par = new WebSocketPair();
+    const [cliente, servidor] = Object.values(par);
+    servidor.accept();
+    this.jogadores = this.jogadores.filter((j) => j.ws.readyState === 1);
+    if (this.jogadores.length >= 8) {
+      servidor.send(JSON.stringify({ t: "erro", msg: "sala cheia" }));
+      servidor.close(1000, "cheia");
+      return new Response(null, { status: 101, webSocket: cliente });
+    }
+    const eu = { ws: servidor, nome, n: this.proximo++ };
+    this.jogadores.push(eu);
+    this.avisar();
+    servidor.addEventListener("message", (ev) => {
+      if (typeof ev.data !== "string" || ev.data.length > 4000) return;
+      let m;
+      try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (!m || typeof m.t !== "string") return;
+      m.de = eu.n;
+      m.nome = eu.nome;
+      const txt = JSON.stringify(m);
+      for (const j of this.jogadores) if (j !== eu) { try { j.ws.send(txt); } catch (e) {} }
+    });
+    const sair = () => { this.jogadores = this.jogadores.filter((j) => j !== eu); this.avisar(); };
+    servidor.addEventListener("close", sair);
+    servidor.addEventListener("error", sair);
+    return new Response(null, { status: 101, webSocket: cliente });
+  }
+
+  avisar() {
+    const nomes = this.jogadores.map((j) => ({ n: j.n, nome: j.nome }));
+    for (const j of this.jogadores) { try { j.ws.send(JSON.stringify({ t: "sala", voce: j.n, jogadores: nomes })); } catch (e) {} }
   }
 }

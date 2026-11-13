@@ -417,3 +417,12 @@
   usado o código antigo continua com as skins.
 - Imagens de novidades com código pessoal não são guardadas no repositório
   (ele é público).
+
+## 2026-11-14: o servidor online serve para os outros jogos
+
+- O ranking aceita categorias de outros jogos (`jogo-coisa`, ex.:
+  `mmo-nivel`, com opção de somar) e entrou a "sala livre" (`/sala-livre/…`,
+  até 8 jogadores, repassa qualquer mensagem): serve para o MMO ter amigos no
+  mesmo mundo. A Ordem pode ser a mesma em todos os jogos. Nada do que o
+  Quadros usa mudou. Instruções: `servidor-duelo/PARA-OUTROS-JOGOS.md`.
+- Publicar agora usa o wrangler 4 (o 3 dava erro 10013 da Cloudflare).

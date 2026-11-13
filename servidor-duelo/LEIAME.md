@@ -9,7 +9,7 @@ e repassa vida, onda e ataques. Ele não guarda nada.
 
 ```sh
 cd servidor-duelo
-npx wrangler deploy        # precisa de CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID
+npx wrangler@4 deploy      # precisa de CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID (o wrangler 3 dá erro 10013)
 ```
 
 No ar desde 13/11/2026 em `https://kravenox-duelo.kravenox.workers.dev` (conta Cloudflare do Rone). O endereço vai em

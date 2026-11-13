@@ -24,3 +24,12 @@ class_name = "Ordem"
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["Ranking", "Ordem"]
+
+# 14/11: sala livre (até 8 jogadores) para outros jogos do Kravenox
+[[durable_objects.bindings]]
+name = "SALAS_LIVRES"
+class_name = "SalaLivre"
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["SalaLivre"]
