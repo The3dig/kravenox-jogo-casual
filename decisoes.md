@@ -493,3 +493,16 @@
   passo). Fenda = rachadura em zigue-zague com lava e "+50%" (dano do poder
   ali). O Altar continua igual. Versão 2026-11-15c.
 - **Por quê:** o desenho tem que dizer o que o quadro faz sem precisar tocar.
+
+## 15/11/2026: recorde do Abismo passa a ser o dano total
+
+- **Era:** o recorde do Abismo era a onda que a pessoa alcançou
+  ("RECORDE 6"), e o ranking do Abismo também.
+- **Passou a ser:** o recorde é o **dano total** da partida. Uma caixa
+  "DANO" no alto sobe a cada golpe e fica dourada quando passa o recorde; o
+  título mostra "ABISMO · RECORDE 7.663.717" e a onda continua à direita
+  ("ONDA 7"). O ranking do Abismo passou a ser por dano, guardado no servidor
+  como "abismo_dano" (começou vazio). No ranking e no botão do Abismo o
+  número aparece curto ("7,7 mi"). Robô: ~2,4 milhões na onda 35. Versão
+  2026-11-15d.
+- **Por quê:** pedido do Rone: "sempre dano é o que empolga mais".

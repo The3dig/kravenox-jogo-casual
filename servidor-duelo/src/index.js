@@ -139,9 +139,10 @@ function json(obj, status = 200) {
 }
 
 // Onde guardar cada categoria. O Abismo foi zerado em 14/11/2026 (ficou bem
-// mais difícil): ele passou a ser guardado com outro nome ("abismo2").
+// mais difícil) e guardado como "abismo2"; em 15/11/2026 o recorde dele virou
+// o DANO total da partida, guardado como "abismo_dano" (começa vazio).
 function chaveCat(cat) {
-  return cat === "abismo" ? "abismo2" : cat;
+  return cat === "abismo" ? "abismo_dano" : cat;
 }
 
 // semana no formato 2026-S46 (segunda-feira a domingo, UTC)

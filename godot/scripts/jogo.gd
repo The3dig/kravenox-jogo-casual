@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-15c"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-15d"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -671,7 +671,7 @@ func salvar_partida() -> void:
 	var qs := []
 	for q in quadros:
 		qs.append(null if q == null else {"id": q["id"], "nv": int(q["nv"]), "lend": bool(q.get("lend", false))})
-	prog["partida"] = {"modo": modo, "capitulo": capitulo, "onda": onda, "essencia": essencia, "hp": hp, "escudo": escudo,
+	prog["partida"] = {"modo": modo, "capitulo": capitulo, "onda": onda, "essencia": essencia, "hp": hp, "escudo": escudo, "dano": dano_partida,
 		"quadros": qs, "loja": loja, "trocas": trocas_gratis, "bonus_pendente": bonus_pendente,
 		"premio_fim": premio_fim, "mortes": mortes, "tamanho": ANEL.size(), "tipo": tipo_partida,
 		"bencaos": bencaos, "escolha": escolha, "onda_elite": onda_elite, "furia": furia, "desafio": desafio}
@@ -706,6 +706,7 @@ func retomar_partida() -> void:
 	essencia = int(pt["essencia"])
 	hp = minf(hp_max, float(pt["hp"]))
 	escudo = float(pt.get("escudo", 0.0))
+	dano_partida = float(pt.get("dano", 0.0))
 	trocas_gratis = int(pt.get("trocas", 1))
 	bonus_pendente = bool(pt.get("bonus_pendente", false))
 	premio_fim = int(pt.get("premio_fim", 0))
@@ -865,6 +866,7 @@ func novo_jogo() -> void:
 	k_salto = 0.0
 	fim_onda_t = -1.0
 	escudo = 0.0
+	dano_partida = 0.0
 	bonus_pendente = false
 	bonus_res = ""
 	premio_bonus = 0
@@ -890,7 +892,7 @@ func novo_jogo() -> void:
 	trocas_gratis = trocas_por_onda()
 	mortes = 0
 	if tipo_partida == "abismo":
-		aviso("Abismo sem Fim · recorde: onda %d" % int(prog.get("abismo_rec", 0)), 3.0)
+		aviso(tx("Abismo sem Fim · recorde: %s de dano") % num_grande(int(prog.get("abismo_dano", 0))), 3.0)
 	elif tipo_partida == "desafio":
 		aviso("Desafio do Dia: %s" % regra_desafio()["nome"], 3.5)
 	elif capitulo == 1:
@@ -1004,7 +1006,7 @@ func iniciar_onda() -> void:
 		fila.append(tipos.pick_random())
 	if tipo_partida == "abismo":
 		if robo:
-			print("ROBO abismo onda %d · vida %d/%d · bênçãos %d" % [onda, int(hp), int(hp_max), bencaos.size()])
+			print("ROBO abismo onda %d · vida %d/%d · bênçãos %d · dano %s" % [onda, int(hp), int(hp_max), bencaos.size(), num_grande(dano_partida)])
 		if onda % 5 == 0:
 			var ch: String = ["larvamae", "semrosto", "thornox"][(onda / 5 - 1) % 3]
 			fila.insert(3, ch)
@@ -1293,6 +1295,8 @@ func ferir(m: Dictionary, dano: float, critico_ok := true) -> void:
 	if critico:
 		dano *= 2.0
 	m["hp"] -= dano
+	if tipo_partida == "abismo":
+		dano_partida += dano
 	m["flash"] = 0.1
 	if golpe.has("sangra"):
 		m["sangra"] = 3.0
@@ -1657,11 +1661,12 @@ func atualizar(dt: float) -> void:
 		else:
 			estado = "loja"
 			if tipo_partida == "abismo":
-				# o recorde e o ranking já contam a cada onda vencida
-				if onda > int(prog.get("abismo_rec", 0)):
-					prog["abismo_rec"] = onda
-					aviso(tx("Novo recorde: onda %d!") % onda, 2.0)
-				enviar_recorde("abismo", onda)
+				# o recorde e o ranking já contam a cada onda vencida.
+				# 15/11: o recorde do Abismo passou a ser o DANO total da partida.
+				prog["abismo_rec"] = maxi(int(prog.get("abismo_rec", 0)), onda)
+				if int(dano_partida) > int(prog.get("abismo_dano", 0)):
+					prog["abismo_dano"] = int(dano_partida)
+				enviar_recorde("abismo", int(dano_partida))
 			var premio := descanso_entre_ondas()
 			aviso("Onda vencida! +%d de essência" % premio, 3.0)
 			oferecer_escolha()
@@ -2206,7 +2211,7 @@ func desenhar_fim() -> void:
 	var t2 := "Capítulo %d · %s" % [capitulo, CAPITULOS[capitulo - 1]] if venceu else "Chegou à fase %d de %d" % [onda, FASES]
 	if tipo_partida == "abismo":
 		titulo = "NOVO RECORDE!" if abismo_novo_rec else "O ABISMO VENCEU"
-		t2 = "Venceu %d ondas · recorde: %d" % [maxi(0, onda - 1), int(prog.get("abismo_rec", 0))]
+		t2 = tx("Onda %d · dano %s") % [maxi(0, onda - 1), num_grande(dano_partida)]
 	elif tipo_partida == "desafio":
 		titulo = "DESAFIO VENCIDO" if venceu else "DESAFIO PERDIDO"
 		t2 = "Desafio do Dia · %s" % regra_desafio()["nome"]
@@ -2401,13 +2406,14 @@ func desenhar_topo() -> void:
 	escrever_esq(t, Vector2(LARG - 16 - w, 31), 14, BRANCO, fonte_titulo)
 	var tit_txt := ("PESADELO · " if pesadelo_ativo() else "") + "CAP. %d · %s" % [capitulo, CAPITULOS[capitulo - 1].to_upper()]
 	if tipo_partida == "abismo":
-		tit_txt = "ABISMO SEM FIM · RECORDE %d" % recorde_abismo_ao_vivo()
+		tit_txt = tx("ABISMO · RECORDE ") + num_grande(recorde_dano_ao_vivo())
 	elif tipo_partida == "desafio":
 		tit_txt = tx("DESAFIO · ") + tx(regra_desafio()["nome"]).to_upper()
 	var tit := encurtar(tit_txt, fonte_titulo, 13, LARG - 80 - w)
 	escrever_esq(tit, Vector2(56, 31), 13, OURO, fonte_titulo)
 	if tipo_partida == "abismo":
 		desenhar_trilha_abismo()
+		desenhar_dano_abismo()
 	else:
 		# trilha das fases
 		var y := 60.0
@@ -3687,7 +3693,7 @@ func desenhar_inicio() -> void:
 		botao_icone(b["desafio"], "desafio", "Desafio", not desafio_feito_hoje())
 	if liberou("abismo"):
 		var ptb := partida_guardada()
-		var rot := "Rec. %d" % int(prog.get("abismo_rec", 0))
+		var rot := "Rec. " + num_curto(int(prog.get("abismo_dano", 0)))
 		if not ptb.is_empty() and str(ptb.get("tipo", "")) == "abismo":
 			rot = "Onda %d" % (int(ptb["onda"]) + 1)
 		botao_icone(b["abismo"], "abismo", rot)
@@ -4658,7 +4664,7 @@ var abismo_rec_inicio := 0
 
 
 func comecar_abismo() -> void:
-	abismo_rec_inicio = int(prog.get("abismo_rec", 0))
+	abismo_rec_inicio = int(prog.get("abismo_dano", 0))
 	tipo_partida = "abismo"
 	capitulo = clampi(int(prog["liberado"]), 4, TOTAL_CAPITULOS)
 	tela = "jogo"
@@ -4668,10 +4674,10 @@ func comecar_abismo() -> void:
 
 func fim_abismo() -> void:
 	var feitas := maxi(0, onda - 1)
-	var rec := int(prog.get("abismo_rec", 0))
-	abismo_novo_rec = feitas > abismo_rec_inicio
-	prog["abismo_rec"] = maxi(rec, feitas)
-	enviar_recorde("abismo", feitas)
+	prog["abismo_rec"] = maxi(int(prog.get("abismo_rec", 0)), feitas)
+	abismo_novo_rec = int(dano_partida) > abismo_rec_inicio
+	prog["abismo_dano"] = maxi(int(prog.get("abismo_dano", 0)), int(dano_partida))
+	enviar_recorde("abismo", int(dano_partida))
 	premio_fim = int(round(feitas * (0.5 + mundo_de(capitulo) / 8.0) * mult_pacto()))
 	prog["fragmentos"] = int(prog["fragmentos"]) + premio_fim
 	limpar_partida()
@@ -4996,7 +5002,7 @@ func texto_rec(id: String) -> String:
 		"refugio":
 			return "Recorde: %d:%02d de 2:30" % [r / 60, r % 60]
 		"abismo":
-			return "Recorde: onda %d" % int(prog.get("abismo_rec", 0))
+			return tx("Recorde: %s de dano") % num_grande(int(prog.get("abismo_dano", 0)))
 		"desafio":
 			return "Feito hoje!" if desafio_feito_hoje() else "Ainda não feito hoje"
 		"duelo":
@@ -7238,7 +7244,7 @@ func desenhar_skin_ganha() -> void:
 # ============================================================ online: ranking semanal e Ordem (13/11)
 # Usa o mesmo servidor da Cloudflare do Duelo. Só esta área usa internet; se
 # estiver sem internet, os recordes e os golpes ficam guardados e vão depois.
-const CATS_RANKING := [["abismo", "Abismo", "onda"], ["colosso", "Colosso", "dano"], ["duelo", "Duelo", "vitórias"]]
+const CATS_RANKING := [["abismo", "Abismo", "dano"], ["colosso", "Colosso", "dano"], ["duelo", "Duelo", "vitórias"]]
 var rank := {"cat": "abismo", "dados": {}, "carregando": false, "erro": ""}
 var ordem_dados := {}
 var ordem_estado := {"carregando": false, "erro": ""}
@@ -7497,7 +7503,7 @@ func desenhar_ranking() -> void:
 			var cor_pos: Color = [OURO, Color8(200, 200, 215), Color8(205, 130, 70)][int(l["pos"]) - 1] if int(l["pos"]) <= 3 else CINZA
 			escrever_esq("%dº" % int(l["pos"]), Vector2(28, y + 22), 16, cor_pos, fonte_titulo)
 			escrever_esq(str(l["nome"]), Vector2(76, y + 22), 16, BRANCO)
-			var v := "%d %s" % [int(l["valor"]), tx(unidade)]
+			var v := "%s %s" % [num_curto(int(l["valor"])), tx(unidade)]
 			var wv := fonte.get_string_size(v, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 			escrever_esq(v, Vector2(LARG - 28 - wv, y + 22), 15, OURO)
 		var minha := int(d.get("minha_pos", 0))
@@ -7667,3 +7673,42 @@ func formato_rec_esp(id: String, v: int) -> String:
 	if id == "refugio":
 		return "%d:%02d" % [v / 60, v % 60]
 	return str(v)
+
+
+# ------------------------------------------------------------ recorde de dano do Abismo (15/11)
+# Pedido do Rone: em vez de "quantas ondas aguentou", o recorde é o dano total
+# da partida, um número grande que sobe a cada golpe. A onda continua no alto.
+var dano_partida := 0.0
+
+
+func recorde_dano_ao_vivo() -> int:
+	return maxi(int(prog.get("abismo_dano", 0)), int(dano_partida))
+
+
+func num_grande(v) -> String:
+	var t := str(int(v))
+	var sep := "," if idioma == "en" else "."
+	var r := ""
+	while t.length() > 3:
+		r = sep + t.substr(t.length() - 3) + r
+		t = t.substr(0, t.length() - 3)
+	return t + r
+
+
+func num_curto(v: int) -> String:
+	var dec := "." if idioma == "en" else ","
+	if v >= 1000000000:
+		return String.num(v / 1e9, 1).replace(".", dec) + (" bi" if idioma != "en" else "B")
+	if v >= 1000000:
+		return String.num(v / 1e6, 1).replace(".", dec) + (" mi" if idioma != "en" else "M")
+	if v >= 10000:
+		return String.num(v / 1e3, 0) + (" mil" if idioma != "en" else "K")
+	return num_grande(v)
+
+
+func desenhar_dano_abismo() -> void:
+	var r := Rect2(16, 132, LARG - 160, 26)
+	var novo := dano_partida > 0 and int(dano_partida) >= int(prog.get("abismo_dano", 0)) and int(prog.get("abismo_dano", 0)) > 0
+	caixa(r, Color(0.07, 0.04, 0.05, 0.9), 8, 1, Color(OURO if novo else VERMELHO, 0.7))
+	escrever_esq(tx("DANO"), r.position + Vector2(10, 18), 12, Color8(255, 150, 120), fonte_titulo)
+	escrever_esq(num_grande(dano_partida), r.position + Vector2(58, 19), 16, OURO if novo else BRANCO)
