@@ -408,3 +408,12 @@
   aparecem. A chave da Cloudflare está guardada no ambiente "Kravenox jogos"
   do Claude Code (não no repositório). Para publicar de novo:
   `npx wrangler deploy` dentro de `servidor-duelo/`.
+
+## 2026-11-14: código de beta tester desligado por ter vazado
+
+- O primeiro código do Ludivicky foi parar no grupo geral junto com a imagem
+  de novidades. Ele foi desligado e o Ludivicky ganhou um código novo (o
+  código fica só com o Rone; aqui, só a impressão digital). Quem já tinha
+  usado o código antigo continua com as skins.
+- Imagens de novidades com código pessoal não são guardadas no repositório
+  (ele é público).

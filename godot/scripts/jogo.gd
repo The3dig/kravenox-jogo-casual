@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-13f"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-14a"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const PESADELO_VIDA := 2.7   # 13/11: era 1.8; quem chega ao Pesadelo já tem as melhorias no máximo
@@ -6798,7 +6798,7 @@ func desenhar_jogos() -> void:
 # sem hífen, em maiúsculas), para os códigos não aparecerem no repositório
 # público. Gerar novos com godot/ferramentas/codigo_beta.py.
 const CODIGOS_BETA := {
-	"6ecd6c57a6a636332edbc2a1389ccdccb0ccb6e04c2646b432df28a835139382": "Ludivicky",
+	"a5de82764bb9a9bb904927d790a6ec48910a4f3747b5e25f53727d89604898e7": "Ludivicky",   # 14/11: o primeiro código do Ludivicky vazou num grupo e foi desligado
 }
 const SKINS_BETA := ["gelo", "ouro", "sombrio", "brasa"]
 
