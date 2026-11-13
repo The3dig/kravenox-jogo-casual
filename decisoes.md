@@ -515,3 +515,19 @@
   o poder sozinho quando ele muda (ou a cada 6 h jogando) e na hora em que a
   pessoa abre essa aba. Servidor: categoria "poder". Versão 2026-11-15e.
 - **Por quê:** pedido do Rone ("faz ranking de poder").
+
+## 15/11/2026: contas com usuário e senha
+
+- **Era:** o nome no online era só um apelido digitado, opcional. Quem não
+  escolhia aparecia como "Jogador" e o ranking ficava sem saber quem é quem
+  (o Rone viu dois "Jogador" no ranking de Poder).
+- **Passou a ser:** **conta Kravenox** com usuário e senha (botão "Criar
+  conta ou entrar" na tela Online e no Ranking). Nas categorias do Kravenox
+  (Poder, Abismo, Colosso, Duelo) só aparece quem tem conta, sempre com o
+  nome da conta. "Entrar" em outro celular junta os recordes no mesmo
+  jogador. O servidor guarda só usuário, um hash PBKDF2 da senha (com sal) e
+  o número do jogador; 10 senhas erradas travam a conta por 15 min. O jogo
+  continua offline: a conta é só para a parte online. As categorias de
+  outros jogos (ex.: "mmo-nivel") não exigem conta. Versão 2026-11-15f.
+- **Por quê:** pedido do Rone ("criar usuário e senha igual ao mmo pra
+  registrar quem está jogando").

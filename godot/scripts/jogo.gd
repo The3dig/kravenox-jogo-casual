@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-15e"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-15f"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -6977,6 +6977,9 @@ func nome_duelo() -> String:
 
 
 func pedir_nome_duelo() -> bool:
+	if conta() != "":
+		prog["nome_duelo"] = conta()
+		return true
 	if nome_duelo() != "":
 		return true
 	var n := "Jogador"
@@ -7271,6 +7274,8 @@ func id_jogador() -> String:
 
 
 func nome_online() -> String:
+	if conta() != "":
+		return conta()
 	return nome_duelo() if nome_duelo() != "" else "Jogador"
 
 
@@ -7449,8 +7454,11 @@ func desenhar_online() -> void:
 	desenhar_fundo(0.65)
 	cabecalho("ONLINE")
 	escrever("Só esta área usa internet. O resto do jogo funciona sem ela.", Vector2(LARG / 2, 134), 13, Color8(150, 220, 170))
-	escrever(tx("Seu nome: %s") % nome_online() + "  ·  " + tx("toque para trocar"), Vector2(LARG / 2, 166), 14, CINZA, false)
-	var itens := [["ranking", "Ranking semanal", "Os melhores da semana no Abismo, no Colosso e no Duelo. Toda segunda recomeça; o 1º vira Soberano da Semana."],
+	if conta() != "":
+		escrever(tx("Conta: %s") % conta(), Vector2(LARG / 2, 166), 15, OURO, false)
+	else:
+		botao(Rect2(LARG / 2 - 120, 150, 240, 34), "Criar conta ou entrar", OURO, true, true)
+	var itens := [["ranking", "Ranking semanal", "Os melhores da semana em Poder, Abismo, Colosso e Duelo. Toda segunda recomeça; o 1º vira Soberano da Semana."],
 		["ordem", "Ordem", "O seu clã. Toda semana, derrubem juntos o Gigante do Vazio: cada partida no Colosso conta. Prêmio para todos."],
 		["duelo", "Duelo ao vivo", "Você contra um amigo, ao mesmo tempo, contra a mesma horda."]]
 	for i in itens.size():
@@ -7464,9 +7472,11 @@ func desenhar_online() -> void:
 
 
 func clique_online(p: Vector2) -> void:
-	if p.y > 150 and p.y < 182:
-		prog["nome_duelo"] = ""
-		pedir_nome_duelo()
+	if p.y > 150 and p.y < 184:
+		if conta() == "":
+			abrir_conta()
+		else:
+			popup = {"titulo": "CONTA", "texto": tx("Você está na conta %s. Para usar em outro celular, toque em Entrar lá com o mesmo usuário e senha.") % conta()}
 		return
 	for i in 3:
 		if ret_online(i).has_point(p):
@@ -7512,13 +7522,19 @@ func desenhar_ranking() -> void:
 			var wv := fonte.get_string_size(v, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 			escrever_esq(v, Vector2(LARG - 28 - wv, y + 22), 15, OURO)
 		var minha := int(d.get("minha_pos", 0))
-		escrever(tx("Sua posição: %dº") % minha if minha > 0 else tx("Você ainda não jogou esta categoria nesta semana"), Vector2(LARG / 2, 640), 15, OURO if minha > 0 else CINZA, true)
+		if conta() == "":
+			pass
+		else:
+			escrever(tx("Sua posição: %dº") % minha if minha > 0 else tx("Você ainda não jogou esta categoria nesta semana"), Vector2(LARG / 2, 640), 15, OURO if minha > 0 else CINZA, true)
 		var camp: Array = d.get("campeoes", [])
 		if not camp.is_empty():
 			var nomes := []
 			for c in camp:
 				nomes.append("%dº %s" % [int(c["pos"]), c["nome"]])
 			escrever(tx("Semana passada: ") + "  ".join(nomes), Vector2(LARG / 2, 668), 13, Color8(200, 170, 255), false)
+	if conta() == "" and not rank["carregando"]:
+		escrever("Crie uma conta para aparecer no ranking", Vector2(LARG / 2, 612), 15, BRANCO, true)
+		botao(Rect2(LARG / 2 - 120, 630, 240, 44), "Criar conta ou entrar", OURO, true, true)
 	botao(Rect2(LARG / 2 - 70, 688, 140, 40), "Atualizar", AZUL, true, false)
 	desenhar_abas()
 
@@ -7530,6 +7546,9 @@ func clique_ranking(p: Vector2) -> void:
 			rank["dados"] = {}
 			carregar_ranking()
 			return
+	if conta() == "" and Rect2(LARG / 2 - 120, 630, 240, 44).has_point(p):
+		abrir_conta()
+		return
 	if Rect2(LARG / 2 - 70, 688, 140, 40).has_point(p):
 		carregar_ranking()
 
@@ -7736,3 +7755,85 @@ func checar_poder() -> void:
 func aba_ranking(i: int) -> Rect2:
 	var w := (LARG - 32 - 6 * (CATS_RANKING.size() - 1)) / CATS_RANKING.size()
 	return Rect2(16 + i * (w + 6), 118, w, 40)
+
+
+# ------------------------------------------------------------ conta (15/11)
+# Usuário e senha para o ranking mostrar quem é quem (antes ficava todo mundo
+# "Jogador") e para juntar o mesmo jogador em dois celulares. A senha vai só
+# para o servidor, que guarda um hash; no aparelho fica só o nome da conta.
+# O jogo continua todo offline: a conta só serve para a parte online.
+var cb_conta = null
+
+
+func conta() -> String:
+	return str(prog.get("conta", ""))
+
+
+func abrir_conta() -> void:
+	if not OS.has_feature("web"):
+		popup = {"titulo": "CONTA", "texto": "A conta só pode ser criada no jogo pelo navegador."}
+		return
+	if cb_conta == null:
+		cb_conta = JavaScriptBridge.create_callback(_resposta_conta)
+	var textos := {"titulo": tx("Conta Kravenox"), "usuario": tx("Usuário"), "senha": tx("Senha"),
+		"entrar": tx("Entrar"), "criar": tx("Criar conta"), "cancelar": tx("Cancelar"),
+		"nota": tx("Primeira vez? Escolha um usuário e uma senha e toque em Criar conta. No outro celular, use os mesmos e toque em Entrar.")}
+	JavaScriptBridge.eval(JS_CONTA)
+	JavaScriptBridge.get_interface("window").kxConta(JSON.stringify(textos), cb_conta)
+
+
+func _resposta_conta(args: Array) -> void:
+	var d = JSON.parse_string(str(args[0]))
+	if d is Dictionary and str(d.get("acao", "")) in ["criar", "entrar"]:
+		enviar_conta(str(d["acao"]), str(d.get("u", "")).strip_edges(), str(d.get("s", "")))
+
+
+func enviar_conta(acao: String, usuario: String, senha: String) -> void:
+	popup = {"titulo": "CONTA", "texto": "Conectando…"}
+	var r := await chamar_api("POST", "/conta/" + acao, {"usuario": usuario, "senha": senha, "id": id_jogador()})
+	if r.has("erro"):
+		popup = {"titulo": "CONTA", "texto": "Sem internet: a conta precisa de internet." if r["erro"] == "sem internet" else str(r["erro"])}
+		som("dano")
+		return
+	prog["conta"] = str(r.get("nome", usuario))
+	prog["nome_duelo"] = prog["conta"]
+	if acao == "entrar" and str(r.get("id", "")) != "":
+		prog["id_jogador"] = str(r["id"])   # o mesmo jogador nos dois celulares
+	prog["poder_env"] = {}
+	salvar()
+	som("nivel")
+	popup = {"titulo": "CONTA", "texto": (tx("Conta criada! Bem-vindo, %s.") if acao == "criar" else tx("Bem-vindo de volta, %s!")) % prog["conta"]}
+	if tela == "ranking":
+		carregar_ranking()
+
+
+const JS_CONTA := """
+window.kxConta = window.kxConta || function (textos, cb) {
+  var t = JSON.parse(textos);
+  var velho = document.getElementById('kx-conta'); if (velho) velho.remove();
+  var f = document.createElement('div'); f.id = 'kx-conta';
+  f.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:system-ui,sans-serif';
+  var campo = 'width:100%;box-sizing:border-box;margin:6px 0 12px;padding:12px;font-size:17px;border-radius:8px;border:1px solid #8a6d3b;background:#120e18;color:#fff';
+  var bt = 'flex:1;padding:12px 6px;font-size:16px;border-radius:8px;border:1px solid #d4a94f;margin:0 4px;';
+  f.innerHTML = '<div style="background:#1a1424;border:2px solid #d4a94f;border-radius:14px;padding:20px;width:min(340px,86vw);color:#eee">'
+    + '<div style="color:#e8c26a;font-size:20px;font-weight:bold;text-align:center;margin-bottom:12px"></div>'
+    + '<label style="font-size:14px"></label><input id="kx-u" autocomplete="username" autocapitalize="none" maxlength="16" style="' + campo + '">'
+    + '<label style="font-size:14px"></label><input id="kx-s" type="password" autocomplete="current-password" maxlength="64" style="' + campo + '">'
+    + '<div style="display:flex;margin:4px -4px 10px"><button data-a="entrar" style="' + bt + 'background:#2a2134;color:#e8c26a"></button>'
+    + '<button data-a="criar" style="' + bt + 'background:#d4a94f;color:#1a1424;font-weight:bold"></button></div>'
+    + '<div style="font-size:13px;color:#b8acc8;margin-bottom:10px"></div>'
+    + '<button data-a="cancelar" style="width:100%;padding:10px;font-size:15px;border-radius:8px;border:1px solid #555;background:none;color:#aaa"></button></div>';
+  var c = f.firstChild;
+  c.children[0].textContent = t.titulo; c.children[1].textContent = t.usuario; c.children[3].textContent = t.senha;
+  c.children[5].children[0].textContent = t.entrar; c.children[5].children[1].textContent = t.criar;
+  c.children[6].textContent = t.nota; c.children[7].textContent = t.cancelar;
+  f.querySelectorAll('button').forEach(function (b) {
+    b.onclick = function () {
+      var r = JSON.stringify({acao: b.dataset.a, u: document.getElementById('kx-u').value, s: document.getElementById('kx-s').value});
+      f.remove(); cb(r);
+    };
+  });
+  document.body.appendChild(f);
+  setTimeout(function () { document.getElementById('kx-u').focus(); }, 50);
+};
+"""

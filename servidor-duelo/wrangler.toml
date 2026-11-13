@@ -33,3 +33,12 @@ class_name = "SalaLivre"
 [[migrations]]
 tag = "v3"
 new_sqlite_classes = ["SalaLivre"]
+
+# 15/11: contas (usuário e senha) para o ranking
+[[durable_objects.bindings]]
+name = "CONTAS"
+class_name = "Contas"
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["Contas"]

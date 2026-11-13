@@ -174,6 +174,17 @@ async function api(req, env, partes) {
     try { corpo = await req.json(); } catch (e) { return json({ erro: "json inválido" }, 400); }
   }
   const url = new URL(req.url);
+  const contas = env.CONTAS.get(env.CONTAS.idFromName("global"));
+  if (partes[0] === "conta" && req.method === "POST" && (partes[1] === "criar" || partes[1] === "entrar")) {
+    return contas.fetch(new Request("https://interno/" + partes[1], { method: "POST", body: JSON.stringify(corpo) }));
+  }
+  if (partes[0] === "recorde" && req.method === "POST" && CATS.includes(String(corpo.cat || ""))) {
+    // 15/11: no ranking do Kravenox só entra quem tem conta, com o nome da conta
+    const r = await (await contas.fetch(new Request("https://interno/nome?id=" + encodeURIComponent(String(corpo.id || ""))))).json();
+    if (!r.nome) return json({ erro: "sem conta" });
+    corpo.nome = r.nome;
+    corpo.conta = true;
+  }
   if (partes[0] === "recorde" || partes[0] === "ranking") {
     const ranking = env.RANKING.get(env.RANKING.idFromName("global"));
     return ranking.fetch(new Request("https://interno/" + partes[0] + url.search, { method: req.method, body: req.method === "POST" ? JSON.stringify(corpo) : undefined }));
@@ -216,9 +227,9 @@ export class Ranking {
       // "soma": cada envio soma (vitórias); senão guarda o melhor da semana
       const soma = cat === "duelo" || c.soma === true;
       const novo = soma ? (antigo ? antigo.valor : 0) + (cat === "duelo" ? 1 : valor) : Math.max(antigo ? antigo.valor : 0, valor);
-      tabela[id] = { nome: limpaNome(c.nome), valor: novo, skin: String(c.skin || "").slice(0, 12) };
+      tabela[id] = { nome: limpaNome(c.nome), valor: novo, skin: String(c.skin || "").slice(0, 12), conta: c.conta === true };
       await this.storage.put(chave, tabela);
-      return json({ ok: true, valor: novo, ...this.posicao(tabela, id) });
+      return json({ ok: true, valor: novo, ...this.posicao(tabela, id, cat) });
     }
     if (acao === "ranking") {
       const cat = url.searchParams.get("cat") || "abismo";
@@ -226,24 +237,26 @@ export class Ranking {
       const id = limpaId(url.searchParams.get("id"));
       const tabela = (await this.storage.get("s:" + semana() + ":" + chaveCat(cat))) || {};
       const passada = (await this.storage.get("s:" + semanaPassada() + ":" + chaveCat(cat))) || {};
-      const lista = this.ordenar(tabela);
+      const lista = this.ordenar(tabela, cat);
       return json({
         semana: semana(),
         cat,
         top: lista.slice(0, 20).map(([i, v], k) => ({ pos: k + 1, nome: v.nome, valor: v.valor, skin: v.skin, eu: i === id })),
-        ...this.posicao(tabela, id),
-        campeoes: this.ordenar(passada).slice(0, 3).map(([i, v], k) => ({ pos: k + 1, nome: v.nome, valor: v.valor, eu: i === id })),
+        ...this.posicao(tabela, id, cat),
+        campeoes: this.ordenar(passada, cat).slice(0, 3).map(([i, v], k) => ({ pos: k + 1, nome: v.nome, valor: v.valor, eu: i === id })),
       });
     }
     return json({ erro: "não encontrado" }, 404);
   }
 
-  ordenar(tabela) {
-    return Object.entries(tabela).filter(([i]) => !i.startsWith("teste")).sort((a, b) => b[1].valor - a[1].valor);
+  // nas categorias do Kravenox só aparece quem tem conta (desde 15/11)
+  ordenar(tabela, cat) {
+    const soConta = CATS.includes(cat);
+    return Object.entries(tabela).filter(([i, v]) => !i.startsWith("teste") && (!soConta || v.conta)).sort((a, b) => b[1].valor - a[1].valor);
   }
 
-  posicao(tabela, id) {
-    const lista = this.ordenar(tabela);
+  posicao(tabela, id, cat) {
+    const lista = this.ordenar(tabela, cat);
     const k = lista.findIndex(([i]) => i === id);
     return { minha_pos: k >= 0 ? k + 1 : 0, total: lista.length };
   }
@@ -365,5 +378,76 @@ export class SalaLivre {
   avisar() {
     const nomes = this.jogadores.map((j) => ({ n: j.n, nome: j.nome }));
     for (const j of this.jogadores) { try { j.ws.send(JSON.stringify({ t: "sala", voce: j.n, jogadores: nomes })); } catch (e) {} }
+  }
+}
+
+// ------------------------------------------------------------ contas (15/11)
+// Usuário e senha para o ranking mostrar quem é quem e para juntar o mesmo
+// jogador em vários celulares. A senha nunca é guardada: só um hash PBKDF2
+// com sal. Guarda: usuário, hash, sal e o número do jogador (id do aparelho).
+const ITERACOES = 100000;
+
+async function hashSenha(senha, sal) {
+  const chave = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: sal, iterations: ITERACOES }, chave, 256);
+  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function hexParaBytes(h) {
+  return new Uint8Array(h.match(/../g).map((x) => parseInt(x, 16)));
+}
+
+function iguais(a, b) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+
+export class Contas {
+  constructor(state) {
+    this.storage = state.storage;
+  }
+
+  async fetch(req) {
+    const url = new URL(req.url);
+    const acao = url.pathname.slice(1);
+    if (acao === "nome") {
+      const id = limpaId(url.searchParams.get("id"));
+      const u = id ? await this.storage.get("i:" + id) : null;
+      const c = u ? await this.storage.get("u:" + u) : null;
+      return json({ nome: c ? c.nome : null });
+    }
+    const c = await req.json();
+    const nome = String(c.usuario || "").trim();
+    const senha = String(c.senha || "");
+    const id = limpaId(c.id);
+    if (!/^[\p{L}\p{N}_]{3,16}$/u.test(nome)) return json({ erro: "O usuário precisa ter de 3 a 16 letras ou números, sem espaço." });
+    if (senha.length < 4 || senha.length > 64) return json({ erro: "A senha precisa ter pelo menos 4 caracteres." });
+    if (!id) return json({ erro: "dados inválidos" }, 400);
+    const chave = nome.toLowerCase();
+    if (acao === "criar") {
+      if (await this.storage.get("u:" + chave)) return json({ erro: "Esse usuário já existe. Escolha outro ou toque em Entrar." });
+      const ja = await this.storage.get("i:" + id);
+      if (ja) return json({ erro: "Este celular já tem a conta " + (await this.storage.get("u:" + ja)).nome + ". Use Entrar." });
+      const sal = crypto.getRandomValues(new Uint8Array(16));
+      const salHex = [...sal].map((b) => b.toString(16).padStart(2, "0")).join("");
+      await this.storage.put("u:" + chave, { nome, sal: salHex, hash: await hashSenha(senha, sal), id, criado: Date.now() });
+      await this.storage.put("i:" + id, chave);
+      return json({ ok: true, nome, id });
+    }
+    if (acao === "entrar") {
+      // trava de 15 min depois de 10 senhas erradas seguidas
+      const f = (await this.storage.get("f:" + chave)) || { n: 0, t: 0 };
+      if (f.n >= 10 && Date.now() - f.t < 15 * 60000) return json({ erro: "Muitas tentativas erradas. Espere 15 minutos." });
+      const conta = await this.storage.get("u:" + chave);
+      if (!conta || !iguais(await hashSenha(senha, hexParaBytes(conta.sal)), conta.hash)) {
+        await this.storage.put("f:" + chave, { n: f.n + 1, t: Date.now() });
+        return json({ erro: "Usuário ou senha errados." });
+      }
+      await this.storage.delete("f:" + chave);
+      return json({ ok: true, nome: conta.nome, id: conta.id });
+    }
+    return json({ erro: "não encontrado" }, 404);
   }
 }
