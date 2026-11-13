@@ -817,5 +817,7 @@
  "Onda %d · dano %s": "Wave %d · damage %s",
  "Recorde: %s de dano": "Best: %s damage",
  "Abismo sem Fim · recorde: %s de dano": "Endless Abyss · best: %s damage",
- "DANO": "DAMAGE"
+ "DANO": "DAMAGE",
+ "Poder": "Power",
+ "poder": "power"
 }

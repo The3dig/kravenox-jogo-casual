@@ -129,7 +129,7 @@ export class Sala {
 //   GET  /api/ordem/CODIGO                                  membros, Gigante e contribuições
 // Não guarda nada além do nome escolhido no jogo e de um número aleatório do aparelho.
 
-const CATS = ["abismo", "colosso", "duelo"];
+const CATS = ["poder", "abismo", "colosso", "duelo"];
 // outros jogos do Kravenox: categoria com o nome do jogo na frente (ex.: "mmo-nivel")
 const catValida = (c) => CATS.includes(c) || /^[a-z0-9]{2,12}-[a-z0-9_]{2,20}$/.test(c);
 const LETRAS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";

@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-15d"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-15e"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -584,6 +584,7 @@ func salvar() -> void:
 	if f:
 		f.store_string(JSON.stringify(prog))
 		f.close()   # fecha na hora: no navegador é aí que o arquivo vai para o armazenamento do aparelho
+	checar_poder.call_deferred()
 
 
 func mundo_de(c: int) -> int:
@@ -7244,8 +7245,8 @@ func desenhar_skin_ganha() -> void:
 # ============================================================ online: ranking semanal e Ordem (13/11)
 # Usa o mesmo servidor da Cloudflare do Duelo. Só esta área usa internet; se
 # estiver sem internet, os recordes e os golpes ficam guardados e vão depois.
-const CATS_RANKING := [["abismo", "Abismo", "dano"], ["colosso", "Colosso", "dano"], ["duelo", "Duelo", "vitórias"]]
-var rank := {"cat": "abismo", "dados": {}, "carregando": false, "erro": ""}
+const CATS_RANKING := [["poder", "Poder", "poder"], ["abismo", "Abismo", "dano"], ["colosso", "Colosso", "dano"], ["duelo", "Duelo", "vitórias"]]
+var rank := {"cat": "poder", "dados": {}, "carregando": false, "erro": ""}
 var ordem_dados := {}
 var ordem_estado := {"carregando": false, "erro": ""}
 var sair_ordem_confirma := 0.0
@@ -7333,6 +7334,10 @@ func carregar_ranking() -> void:
 	rank["carregando"] = true
 	rank["erro"] = ""
 	reenviar_pendentes()
+	if rank["cat"] == "poder" and online_disponivel():
+		# manda o poder de agora antes de buscar, para a pessoa já aparecer
+		await chamar_api("POST", "/recorde", {"id": id_jogador(), "nome": nome_online(), "cat": "poder", "valor": poder(), "skin": skin_atual()})
+		prog["poder_env"] = {"v": poder(), "t": agora()}
 	var r := await chamar_api("GET", "/ranking?cat=%s&id=%s" % [rank["cat"], id_jogador()])
 	rank["carregando"] = false
 	if r.has("erro"):
@@ -7482,7 +7487,7 @@ func desenhar_ranking() -> void:
 	desenhar_fundo(0.7)
 	cabecalho("RANKING SEMANAL")
 	for i in CATS_RANKING.size():
-		var r := Rect2(16 + i * 150, 118, 144, 40)
+		var r := aba_ranking(i)
 		botao(r, CATS_RANKING[i][1], OURO, true, rank["cat"] == CATS_RANKING[i][0])
 	var d: Dictionary = rank["dados"]
 	if rank["carregando"]:
@@ -7520,7 +7525,7 @@ func desenhar_ranking() -> void:
 
 func clique_ranking(p: Vector2) -> void:
 	for i in CATS_RANKING.size():
-		if Rect2(16 + i * 150, 118, 144, 40).has_point(p):
+		if aba_ranking(i).has_point(p):
 			rank["cat"] = CATS_RANKING[i][0]
 			rank["dados"] = {}
 			carregar_ranking()
@@ -7712,3 +7717,22 @@ func desenhar_dano_abismo() -> void:
 	caixa(r, Color(0.07, 0.04, 0.05, 0.9), 8, 1, Color(OURO if novo else VERMELHO, 0.7))
 	escrever_esq(tx("DANO"), r.position + Vector2(10, 18), 12, Color8(255, 150, 120), fonte_titulo)
 	escrever_esq(num_grande(dano_partida), r.position + Vector2(58, 19), 16, OURO if novo else BRANCO)
+
+
+# ------------------------------------------------------------ ranking de poder (15/11)
+# O PODER do Kravenox (melhorias + capítulos vencidos) vai para o ranking
+# quando muda, ou a cada 6 h jogando (o ranking é por semana).
+func checar_poder() -> void:
+	if robo or not online_disponivel():
+		return
+	var pe: Dictionary = prog.get("poder_env", {})
+	var v := poder()
+	if int(pe.get("v", -1)) == v and agora() - float(pe.get("t", 0.0)) < 6 * 3600:
+		return
+	prog["poder_env"] = {"v": v, "t": agora()}
+	enviar_recorde("poder", v)
+
+
+func aba_ranking(i: int) -> Rect2:
+	var w := (LARG - 32 - 6 * (CATS_RANKING.size() - 1)) / CATS_RANKING.size()
+	return Rect2(16 + i * (w + 6), 118, w, 40)

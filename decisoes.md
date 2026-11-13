@@ -506,3 +506,12 @@
   número aparece curto ("7,7 mi"). Robô: ~2,4 milhões na onda 35. Versão
   2026-11-15d.
 - **Por quê:** pedido do Rone: "sempre dano é o que empolga mais".
+
+## 15/11/2026: ranking de Poder
+
+- **Era:** o ranking semanal tinha Abismo, Colosso e Duelo.
+- **Passou a ser:** primeira aba **Poder**, com o PODER do Kravenox (o
+  número da tela do Kravenox: melhorias + capítulos vencidos). O jogo manda
+  o poder sozinho quando ele muda (ou a cada 6 h jogando) e na hora em que a
+  pessoa abre essa aba. Servidor: categoria "poder". Versão 2026-11-15e.
+- **Por quê:** pedido do Rone ("faz ranking de poder").
