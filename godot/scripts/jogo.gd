@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-14c"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-14d"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -2722,6 +2722,8 @@ func desenhar_kravenox(k: Vector2) -> void:
 			var ini := k + Vector2(-k_dir * 18, y)
 			draw_line(ini, ini + Vector2(-k_dir * tam, 0), Color(laranja, 0.55), 3, true)
 	brilho_suave(k + Vector2(0, -4), 48, cor_forma(), 0.4 + (0.6 * (0.5 + 0.5 * sin(tempo * 8)) if furia >= 100.0 else 0.0))
+	if escudo > 0:
+		desenhar_escudo(k, false)   # metade de trás do anel, atrás do corpo
 	desenhar_arte(nome, base, 68, k_dir < 0)
 	var e := eco_atual()
 	if not e.is_empty():
@@ -2739,11 +2741,7 @@ func desenhar_kravenox(k: Vector2) -> void:
 	if k_flash > 0:
 		desenhar_arte(nome, base, 68, k_dir < 0, Color(1, 0.3, 0.3, k_flash * 4), true)
 	if escudo > 0:
-		# bolha de escudo: mais forte quanto mais escudo
-		var a := clampf(escudo / 60.0, 0.25, 0.8) + escudo_flash * 2
-		draw_circle(k + Vector2(0, -6), 42, Color(AZUL, 0.08 * a))
-		draw_arc(k + Vector2(0, -6), 42, 0, TAU, 40, Color(Color8(150, 200, 255), a), 2, true)
-		draw_arc(k + Vector2(0, -6), 42, -2.4, -1.6, 10, Color(1, 1, 1, a), 2, true)
+		desenhar_escudo(k, true)    # metade da frente, por cima dele
 
 
 func desenhar_monstro(m: Dictionary, k: Vector2) -> void:
@@ -7579,3 +7577,38 @@ func desenhar_trilha_abismo() -> void:
 
 func recorde_abismo_ao_vivo() -> int:
 	return maxi(int(prog.get("abismo_rec", 0)), maxi(0, onda - 1) if estado == "onda" else onda)
+
+
+
+# Escudo de Espinhos (14/11): um anel de espinhos azuis girando em volta do
+# Kravenox, no chão e atrás dele, em vez de uma bolha por cima. Mais escudo =
+# mais espinhos acesos; pisca ao levar golpe.
+func desenhar_escudo(k: Vector2, frente_agora: bool) -> void:
+	var forca := clampf(escudo / 60.0, 0.3, 1.0)
+	var pisca := clampf(escudo_flash * 4.0, 0.0, 1.0)
+	var c := k + Vector2(0, 24)   # na altura dos pés
+	var cor := Color8(140, 200, 255).lerp(Color.WHITE, pisca)
+	if not frente_agora:
+		brilho_suave(k + Vector2(0, 4), 50, AZUL, 0.3 * forca + pisca * 0.5)
+		# o aro no chão, bem fraquinho, liga os espinhos
+		var aro := PackedVector2Array()
+		for a in 33:
+			var t := a * TAU / 32
+			aro.append(c + Vector2(cos(t) * 42, sin(t) * 13))
+		draw_polyline(aro, Color(cor, 0.25 + 0.2 * forca), 1.5, true)
+	var n := 8
+	var acesos := maxi(2, int(ceil(n * forca)))
+	for i in n:
+		var ang := tempo * 1.1 + i * TAU / n
+		var frente := sin(ang) > 0
+		if frente != frente_agora:
+			continue
+		var base := c + Vector2(cos(ang) * 42, sin(ang) * 13)
+		var alto := 20.0 if frente else 15.0
+		var alfa := (0.95 if frente else 0.55) * (1.0 if i < acesos else 0.2)
+		# espinho curvado para fora, como os das costas dele
+		var ponta := base + Vector2(cos(ang) * 8, -alto)
+		var lado := Vector2(5.5, 0)
+		draw_colored_polygon(PackedVector2Array([base - lado, ponta, base + lado]), Color(cor.darkened(0.25), alfa))
+		draw_colored_polygon(PackedVector2Array([base - lado * 0.2, ponta, base + lado]), Color(cor, alfa))
+		draw_line(base + Vector2(1, -2), ponta, Color(1, 1, 1, alfa * 0.8), 1.2, true)

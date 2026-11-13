@@ -443,3 +443,12 @@
   recorde de cada aparelho foi zerado uma vez (marca `abismo_v2`) e o ranking
   do Abismo no servidor passou a ser guardado com outro nome ("abismo2"),
   começando vazio. Pedido do Rone.
+
+## 14/11/2026: novo visual do Escudo de Espinhos
+
+- **Era:** uma bolha azul fina em volta do Kravenox, por cima dele.
+- **Passou a ser:** um anel de espinhos de cristal azul no chão, girando
+  devagar; a metade de trás fica atrás do corpo e a da frente por cima.
+  Quanto mais escudo, mais espinhos acesos; pisca branco ao levar golpe.
+- **Por quê:** o Rone achou a bolha feia ("esse escudo está zuado"). O
+  poder se chama Escudo de *Espinhos*, então o visual passou a combinar.
