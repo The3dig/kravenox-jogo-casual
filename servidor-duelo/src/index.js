@@ -138,6 +138,12 @@ function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8", ...CORS } });
 }
 
+// Onde guardar cada categoria. O Abismo foi zerado em 14/11/2026 (ficou bem
+// mais difícil): ele passou a ser guardado com outro nome ("abismo2").
+function chaveCat(cat) {
+  return cat === "abismo" ? "abismo2" : cat;
+}
+
 // semana no formato 2026-S46 (segunda-feira a domingo, UTC)
 function semana(d = new Date()) {
   const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -202,7 +208,7 @@ export class Ranking {
       const valor = Math.floor(Number(c.valor) || 0);
       if (!id || !catValida(cat) || valor <= 0 || valor > 1e12) return json({ erro: "dados inválidos" }, 400);
       if (id.startsWith("teste")) return json({ ok: true, teste: true });   // testes não entram no ranking
-      const chave = "s:" + semana() + ":" + cat;
+      const chave = "s:" + semana() + ":" + chaveCat(cat);
       const tabela = (await this.storage.get(chave)) || {};
       const antigo = tabela[id];
       // duelo soma vitórias; os outros guardam o melhor da semana
@@ -217,8 +223,8 @@ export class Ranking {
       const cat = url.searchParams.get("cat") || "abismo";
       if (!catValida(cat)) return json({ erro: "categoria inválida" }, 400);
       const id = limpaId(url.searchParams.get("id"));
-      const tabela = (await this.storage.get("s:" + semana() + ":" + cat)) || {};
-      const passada = (await this.storage.get("s:" + semanaPassada() + ":" + cat)) || {};
+      const tabela = (await this.storage.get("s:" + semana() + ":" + chaveCat(cat))) || {};
+      const passada = (await this.storage.get("s:" + semanaPassada() + ":" + chaveCat(cat))) || {};
       const lista = this.ordenar(tabela);
       return json({
         semana: semana(),

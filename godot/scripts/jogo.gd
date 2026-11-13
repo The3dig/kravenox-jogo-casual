@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-14b"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-14c"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -549,6 +549,10 @@ func carregar_progresso() -> void:
 	prog["fragmentos"] = int(prog["fragmentos"])
 	modo = str(prog.get("modo", "normal"))
 	vibracao_ligada = bool(prog.get("vibracao", true))
+	if not prog.get("abismo_v2", false):
+		# 14/11: o Abismo ficou bem mais difícil; o recorde antigo foi zerado
+		prog["abismo_v2"] = true
+		prog["abismo_rec"] = 0
 	idioma = str(prog.get("idioma", idioma_padrao()))
 	cache_tx.clear()
 	var ultima := float(prog.get("ultima_visita", 0.0))

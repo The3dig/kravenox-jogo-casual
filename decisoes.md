@@ -439,3 +439,7 @@
   (era 9%). Robô com tudo no máximo: onda ~30, em qualquer capítulo.
 - **Por quê:** relato do Rone com print ("tem que ter fase até a pessoa
   cansar e bem mais difíceis").
+- **Recorde zerado (14/11):** como o Abismo ficou bem mais difícil, o
+  recorde de cada aparelho foi zerado uma vez (marca `abismo_v2`) e o ranking
+  do Abismo no servidor passou a ser guardado com outro nome ("abismo2"),
+  começando vazio. Pedido do Rone.
