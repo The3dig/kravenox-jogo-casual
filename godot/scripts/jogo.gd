@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-15f"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-15g"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -6835,7 +6835,7 @@ const JOGOS_NOSSOS := [
 	{"nome": "Cratera do Cisma", "desc": "O primeiro jogo do Kravenox, na Cratera do Cisma.", "url": "https://the3dig.github.io/kravenox-jogar/", "img": "cratera"},
 	{"nome": "Reino Quebrado (RPG)", "desc": "O RPG da história do livro, capítulo por capítulo.", "url": "https://the3dig.github.io/kravenox-jogar/rpg/", "img": "rpg"},
 	{"nome": "Kravenox Plataforma", "desc": "Jogo de plataforma em 3D: corra, pule e lute pelas fases.", "url": "https://the3dig.github.io/kravenox-jogar/plataforma/", "img": "plataforma"},
-	{"nome": "Reino Quebrado Online", "desc": "O MMO em 3D: escolha um herói do livro e explore o reino.", "url": "https://the3dig.github.io/kravenox-mmo/", "img": "mmo"},
+	{"nome": "Reino Quebrado Online", "desc": "O MMO em 3D: escolha um herói do livro e explore o reino.", "url": "https://the3dig.github.io/kravenox-jogar/mmo/", "img": "mmo"},
 ]
 var tex_jogos := {}
 

@@ -531,3 +531,11 @@
   outros jogos (ex.: "mmo-nivel") não exigem conta. Versão 2026-11-15f.
 - **Por quê:** pedido do Rone ("criar usuário e senha igual ao mmo pra
   registrar quem está jogando").
+
+## 15/11/2026: link do Reino Quebrado Online corrigido
+
+- **Era:** o botão "Mais jogos" mandava o MMO para
+  `the3dig.github.io/kravenox-mmo/`, que nunca foi ligado (o Ludivicky avisou
+  que não abria).
+- **Passou a ser:** `the3dig.github.io/kravenox-jogar/mmo/`, onde a conversa
+  do MMO publica e atualiza o jogo. Versão 2026-11-15g.
