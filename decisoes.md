@@ -452,3 +452,6 @@
   Quanto mais escudo, mais espinhos acesos; pisca branco ao levar golpe.
 - **Por quê:** o Rone achou a bolha feia ("esse escudo está zuado"). O
   poder se chama Escudo de *Espinhos*, então o visual passou a combinar.
+- **Mudou de novo (14/11, versão 2026-11-14e):** o anel também saiu. O
+  escudo aparece só na barra de vida lá em cima (faixa azul e "+N"), que já
+  existia. O Rone achou que não precisa de nada em volta do Kravenox.
