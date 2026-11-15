@@ -597,3 +597,13 @@
 - **Era:** a seta ">" da tela inicial encostava no botão Baús (print do Rone).
 - **Passou a ser:** a coluna da direita (Evento, Presente, Missões, Baús)
   ficou mais junta e as setas desceram um pouco. Versão 2026-11-16c.
+
+## 16/11/2026: login na entrada do jogo
+
+- **Era:** a conta só aparecia na tela Online e no Ranking.
+- **Passou a ser:** ao abrir o jogo, quem ainda não tem conta salva no
+  celular vê a tela "Conta Kravenox" (Entrar / Criar conta), como no MMO.
+  Quem já entrou uma vez não vê nada: a conta fica salva e o jogo só carrega.
+  Tem o botão "Jogar sem conta", porque o jogo continua funcionando offline;
+  nesse caso a tela volta na próxima vez que abrir o jogo. Versão 2026-11-16d.
+- **Por quê:** pedido do Rone.

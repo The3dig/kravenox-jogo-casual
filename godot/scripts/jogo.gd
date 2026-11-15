@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-16c"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-16d"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -738,6 +738,13 @@ func ir_para(t: String) -> void:
 	t_tela = 0.0
 	if t == "inicio":
 		checar_novidades()
+		if not conta_pedida:
+			# 16/11: login na entrada, como no MMO. Quem já entrou neste
+			# celular não vê nada (a conta fica salva); sem conta, pode jogar
+			# assim mesmo (o jogo funciona offline) e o pedido volta na próxima vez.
+			conta_pedida = true
+			if conta() == "" and not robo and online_disponivel() and OS.has_feature("web"):
+				abrir_conta(true)
 		if not ultrapassagem_vista:
 			ultrapassagem_vista = true
 			verificar_ultrapassagem()
@@ -7873,15 +7880,19 @@ func conta() -> String:
 	return str(prog.get("conta", ""))
 
 
-func abrir_conta() -> void:
+var conta_pedida := false
+
+
+func abrir_conta(entrada := false) -> void:
 	if not OS.has_feature("web"):
 		popup = {"titulo": "CONTA", "texto": "A conta só pode ser criada no jogo pelo navegador."}
 		return
 	if cb_conta == null:
 		cb_conta = JavaScriptBridge.create_callback(_resposta_conta)
 	var textos := {"titulo": tx("Conta Kravenox"), "usuario": tx("Usuário"), "senha": tx("Senha"),
-		"entrar": tx("Entrar"), "criar": tx("Criar conta"), "cancelar": tx("Cancelar"),
-		"nota": tx("Primeira vez? Escolha um usuário e uma senha e toque em Criar conta. No outro celular, use os mesmos e toque em Entrar.")}
+		"entrar": tx("Entrar"), "criar": tx("Criar conta"), "cancelar": tx("Jogar sem conta") if entrada else tx("Cancelar"),
+		"nota": tx("Primeira vez? Escolha um usuário e uma senha e toque em Criar conta. No outro celular, use os mesmos e toque em Entrar.")
+			+ (" " + tx("A conta põe seu nome no ranking e junta os seus celulares. Sem ela o jogo funciona igual, só fica fora do online.") if entrada else "")}
 	JavaScriptBridge.eval(JS_CONTA)
 	JavaScriptBridge.get_interface("window").kxConta(JSON.stringify(textos), cb_conta)
 
