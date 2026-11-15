@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-16g"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-16h"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -7028,6 +7028,16 @@ const CODIGOS_BETA := {
 	"a5de82764bb9a9bb904927d790a6ec48910a4f3747b5e25f53727d89604898e7": "Ludivicky",   # 14/11: o primeiro código do Ludivicky vazou num grupo e foi desligado
 }
 const SKINS_BETA := ["gelo", "ouro", "sombrio", "brasa"]
+# 16/11: códigos de RECUPERAÇÃO (Ajustes → Código de presente) para quem
+# perdeu o progresso. Como no beta, aqui fica só o hash do código. O progresso
+# é SOMADO ao do aparelho (fica o maior de cada coisa), nunca trocado, e os
+# fragmentos só entram uma vez. Gerado com ferramentas/codigo_recuperacao.py.
+const RECUPERACOES := {
+	"d0c68843386d3f4db24c974c4ed978c18c1cb88730b654415590ac3838bfa712": {"nome": "Ludivicky", "liberado": 40, "fragmentos": 300,
+		"melhorias": {"critico":  5, "defesa":  5, "essencia":  9, "forca":  6, "passo":  5, "sorte":  2, "vida":  9}, "obras": {"vigia": 1},
+		"skins": ["gelo", "ouro", "sombrio", "brasa", "pioneiro"], "skin": "pioneiro", "beta": true},
+}
+
 
 
 func ret_skin_beta(i: int) -> Rect2:
@@ -7044,6 +7054,9 @@ func pedir_codigo() -> void:
 	if c == "":
 		if not OS.has_feature("web"):
 			popup = {"titulo": "CÓDIGO DE PRESENTE", "texto": "Copie o código e depois toque aqui."}
+		return
+	if RECUPERACOES.has(c.sha256_text()):
+		aplicar_recuperacao(c.sha256_text())
 		return
 	var nome_beta: String = CODIGOS_BETA.get(c.sha256_text(), "")
 	if nome_beta == "":
@@ -8458,3 +8471,41 @@ func baixar_save(depois_de_entrar: bool) -> void:
 	som("nivel")
 	if tela != "jogo":
 		popup = {"titulo": "PROGRESSO RECUPERADO", "texto": tx("O progresso guardado na sua conta voltou: capítulo %d, %d fragmentos.") % [int(prog["liberado"]), int(prog["fragmentos"])]}
+
+
+func aplicar_recuperacao(h: String) -> void:
+	var r: Dictionary = RECUPERACOES[h]
+	var lib := int(r["liberado"])
+	prog["liberado"] = maxi(int(prog["liberado"]), lib)
+	for c in range(1, lib):
+		prog["feitos"][str(c)] = true
+	for k in r["melhorias"]:
+		prog["melhorias"][k] = maxi(nivel_melhoria(k), int(r["melhorias"][k]))
+	var ob = prog.get("obras", {})
+	if not (ob is Dictionary):
+		ob = {}
+	for k in r["obras"]:
+		ob[k] = maxi(int(ob.get(k, 0)), int(r["obras"][k]))
+	prog["obras"] = ob
+	var cp: Dictionary = prog.get("compras", {})
+	for sk in r["skins"]:
+		if not cp.has("skin_" + sk):
+			cp["skin_" + sk] = "recuperado"
+	prog["compras"] = cp
+	if str(prog.get("skin", "")) == "":
+		prog["skin"] = r["skin"]
+	if r.get("beta", false):
+		prog["beta"] = "pronto"
+		prog["beta_frag"] = true
+		prog["beta_nome"] = r["nome"]
+	var usados: Dictionary = prog.get("recuperacoes", {})
+	if not usados.has(h.substr(0, 12)):
+		usados[h.substr(0, 12)] = true
+		prog["fragmentos"] = int(prog["fragmentos"]) + int(r["fragmentos"])
+	prog["recuperacoes"] = usados
+	cap_sel = 0
+	salvar()
+	subir_save(true, true)
+	som("nivel")
+	tremer(0.4, 200)
+	popup = {"titulo": "PROGRESSO DE VOLTA!", "texto": tx("Bem-vindo de volta, %s! Capítulo %d liberado, skins devolvidas e +%d fragmentos.") % [str(r["nome"]), lib, int(r["fragmentos"])]}

@@ -655,3 +655,9 @@
     deixar ele para trás. O código não fica no repositório (é pessoal).
   - **Sugestões:** `ADMINS = "roneignacio"` (confirmado pelo Rone).
 - **Por quê:** pedido do Rone ("arruma tudo").
+- **Código curto (16/11, versão 2026-11-16h):** o código de progresso tinha
+  mais de 500 letras. Passou a ser um código curto (formato `LUDI-XXXXX`),
+  digitado em Ajustes → Código de presente. No jogo fica só o hash
+  (`RECUPERACOES`). O progresso é **somado** ao do aparelho (fica o maior de
+  cada coisa: capítulo, melhorias, skins), nunca trocado, e os 300
+  fragmentos entram uma vez só. Ferramenta: `ferramentas/codigo_recuperacao.py`.
