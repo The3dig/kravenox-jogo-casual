@@ -607,3 +607,19 @@
   Tem o botão "Jogar sem conta", porque o jogo continua funcionando offline;
   nesse caso a tela volta na próxima vez que abrir o jogo. Versão 2026-11-16d.
 - **Por quê:** pedido do Rone.
+
+## 16/11/2026: save em três lugares (o Ludivicky perdeu o progresso)
+
+- **Era:** o save ficava num arquivo só. Se ele estivesse vazio ou estragado
+  ao abrir o jogo (a página recarregou bem na hora de gravar, ou o iPhone
+  limpou o armazenamento), o jogo começava do zero e, no primeiro
+  salvamento, gravava por cima. O Ludivicky perdeu todo o progresso e as
+  skins.
+- **Passou a ser:** o save é gravado em três lugares (arquivo, cópia do
+  arquivo e localStorage do navegador), um de cada vez. Ao abrir, o jogo lê
+  os três e usa o mais completo (mais capítulos, melhorias e skins), e já
+  grava de novo nos três. Um arquivo estragado não é apagado: fica como
+  `progresso-estragado.json`. "Apagar progresso" e "Colar progresso" limpam
+  os três. Testado: arquivo estragado, vazio, sumido e jogo novo gravado por
+  cima mantêm o progresso; no navegador, apagando os arquivos do jogo, ele
+  voltou pelo localStorage. Versão 2026-11-16e.

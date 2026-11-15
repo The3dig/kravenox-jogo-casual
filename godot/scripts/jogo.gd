@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-16d"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-16e"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -387,6 +387,7 @@ func _ready() -> void:
 			trechos = dt
 	carregar_idioma()
 	carregar_progresso()
+	salvar()   # 16/11: já grava nos três lugares ao abrir (se um se perdeu, os outros o refazem)
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--servidor-duelo="):
 			servidor_duelo = a.substr(17)
@@ -534,15 +535,68 @@ func gerar_vinheta() -> Texture2D:
 const ARQUIVO := "user://progresso.json"
 
 
+# 16/11: o Ludivicky perdeu todo o progresso. Se o arquivo do save estiver
+# vazio ou estragado (a página recarregou bem na hora de gravar, ou o iPhone
+# limpou o armazenamento), o jogo começava do zero e gravava POR CIMA. Agora
+# o save fica em três lugares (arquivo, cópia do arquivo e localStorage do
+# navegador) e ao abrir o jogo usa o mais completo. Um arquivo estragado não
+# é apagado: fica guardado como progresso-estragado.json.
+const ARQUIVO_COPIA := "user://progresso-copia.json"
+const ARQUIVO_RUIM := "user://progresso-estragado.json"
+
+
+func ler_save(caminho: String) -> Dictionary:
+	if not FileAccess.file_exists(caminho):
+		return {}
+	var f := FileAccess.open(caminho, FileAccess.READ)
+	if f == null:
+		return {}
+	var texto := f.get_as_text()
+	f.close()
+	var d = JSON.parse_string(texto)
+	if d is Dictionary and d.has("liberado"):
+		return d
+	if texto.strip_edges() != "" and caminho == ARQUIVO:
+		var g := FileAccess.open(ARQUIVO_RUIM, FileAccess.WRITE)   # guarda o estragado, nunca apaga
+		if g:
+			g.store_string(texto)
+			g.close()
+	return {}
+
+
+func ler_save_navegador() -> Dictionary:
+	if not OS.has_feature("web"):
+		return {}
+	var t = JavaScriptBridge.eval("(function(){try{return localStorage.getItem('kx_progresso')||''}catch(e){return ''}})()")
+	var d = JSON.parse_string(str(t)) if str(t) != "" else null
+	return d if d is Dictionary and d.has("liberado") else {}
+
+
+# quanto progresso um save tem (para escolher o mais completo)
+func tamanho_save(d: Dictionary) -> int:
+	if d.is_empty():
+		return -1
+	var m := 0
+	var mel = d.get("melhorias", {})
+	if mel is Dictionary:
+		for v in mel.values():
+			m += int(v)
+	var feitos = d.get("feitos", {})
+	var cp = d.get("compras", {})
+	return int(d.get("liberado", 1)) * 1000 + (feitos.size() if feitos is Dictionary else 0) * 100 + m * 10 \
+		+ (cp.size() if cp is Dictionary else 0) * 50 + mini(int(d.get("fragmentos", 0)), 9)
+
+
 func carregar_progresso() -> void:
 	prog = {"liberado": 1, "feitos": {}, "fragmentos": 0, "melhorias": {}, "vistos": {}, "bonus": {}}
-	if robo or not FileAccess.file_exists(ARQUIVO):
+	if robo:
 		return
-	var f := FileAccess.open(ARQUIVO, FileAccess.READ)
-	if f == null:
-		return
-	var d = JSON.parse_string(f.get_as_text())
-	if d is Dictionary:
+	var melhor := {}
+	for d in [ler_save(ARQUIVO), ler_save(ARQUIVO_COPIA), ler_save_navegador()]:
+		if tamanho_save(d) > tamanho_save(melhor):
+			melhor = d
+	if not melhor.is_empty():
+		var d = melhor
 		for k in d.keys():   # tudo o que estiver salvo (inclusive a partida em andamento)
 			prog[k] = d[k]
 	prog["liberado"] = clampi(int(prog["liberado"]), 1, TOTAL_CAPITULOS)
@@ -580,10 +634,7 @@ func carregar_progresso() -> void:
 func salvar() -> void:
 	if robo:
 		return
-	var f := FileAccess.open(ARQUIVO, FileAccess.WRITE)
-	if f:
-		f.store_string(JSON.stringify(prog))
-		f.close()   # fecha na hora: no navegador é aí que o arquivo vai para o armazenamento do aparelho
+	gravar_save(JSON.stringify(prog))
 	checar_poder.call_deferred()
 	checar_conquistas_skin.call_deferred()
 
@@ -3473,7 +3524,7 @@ func clique_menu(p: Vector2) -> void:
 				efeitos_ligados = not efeitos_ligados
 			elif b["apagar"].has_point(p):
 				if apagar_confirma > 0:
-					DirAccess.remove_absolute(ProjectSettings.globalize_path(ARQUIVO))
+					apagar_saves()
 					carregar_progresso()
 					apagar_confirma = 0.0
 					cap_sel = 0
@@ -6678,10 +6729,8 @@ func copiar_progresso() -> void:
 func colar_progresso() -> void:
 	if colar_confirma > 0 and not progresso_recebido.is_empty():
 		# segundo toque: troca o progresso deste celular
-		var f := FileAccess.open(ARQUIVO, FileAccess.WRITE)
-		if f:
-			f.store_string(JSON.stringify(progresso_recebido))
-			f.close()
+		apagar_saves()   # o código colado troca o progresso deste celular
+		gravar_save(JSON.stringify(progresso_recebido))
 		carregar_progresso()
 		cap_sel = 0
 		colar_confirma = 0.0
@@ -8316,3 +8365,23 @@ func verificar_ultrapassagem() -> void:
 		rp[cat] = {"s": str(r.get("semana", "")), "p": pos}
 		prog["rank_pos"] = rp
 	salvar()
+
+
+# grava o save nos três lugares (um de cada vez: se cair no meio de um,
+# os outros continuam inteiros)
+func gravar_save(texto: String) -> void:
+	for caminho in [ARQUIVO, ARQUIVO_COPIA]:
+		var f := FileAccess.open(caminho, FileAccess.WRITE)
+		if f:
+			f.store_string(texto)
+			f.close()   # fecha na hora: no navegador é aí que o arquivo vai para o armazenamento do aparelho
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("try{localStorage.setItem('kx_progresso',%s)}catch(e){}" % JSON.stringify(texto))
+
+
+func apagar_saves() -> void:
+	for caminho in [ARQUIVO, ARQUIVO_COPIA]:
+		if FileAccess.file_exists(caminho):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(caminho))
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("try{localStorage.removeItem('kx_progresso')}catch(e){}")
