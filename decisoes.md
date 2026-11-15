@@ -587,3 +587,13 @@
   Perder não conta: dá para tentar de novo no mesmo dia até vencer. Versão
   2026-11-16b.
 - **Por quê:** pedido do Rone.
+- **Mudou de novo (16/11, versão 2026-11-16c):** **uma tentativa por dia**,
+  vencendo ou perdendo (marca `desafio_tentado`). A partida em andamento
+  continua podendo ser retomada; o botão Recomeçar não aparece no Desafio.
+  Pedido do Rone ("uma tentativa por dia é justa").
+
+## 16/11/2026: seta dos capítulos separada do botão Baús
+
+- **Era:** a seta ">" da tela inicial encostava no botão Baús (print do Rone).
+- **Passou a ser:** a coluna da direita (Evento, Presente, Missões, Baús)
+  ficou mais junta e as setas desceram um pouco. Versão 2026-11-16c.

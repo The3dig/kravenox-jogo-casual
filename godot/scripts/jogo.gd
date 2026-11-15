@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-16b"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-16c"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -3101,13 +3101,14 @@ func botoes_menu() -> Dictionary:
 		b["conquista%d" % i] = Rect2(370, TOPO_MUNDOS + 6 + i * 51 + 8, 94, 32)
 	b["normal"] = Rect2(110, 150, 128, 40)
 	b["pesadelo"] = Rect2(242, 150, 128, 40)
-	b["ant"] = Rect2(30, 440, 48, 64)
-	b["prox"] = Rect2(402, 440, 48, 64)
+	b["ant"] = Rect2(30, 448, 48, 64)
+	b["prox"] = Rect2(402, 448, 48, 64)
 	b["jogar"] = Rect2(110, 612, 260, 62)
-	b["presente"] = Rect2(LARG - 84, 214, 72, 74)
-	b["missoes"] = Rect2(LARG - 84, 296, 72, 74)
-	b["baus"] = Rect2(LARG - 84, 378, 72, 74)
-	b["evento"] = Rect2(LARG - 84, 134, 72, 74)
+	# 16/11: coluna da direita mais junta, para não encostar na seta dos capítulos
+	b["evento"] = Rect2(LARG - 84, 132, 72, 72)
+	b["presente"] = Rect2(LARG - 84, 210, 72, 72)
+	b["missoes"] = Rect2(LARG - 84, 288, 72, 72)
+	b["baus"] = Rect2(LARG - 84, 366, 72, 72)
 	b["kx_colecao"] = Rect2(LARG - 86, 372, 74, 70)
 	b["fora"] = Rect2(12, 520, 84, 74)
 	b["loja"] = Rect2(222, 20, 94, 34)
@@ -3737,7 +3738,7 @@ func desenhar_inicio() -> void:
 	if pontos_pacto() > 0:
 		escrever("Pactos: %d pontos · fragmentos ×%s" % [pontos_pacto(), String.num(mult_pacto(), 2).replace(".", ",")], Vector2(LARG / 2, 710), 13, Color8(220, 150, 255), false)
 	if liberou("desafio"):
-		botao_icone(b["desafio"], "desafio", "Desafio", not desafio_feito_hoje())
+		botao_icone(b["desafio"], "desafio", "Desafio", not desafio_feito_hoje() and str(prog.get("desafio_tentado", "")) != hoje())
 	if liberou("abismo"):
 		var ptb := partida_guardada()
 		var rot := "Rec. " + num_curto(int(prog.get("abismo_dano", 0)))
@@ -4752,14 +4753,22 @@ func desafio_feito_hoje() -> bool:
 	return prog.get("desafio_dia", "") == hoje()
 
 
-# 16/11: depois de vencer o Desafio do Dia, ele só volta no dia seguinte
-# (antes dava para jogar de novo, valendo só 2 fragmentos). Perder não conta:
-# pode tentar de novo no mesmo dia até vencer.
+# 16/11: uma tentativa por dia no Desafio do Dia. Vencendo ou perdendo, ele
+# só volta no dia seguinte; a partida em andamento (salva entre as ondas)
+# continua podendo ser retomada.
 func tentar_desafio() -> void:
+	var pt := partida_guardada()
+	var em_andamento := not pt.is_empty() and str(pt.get("tipo", "")) == "desafio" and str(pt.get("desafio", {}).get("dia", "")) == hoje()
 	if desafio_feito_hoje():
 		som("dano")
 		popup = {"titulo": "DESAFIO DO DIA", "texto": "Você já venceu o desafio de hoje! Um novo desafio chega amanhã."}
 		return
+	if str(prog.get("desafio_tentado", "")) == hoje() and not em_andamento:
+		som("dano")
+		popup = {"titulo": "DESAFIO DO DIA", "texto": "Você já usou a tentativa de hoje. Um novo desafio chega amanhã!"}
+		return
+	prog["desafio_tentado"] = hoje()
+	salvar()
 	som("gema")
 	comecar_desafio()
 
@@ -5064,7 +5073,7 @@ func texto_rec(id: String) -> String:
 		"abismo":
 			return tx("Recorde: %s de dano") % num_grande(int(prog.get("abismo_dano", 0)))
 		"desafio":
-			return "Feito hoje!" if desafio_feito_hoje() else "Ainda não feito hoje"
+			return "Feito hoje!" if desafio_feito_hoje() else ("Tentativa de hoje usada" if str(prog.get("desafio_tentado", "")) == hoje() else "Uma tentativa por dia")
 		"duelo":
 			return "Vitórias: %d" % int(prog.get("modos", {}).get("duelo_vitorias", 0))
 	return ""
@@ -7759,8 +7768,9 @@ var reiniciar_ate := -1.0
 
 
 func pode_reiniciar() -> bool:
+	# o Desafio do Dia não recomeça: é uma tentativa por dia
 	return tela == "jogo" and estado == "loja" and not em_risco and escolha.is_empty() \
-		and tipo_partida in ["capitulo", "abismo", "desafio"]
+		and tipo_partida in ["capitulo", "abismo"]
 
 
 func reiniciar_partida() -> void:
