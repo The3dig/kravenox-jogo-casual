@@ -178,6 +178,16 @@ async function api(req, env, partes) {
   if (partes[0] === "conta" && req.method === "POST" && (partes[1] === "criar" || partes[1] === "entrar")) {
     return contas.fetch(new Request("https://interno/" + partes[1], { method: "POST", body: JSON.stringify(corpo) }));
   }
+  // 15/11: perfil (aparece ao tocar no nome no ranking) e sugestões para o Rone
+  if (partes[0] === "perfil" && req.method === "POST") {
+    return contas.fetch(new Request("https://interno/perfil", { method: "POST", body: JSON.stringify(corpo) }));
+  }
+  if (partes[0] === "perfil" && req.method === "GET") {
+    return contas.fetch(new Request("https://interno/ver-perfil" + url.search));
+  }
+  if ((partes[0] === "sugestao" || partes[0] === "sugestoes") && req.method === "POST") {
+    return contas.fetch(new Request("https://interno/" + partes[0], { method: "POST", body: JSON.stringify(corpo) }));
+  }
   if (partes[0] === "recorde" && req.method === "POST" && CATS.includes(String(corpo.cat || ""))) {
     // 15/11: no ranking do Kravenox só entra quem tem conta, com o nome da conta
     const r = await (await contas.fetch(new Request("https://interno/nome?id=" + encodeURIComponent(String(corpo.id || ""))))).json();
@@ -397,6 +407,10 @@ function hexParaBytes(h) {
   return new Uint8Array(h.match(/../g).map((x) => parseInt(x, 16)));
 }
 
+function novoToken() {
+  return [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 function iguais(a, b) {
   if (a.length !== b.length) return false;
   let d = 0;
@@ -405,8 +419,16 @@ function iguais(a, b) {
 }
 
 export class Contas {
-  constructor(state) {
+  constructor(state, env) {
     this.storage = state.storage;
+    // quem pode ler as sugestões: usuários separados por vírgula (wrangler.toml, [vars] ADMINS)
+    this.admins = String((env && env.ADMINS) || "").toLowerCase().split(",").map((x) => x.trim()).filter(Boolean);
+  }
+
+  async contaDoId(id) {
+    const u = id ? await this.storage.get("i:" + id) : null;
+    const c = u ? await this.storage.get("u:" + u) : null;
+    return c ? { chave: u, conta: c } : null;
   }
 
   async fetch(req) {
@@ -418,7 +440,46 @@ export class Contas {
       const c = u ? await this.storage.get("u:" + u) : null;
       return json({ nome: c ? c.nome : null });
     }
+    if (acao === "ver-perfil") {
+      const chave = String(url.searchParams.get("nome") || "").trim().toLowerCase();
+      const conta = chave ? await this.storage.get("u:" + chave) : null;
+      if (!conta) return json({ erro: "Jogador não encontrado." });
+      const p = (await this.storage.get("p:" + conta.id)) || {};
+      return json({ nome: conta.nome, ...p });
+    }
     const c = await req.json();
+    if (acao === "perfil") {
+      const dono = await this.contaDoId(limpaId(c.id));
+      if (!dono) return json({ erro: "sem conta" });
+      const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
+      await this.storage.put("p:" + dono.conta.id, {
+        poder: n(c.poder, 1e7), abismo: n(c.abismo, 1e12), capitulos: n(c.capitulos, 500), pesadelo: n(c.pesadelo, 500),
+        skins: n(c.skins, 100), skin: String(c.skin || "").replace(/[^a-z]/g, "").slice(0, 12),
+        titulo: String(c.titulo || "").replace(/[<>]/g, "").slice(0, 60), t: Date.now(),
+      });
+      return json({ ok: true });
+    }
+    if (acao === "sugestao") {
+      const dono = await this.contaDoId(limpaId(c.id));
+      if (!dono) return json({ erro: "Crie uma conta para mandar sugestões." });
+      const texto = String(c.texto || "").replace(/[<>]/g, "").trim().slice(0, 500);
+      if (!texto) return json({ erro: "Escreva alguma coisa." });
+      // até 10 por dia por pessoa
+      const dia = new Date().toISOString().slice(0, 10);
+      const lim = (await this.storage.get("lim:" + dono.chave)) || { dia, n: 0 };
+      if (lim.dia === dia && lim.n >= 10) return json({ erro: "Já recebemos 10 sugestões suas hoje. Mande mais amanhã!" });
+      await this.storage.put("lim:" + dono.chave, { dia, n: lim.dia === dia ? lim.n + 1 : 1 });
+      const t = Date.now();
+      await this.storage.put("g:" + String(t).padStart(15, "0") + ":" + dono.chave, { nome: dono.conta.nome, texto, t });
+      return json({ ok: true });
+    }
+    if (acao === "sugestoes") {
+      const dono = await this.contaDoId(limpaId(c.id));
+      if (!dono || !this.admins.includes(dono.chave)) return json({ erro: "Só o dono do jogo pode ler as sugestões." });
+      if (!dono.conta.token || !iguais(String(c.token || ""), dono.conta.token)) return json({ erro: "Entre de novo na conta (Online → Conta) para ler as sugestões." });
+      const lista = [...(await this.storage.list({ prefix: "g:", reverse: true, limit: 100 })).values()].filter((g) => !g.nome.toLowerCase().startsWith("zzteste"));
+      return json({ lista });
+    }
     const nome = String(c.usuario || "").trim();
     const senha = String(c.senha || "");
     const id = limpaId(c.id);
@@ -432,9 +493,10 @@ export class Contas {
       if (ja) return json({ erro: "Este celular já tem a conta " + (await this.storage.get("u:" + ja)).nome + ". Use Entrar." });
       const sal = crypto.getRandomValues(new Uint8Array(16));
       const salHex = [...sal].map((b) => b.toString(16).padStart(2, "0")).join("");
-      await this.storage.put("u:" + chave, { nome, sal: salHex, hash: await hashSenha(senha, sal), id, criado: Date.now() });
+      const token = novoToken();
+      await this.storage.put("u:" + chave, { nome, sal: salHex, hash: await hashSenha(senha, sal), id, criado: Date.now(), token });
       await this.storage.put("i:" + id, chave);
-      return json({ ok: true, nome, id });
+      return json({ ok: true, nome, id, token, admin: this.admins.includes(chave) });
     }
     if (acao === "entrar") {
       // trava de 15 min depois de 10 senhas erradas seguidas
@@ -446,7 +508,11 @@ export class Contas {
         return json({ erro: "Usuário ou senha errados." });
       }
       await this.storage.delete("f:" + chave);
-      return json({ ok: true, nome: conta.nome, id: conta.id });
+      if (!conta.token) {
+        conta.token = novoToken();
+        await this.storage.put("u:" + chave, conta);
+      }
+      return json({ ok: true, nome: conta.nome, id: conta.id, token: conta.token, admin: this.admins.includes(chave) });
     }
     return json({ erro: "não encontrado" }, 404);
   }

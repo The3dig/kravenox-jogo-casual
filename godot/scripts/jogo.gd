@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-15g"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-15h"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -585,6 +585,7 @@ func salvar() -> void:
 		f.store_string(JSON.stringify(prog))
 		f.close()   # fecha na hora: no navegador é aí que o arquivo vai para o armazenamento do aparelho
 	checar_poder.call_deferred()
+	checar_conquistas_skin.call_deferred()
 
 
 func mundo_de(c: int) -> int:
@@ -737,6 +738,9 @@ func ir_para(t: String) -> void:
 	t_tela = 0.0
 	if t == "inicio":
 		checar_novidades()
+		if not ultrapassagem_vista:
+			ultrapassagem_vista = true
+			verificar_ultrapassagem()
 	if t == "mundos":
 		# vindo de um capítulo, mostra o mundo dele; vindo do início, o próximo capítulo
 		var c := capitulo if destaque_cap > 0 else liberado_modo()
@@ -1298,6 +1302,7 @@ func ferir(m: Dictionary, dano: float, critico_ok := true) -> void:
 	m["hp"] -= dano
 	if tipo_partida == "abismo":
 		dano_partida += dano
+		dano_evento += dano
 	m["flash"] = 0.1
 	if golpe.has("sangra"):
 		m["sangra"] = 3.0
@@ -2173,6 +2178,12 @@ func _draw() -> void:
 			desenhar_ranking()
 		"ordem":
 			desenhar_ordem()
+		"colecao":
+			desenhar_colecao()
+		"evento":
+			desenhar_evento()
+		"sugestoes":
+			desenhar_sugestoes()
 		"especial":
 			desenhar_esp()
 		_:
@@ -2776,6 +2787,7 @@ func desenhar_kravenox(k: Vector2) -> void:
 			var ini := k + Vector2(-k_dir * 18, y)
 			draw_line(ini, ini + Vector2(-k_dir * tam, 0), Color(laranja, 0.55), 3, true)
 	brilho_suave(k + Vector2(0, -4), 48, cor_forma(), 0.4 + (0.6 * (0.5 + 0.5 * sin(tempo * 8)) if furia >= 100.0 else 0.0))
+	desenhar_rastro_skin(k)
 	desenhar_arte(nome, base, 68, k_dir < 0)
 	var e := eco_atual()
 	if not e.is_empty():
@@ -3095,6 +3107,8 @@ func botoes_menu() -> Dictionary:
 	b["presente"] = Rect2(LARG - 84, 214, 72, 74)
 	b["missoes"] = Rect2(LARG - 84, 296, 72, 74)
 	b["baus"] = Rect2(LARG - 84, 378, 72, 74)
+	b["evento"] = Rect2(LARG - 84, 134, 72, 74)
+	b["kx_colecao"] = Rect2(LARG - 86, 372, 74, 70)
 	b["fora"] = Rect2(12, 520, 84, 74)
 	b["loja"] = Rect2(222, 20, 94, 34)
 	b["jogos"] = Rect2(60, 96, 116, 34)
@@ -3181,9 +3195,18 @@ func clique_menu(p: Vector2) -> void:
 				sair_duelo()
 				ir_para("online" if online_disponivel() else "modos")
 				return
-		"ranking", "ordem":
+		"ranking", "ordem", "sugestoes":
 			if b["voltar"].has_point(p):
+				perfil_aberto = {}
 				ir_para("online")
+				return
+		"colecao":
+			if b["voltar"].has_point(p):
+				ir_para("kravenox")
+				return
+		"evento":
+			if b["voltar"].has_point(p):
+				ir_para("inicio")
 				return
 		"mundos", "melhorias", "missoes", "ajustes", "kravenox", "acampamento", "pactos", "modos", "loja", "jogos", "online":
 			if b["voltar"].has_point(p):
@@ -3254,6 +3277,9 @@ func clique_menu(p: Vector2) -> void:
 					ganhar(v, "PRESENTE · DIA %d DE 7" % seq)
 				else:
 					popup = {"titulo": "PRESENTE DO DIA", "texto": "Volte amanhã para outro presente"}
+			elif b["evento"].has_point(p):
+				som("gema")
+				ir_para("evento")
 			elif b["missoes"].has_point(p):
 				ir_para("missoes")
 			elif b["baus"].has_point(p):
@@ -3304,6 +3330,8 @@ func clique_menu(p: Vector2) -> void:
 				ir_para("cronicas")
 			elif b["kx_ecos"].has_point(p):
 				ir_para("ecos")
+			elif b["kx_colecao"].has_point(p):
+				ir_para("colecao")
 			elif b["kx_formas"].has_point(p):
 				ir_para("formas")
 			elif b["kx_conquistas"].has_point(p):
@@ -3347,6 +3375,8 @@ func clique_menu(p: Vector2) -> void:
 			clique_ranking(p)
 		"ordem":
 			clique_ordem(p)
+		"colecao":
+			clique_colecao(p)
 		"jogos":
 			for i in JOGOS_NOSSOS.size():
 				if Rect2(14, 152 + i * 132, LARG - 28, 122).has_point(p):
@@ -3451,6 +3481,19 @@ func botao_icone(r: Rect2, tipo: String, rotulo: String, alerta := false) -> voi
 	caixa(r, Color(0.05, 0.04, 0.07, 0.82), 12, 2, Color(OURO, 0.75), true, 6)
 	var c := r.get_center() + Vector2(0, -9)
 	match tipo:
+		"evento":
+			var ev := evento_atual()
+			brilho_suave(c, 30, ev["cor"], 0.9)
+			draw_circle(c, 16, Color8(30, 22, 40))
+			draw_arc(c, 16, 0, TAU, 24, ev["cor"], 2, true)
+			var fr := clampf(float(progresso_evento()) / float(ev["meta"]), 0, 1)
+			draw_arc(c, 12, -PI / 2, -PI / 2 + TAU * fr, 24, OURO, 4, true)
+			escrever("!", c + Vector2(0, 1), 16, BRANCO, false)
+		"colecao":
+			var sk := skin_atual()
+			brilho_suave(c, 30, item_loja("skin_" + sk)["cor"] if sk != "" else VERMELHO, 0.8)
+			var tk: Texture2D = tex["kravenox"] if sk == "" else textura_skin(sk, "kravenox")
+			draw_texture_rect(tk, Rect2(c + Vector2(-20, -20), Vector2(40, 40)), false)
 		"presente":
 			brilho_suave(c, 30, OURO, 0.8)
 			caixa(Rect2(c + Vector2(-16, -6), Vector2(32, 22)), Color8(150, 30, 40), 3, 1, TINTA)
@@ -3676,6 +3719,7 @@ func desenhar_inicio() -> void:
 	botao_icone(b["presente"], "presente", "Presente", presente_disponivel())
 	botao_icone(b["missoes"], "missoes", "Missões", missoes_prontas() > 0)
 	botao_icone(b["baus"], "baus", "Baús", not baus_prontos().is_empty())
+	botao_icone(b["evento"], "evento", "Evento", evento_cumprido_sem_ver())
 	var vf := valor_fora()
 	botao_icone(b["fora"], "fora", "Vigília +%d" % vf if vf > 0 else "Vigília", vf >= 1)
 	# começar / continuar
@@ -4166,6 +4210,7 @@ func desenhar_kravenox_tela() -> void:
 	botao_icone(b["kx_grimorio"], "grimorio", "Grimório")
 	botao_icone(b["kx_cronicas"], "cronicas", "Crônicas")
 	botao_icone(b["kx_ecos"], "ecos", "Ecos")
+	botao_icone(b["kx_colecao"], "colecao", "Skins")
 	# barra até a próxima forma
 	var ini := int(FORMAS_KX[f][0])
 	var prox := int(FORMAS_KX[f + 1][0]) if f + 1 < FORMAS_KX.size() else ini
@@ -6320,6 +6365,15 @@ const LOJA_ITENS := [
 	{"id": "skin_sombrio", "nome": "Kravenox do Vazio", "preco": "R$ 4,90", "tipo": "skin", "skin": "sombrio", "cor": Color8(170, 110, 255), "desc": "o corpo do Kravenox fica roxo do Vazio"},
 	{"id": "skin_brasa", "nome": "Kravenox de Brasa", "preco": "R$ 4,90", "tipo": "skin", "skin": "brasa", "cor": Color8(255, 140, 50), "desc": "o corpo do Kravenox fica cor de brasa"},
 	{"id": "skin_pioneiro", "nome": "Kravenox Pioneiro", "preco": "Beta", "tipo": "skin", "skin": "pioneiro", "cor": Color8(90, 255, 160), "desc": "exclusiva de quem testou o jogo antes de todo mundo", "exclusivo": true},
+	# 15/11: skins que só saem jogando (conquistas e evento da semana)
+	{"id": "skin_lenda", "nome": "Kravenox Lendário", "preco": "Conquista", "tipo": "skin", "skin": "lenda", "cor": Color8(255, 130, 210), "desc": "para quem venceu os 76 capítulos", "exclusivo": true, "como": "Vença os 76 capítulos."},
+	{"id": "skin_pesadelo", "nome": "Kravenox do Pesadelo", "preco": "Conquista", "tipo": "skin", "skin": "pesadelo", "cor": Color8(255, 40, 40), "desc": "para quem venceu os 76 capítulos no Pesadelo", "exclusivo": true, "como": "Vença os 76 capítulos no Pesadelo."},
+	{"id": "skin_abissal", "nome": "Kravenox Abissal", "preco": "Conquista", "tipo": "skin", "skin": "abissal", "cor": Color8(0, 255, 255), "desc": "para quem fez 5 milhões de dano numa partida do Abismo", "exclusivo": true, "como": "Faça 5 milhões de dano numa partida do Abismo."},
+	{"id": "skin_soberano", "nome": "Kravenox Soberano", "preco": "Conquista", "tipo": "skin", "skin": "soberano", "cor": Color8(255, 248, 210), "desc": "para quem ficou em 1º lugar num ranking da semana", "exclusivo": true, "como": "Fique em 1º lugar num ranking semanal (online)."},
+	{"id": "skin_musgo", "nome": "Kravenox de Musgo", "preco": "Evento", "tipo": "skin", "skin": "musgo", "cor": Color8(180, 230, 100), "desc": "do evento Semana do Thornox", "exclusivo": true, "como": "Cumpra o evento Semana do Thornox."},
+	{"id": "skin_prata", "nome": "Kravenox de Prata", "preco": "Evento", "tipo": "skin", "skin": "prata", "cor": Color8(240, 245, 255), "desc": "do evento Semana da Caçada", "exclusivo": true, "como": "Cumpra o evento Semana da Caçada."},
+	{"id": "skin_estelar", "nome": "Kravenox Estelar", "preco": "Evento", "tipo": "skin", "skin": "estelar", "cor": Color8(150, 170, 255), "desc": "do evento Semana do Abismo", "exclusivo": true, "como": "Cumpra o evento Semana do Abismo."},
+	{"id": "skin_forja", "nome": "Kravenox da Forja", "preco": "Evento", "tipo": "skin", "skin": "forja", "cor": Color8(255, 140, 40), "desc": "do evento Semana da Forja", "exclusivo": true, "como": "Cumpra o evento Semana da Forja."},
 	{"id": "moldura_brasa", "nome": "Moldura de Brasa", "preco": "R$ 2,90", "tipo": "moldura", "cor": Color8(255, 90, 40), "desc": "os quadros com poder ganham borda de brasa"},
 	{"id": "vel4", "nome": "Velocidade 4×", "preco": "R$ 4,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "o botão de velocidade ganha o 4×"},
 	{"id": "fora24", "nome": "Vigília de 24 horas", "preco": "R$ 2,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "a Vigília junta fragmentos por até 24 h, e não 12 h"},
@@ -6467,7 +6521,7 @@ func clique_loja(p: Vector2) -> void:
 			continue
 		var it: Dictionary = LOJA_ITENS[i]
 		if not tem(it["id"]) and it.get("exclusivo", false):
-			popup = {"titulo": tx(it["nome"]).to_upper(), "texto": "Exclusiva dos beta testers: abre com o código de presente (Ajustes → Código de presente)."}
+			popup = {"titulo": tx(it["nome"]).to_upper(), "texto": it.get("como", "Exclusiva dos beta testers: abre com o código de presente (Ajustes → Código de presente).")}
 			return
 		if not tem(it["id"]):
 			popup = {"titulo": it["nome"].to_upper(), "texto": "A compra ainda não está ligada. Ela começa a funcionar quando o jogo estiver na loja da Apple ou do Google. Obrigado pela vontade de apoiar!"}
@@ -7352,6 +7406,7 @@ func carregar_ranking() -> void:
 	for c in r.get("campeoes", []):
 		if c.get("eu", false) and int(c["pos"]) == 1:
 			prog["titulo"] = tx("Soberano da Semana") + " (" + tx(nome_cat(rank["cat"])) + ")"
+			prog["soberano"] = true
 			salvar()
 
 
@@ -7455,7 +7510,7 @@ func desenhar_online() -> void:
 	cabecalho("ONLINE")
 	escrever("Só esta área usa internet. O resto do jogo funciona sem ela.", Vector2(LARG / 2, 134), 13, Color8(150, 220, 170))
 	if conta() != "":
-		escrever(tx("Conta: %s") % conta(), Vector2(LARG / 2, 166), 15, OURO, false)
+		escrever(tx("Conta: %s") % conta() + "  ·  " + tx("toque para entrar de novo"), Vector2(LARG / 2, 166), 14, OURO, false)
 	else:
 		botao(Rect2(LARG / 2 - 120, 150, 240, 34), "Criar conta ou entrar", OURO, true, true)
 	var itens := [["ranking", "Ranking semanal", "Os melhores da semana em Poder, Abismo, Colosso e Duelo. Toda segunda recomeça; o 1º vira Soberano da Semana."],
@@ -7467,16 +7522,24 @@ func desenhar_online() -> void:
 		icone_modo({"ranking": "desafio", "ordem": "horda", "duelo": "duelo"}[itens[i][0]], r.position + Vector2(48, 58), true)
 		escrever_esq(itens[i][1], r.position + Vector2(92, 34), 18, OURO, fonte_titulo)
 		texto_quebrado(itens[i][2], r.position + Vector2(92, 42), r.size.x - 108, 13, Color8(220, 210, 230), 3)
+	if conta() != "":
+		botao(Rect2(24, 596, LARG / 2 - 30, 40), "Enviar sugestão", AZUL, true, false)
+		if bool(prog.get("admin", false)):
+			botao(Rect2(LARG / 2 + 6, 596, LARG / 2 - 30, 40), "Ver sugestões", OURO, true, false)
 	desenhar_abas()
 	desenhar_popup()
 
 
 func clique_online(p: Vector2) -> void:
+	if conta() != "" and Rect2(24, 596, LARG / 2 - 30, 40).has_point(p):
+		enviar_sugestao()
+		return
+	if conta() != "" and bool(prog.get("admin", false)) and Rect2(LARG / 2 + 6, 596, LARG / 2 - 30, 40).has_point(p):
+		ir_para("sugestoes")
+		carregar_sugestoes()
+		return
 	if p.y > 150 and p.y < 184:
-		if conta() == "":
-			abrir_conta()
-		else:
-			popup = {"titulo": "CONTA", "texto": tx("Você está na conta %s. Para usar em outro celular, toque em Entrar lá com o mesmo usuário e senha.") % conta()}
+		abrir_conta()   # com conta: serve para entrar de novo (ou em outra conta)
 		return
 	for i in 3:
 		if ret_online(i).has_point(p):
@@ -7517,7 +7580,10 @@ func desenhar_ranking() -> void:
 			caixa(Rect2(16, y, LARG - 32, 32), Color8(50, 36, 20) if eu else Color(0.06, 0.05, 0.08, 0.9), 6, 1, OURO if eu else Color(PEDRA_BORDA, 0.8))
 			var cor_pos: Color = [OURO, Color8(200, 200, 215), Color8(205, 130, 70)][int(l["pos"]) - 1] if int(l["pos"]) <= 3 else CINZA
 			escrever_esq("%dº" % int(l["pos"]), Vector2(28, y + 22), 16, cor_pos, fonte_titulo)
-			escrever_esq(str(l["nome"]), Vector2(76, y + 22), 16, BRANCO)
+			var sk_l := str(l.get("skin", ""))
+			var tk_l: Texture2D = textura_skin(sk_l, "kravenox") if sk_l != "" and item_loja("skin_" + sk_l).size() > 0 else tex["kravenox"]
+			draw_texture_rect(tk_l, Rect2(70, y + 2, 28, 28), false)
+			escrever_esq(str(l["nome"]), Vector2(104, y + 22), 16, BRANCO)
 			var v := "%s %s" % [num_curto(int(l["valor"])), tx(unidade)]
 			var wv := fonte.get_string_size(v, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 			escrever_esq(v, Vector2(LARG - 28 - wv, y + 22), 15, OURO)
@@ -7536,10 +7602,22 @@ func desenhar_ranking() -> void:
 		escrever("Crie uma conta para aparecer no ranking", Vector2(LARG / 2, 612), 15, BRANCO, true)
 		botao(Rect2(LARG / 2 - 120, 630, 240, 44), "Criar conta ou entrar", OURO, true, true)
 	botao(Rect2(LARG / 2 - 70, 688, 140, 40), "Atualizar", AZUL, true, false)
+	if conta() != "" and not rank["dados"].is_empty() and perfil_aberto.is_empty():
+		escrever("Toque num nome para ver o perfil", Vector2(LARG / 2, 612), 13, Color8(200, 170, 255), false)
+	desenhar_perfil()
 	desenhar_abas()
 
 
 func clique_ranking(p: Vector2) -> void:
+	if not perfil_aberto.is_empty():
+		perfil_aberto = {}
+		return
+	var top_r: Array = rank["dados"].get("top", []) if rank["dados"] is Dictionary else []
+	for k in mini(top_r.size(), 12):
+		if Rect2(16, 192 + k * 36, LARG - 32, 32).has_point(p):
+			som("gema")
+			abrir_perfil(str(top_r[k]["nome"]))
+			return
 	for i in CATS_RANKING.size():
 		if aba_ranking(i).has_point(p):
 			rank["cat"] = CATS_RANKING[i][0]
@@ -7747,9 +7825,11 @@ func checar_poder() -> void:
 	var pe: Dictionary = prog.get("poder_env", {})
 	var v := poder()
 	if int(pe.get("v", -1)) == v and agora() - float(pe.get("t", 0.0)) < 6 * 3600:
+		enviar_perfil()
 		return
 	prog["poder_env"] = {"v": v, "t": agora()}
 	enviar_recorde("poder", v)
+	enviar_perfil()
 
 
 func aba_ranking(i: int) -> Rect2:
@@ -7799,6 +7879,9 @@ func enviar_conta(acao: String, usuario: String, senha: String) -> void:
 	prog["nome_duelo"] = prog["conta"]
 	if acao == "entrar" and str(r.get("id", "")) != "":
 		prog["id_jogador"] = str(r["id"])   # o mesmo jogador nos dois celulares
+	prog["token"] = str(r.get("token", ""))
+	prog["admin"] = bool(r.get("admin", false))
+	prog["perfil_env"] = {}
 	prog["poder_env"] = {}
 	salvar()
 	som("nivel")
@@ -7837,3 +7920,364 @@ window.kxConta = window.kxConta || function (textos, cb) {
   setTimeout(function () { document.getElementById('kx-u').focus(); }, 50);
 };
 """
+
+
+# ============================================================ 15/11: para quem já está avançado
+# Skins de conquista e do evento da semana, coleção de skins, rastro da skin,
+# perfil no ranking, sugestões para o Rone e aviso de "passaram você".
+# Tudo só visual ou social: nada deixa o Kravenox mais forte.
+
+# ------------------------------------------------------------ evento da semana
+# Gira sozinho toda segunda-feira (pela data do aparelho, funciona offline).
+# A meta conta o que a pessoa fizer naquela semana; o prêmio é uma skin que só
+# sai no evento (quem já tem ganha fragmentos em dobro).
+const EVENTOS := [
+	{"id": "thornox", "nome": "Semana do Thornox", "desc": "Derrote %s chefes", "total": "chefes", "meta": 25, "skin": "musgo", "cor": Color8(180, 230, 100)},
+	{"id": "caca", "nome": "Semana da Caçada", "desc": "Derrote %s monstros", "total": "mortes", "meta": 2500, "skin": "prata", "cor": Color8(230, 235, 250)},
+	{"id": "abismo", "nome": "Semana do Abismo", "desc": "Some %s de dano no Abismo", "total": "dano_abismo", "meta": 3000000, "skin": "estelar", "cor": Color8(150, 170, 255)},
+	{"id": "forja", "nome": "Semana da Forja", "desc": "Faça %s fusões de poderes", "total": "fusoes", "meta": 60, "skin": "forja", "cor": Color8(255, 140, 40)},
+]
+const PREMIO_EVENTO := 40
+var dano_evento := 0.0
+
+
+func semana_idx() -> int:
+	return int(floor((agora() / 86400.0 + 3.0) / 7.0))   # muda na segunda-feira
+
+
+func evento_atual() -> Dictionary:
+	return EVENTOS[semana_idx() % EVENTOS.size()]
+
+
+func total_de(id: String) -> int:
+	return int(prog.get("total", {}).get(id, 0))
+
+
+func estado_evento() -> Dictionary:
+	var e = prog.get("evento", {})
+	if not (e is Dictionary) or int(e.get("semana", -1)) != semana_idx():
+		e = {"semana": semana_idx(), "base": total_de(evento_atual()["total"]), "feito": false, "visto": false}
+		prog["evento"] = e
+	return e
+
+
+func progresso_evento() -> int:
+	var ev := evento_atual()
+	return clampi(total_de(ev["total"]) - int(estado_evento()["base"]), 0, int(ev["meta"]))
+
+
+func evento_cumprido_sem_ver() -> bool:
+	var e := estado_evento()
+	return bool(e["feito"]) and not bool(e.get("visto", false))
+
+
+func dias_evento() -> int:
+	return 7 - (int(floor(agora() / 86400.0 + 3.0)) % 7)
+
+
+func desenhar_evento() -> void:
+	desenhar_fundo(0.7)
+	cabecalho("EVENTO DA SEMANA")
+	var ev := evento_atual()
+	var e := estado_evento()
+	if bool(e["feito"]):
+		e["visto"] = true
+	var meta := int(ev["meta"])
+	var pr := progresso_evento()
+	escrever(tx(ev["nome"]).to_upper(), Vector2(LARG / 2, 150), 24, ev["cor"], true, fonte_titulo)
+	escrever(tx(ev["desc"]) % num_grande(meta), Vector2(LARG / 2, 186), 17, BRANCO, true)
+	var r := Rect2(40, 214, LARG - 80, 30)
+	caixa(r, Color(0.05, 0.04, 0.07, 0.9), 8, 1, Color(ev["cor"], 0.7))
+	degrade(Rect2(r.position + Vector2(3, 3), Vector2((r.size.x - 6) * float(pr) / meta, r.size.y - 6)), ev["cor"], Color(ev["cor"]).darkened(0.5))
+	escrever("%s / %s" % [num_grande(pr), num_grande(meta)], r.get_center(), 15, BRANCO, true)
+	var it := item_loja("skin_" + str(ev["skin"]))
+	var base := Vector2(LARG / 2, 470)
+	brilho_suave(base + Vector2(0, -80), 130, ev["cor"], 0.8)
+	sombra_chao(base, 56)
+	desenhar_arte_skin(str(ev["skin"]), base + Vector2(0, -sin(tempo * 1.4) * 3), 170, true)
+	escrever(tx("Prêmio: %s") % tx(it["nome"]), Vector2(LARG / 2, 506), 18, OURO, true, fonte_titulo)
+	escrever(tx("+%d fragmentos (em dobro se já tiver a skin)") % PREMIO_EVENTO, Vector2(LARG / 2, 532), 14, CINZA, false)
+	if bool(e["feito"]):
+		escrever("EVENTO CUMPRIDO!", Vector2(LARG / 2, 584), 22, VERDE, true, fonte_titulo)
+	else:
+		escrever(tx("Termina em %d dias") % dias_evento() if dias_evento() > 1 else tx("Termina hoje à meia-noite de domingo"), Vector2(LARG / 2, 584), 16, BRANCO, true)
+	var prox: Dictionary = EVENTOS[(semana_idx() + 1) % EVENTOS.size()]
+	escrever(tx("Semana que vem: %s") % tx(prox["nome"]), Vector2(LARG / 2, 640), 14, Color8(200, 170, 255), false)
+	escrever("O evento muda toda segunda-feira e funciona sem internet.", Vector2(LARG / 2, 666), 12, CINZA, false)
+	desenhar_abas()
+	desenhar_popup()
+
+
+# o Kravenox numa skin (ou apagado, se ainda não tem)
+func desenhar_arte_skin(sk: String, base: Vector2, alto: float, aceso: bool) -> void:
+	var t: Texture2D = tex["kravenox"] if sk == "" else textura_skin(sk, "kravenox")
+	var w := alto * t.get_width() / float(t.get_height())
+	var r := Rect2(base - Vector2(w / 2, alto), Vector2(w, alto))
+	if aceso:
+		draw_texture_rect(t, r, false)
+	else:
+		draw_texture_rect(t, r, false, Color(0.05, 0.03, 0.08, 0.9))
+		escrever("?", r.get_center(), int(alto * 0.3), Color(1, 1, 1, 0.5), true, fonte_titulo)
+
+
+# ------------------------------------------------------------ conquistas de skin
+func dar_skin(sk: String) -> void:
+	var cp: Dictionary = prog.get("compras", {})
+	cp["skin_" + sk] = "conquista"
+	prog["compras"] = cp
+	prog["skin"] = sk
+	skin_ganha = sk
+	skin_ganha_t = 4.5
+	som("chefe")
+
+
+func checar_conquistas_skin() -> void:
+	if robo:
+		return
+	var mudou := false
+	if dano_evento >= 1.0:
+		contar_total("dano_abismo", int(dano_evento))
+		dano_evento -= float(int(dano_evento))
+		mudou = true
+	var conq := [["lenda", prog["feitos"].size() >= TOTAL_CAPITULOS],
+		["pesadelo", prog.get("feitos_p", {}).size() >= TOTAL_CAPITULOS],
+		["abissal", int(prog.get("abismo_dano", 0)) >= 5000000],
+		["soberano", bool(prog.get("soberano", false))]]
+	for c in conq:
+		if c[1] and not prog.get("compras", {}).has("skin_" + c[0]):
+			dar_skin(c[0])
+			var it := item_loja("skin_" + c[0])
+			popup = {"titulo": "SKIN NOVA!", "texto": tx("Você ganhou o %s: %s.") % [tx(it["nome"]), tx(it["desc"])]}
+			mudou = true
+	var e := estado_evento()
+	var ev := evento_atual()
+	if not bool(e["feito"]) and progresso_evento() >= int(ev["meta"]):
+		e["feito"] = true
+		var it2 := item_loja("skin_" + str(ev["skin"]))
+		var tinha: bool = prog.get("compras", {}).has(it2["id"])
+		var frag := PREMIO_EVENTO * (2 if tinha else 1)
+		prog["fragmentos"] = int(prog["fragmentos"]) + frag
+		if not tinha:
+			dar_skin(str(ev["skin"]))
+		popup = {"titulo": "EVENTO CUMPRIDO!", "texto": (tx("%s: +%d fragmentos.") % [tx(ev["nome"]), frag]) + ("" if tinha else " " + tx("Skin nova: %s!") % tx(it2["nome"]))}
+		mudou = true
+	if mudou:
+		salvar()
+
+
+# ------------------------------------------------------------ coleção de skins
+func lista_skins() -> Array:
+	var l := [""]
+	for it in LOJA_ITENS:
+		if it["tipo"] == "skin":
+			l.append(it["skin"])
+	return l
+
+
+func ret_colecao(i: int) -> Rect2:
+	var w := (LARG - 40) / 3.0
+	return Rect2(14 + (i % 3) * (w + 6), 128 + (i / 3) * 116, w, 110)
+
+
+func desenhar_colecao() -> void:
+	desenhar_fundo(0.7)
+	cabecalho("SKINS")
+	var l := lista_skins()
+	var donas := 0
+	for i in l.size():
+		var sk: String = l[i]
+		var dona := sk == "" or tem("skin_" + sk)
+		if dona:
+			donas += 1
+		var usando_esta := skin_atual() == sk
+		var r := ret_colecao(i)
+		var cor: Color = VERMELHO if sk == "" else item_loja("skin_" + sk)["cor"]
+		caixa(r, Color8(40, 30, 20) if usando_esta else Color(0.06, 0.05, 0.08, 0.93), 10, 2 if usando_esta else 1, OURO if usando_esta else Color(cor, 0.5 if dona else 0.2), true, 4)
+		if dona:
+			brilho_suave(r.get_center() + Vector2(0, -10), 40, cor, 0.5)
+		desenhar_arte_skin(sk, r.position + Vector2(r.size.x / 2, 78), 68, dona)
+		var nome := "Kravenox" if sk == "" else tx(item_loja("skin_" + sk)["nome"]).replace("Kravenox ", "")
+		escrever(encurtar(nome, fonte, 13, r.size.x - 8), r.position + Vector2(r.size.x / 2, 94), 13, BRANCO if dona else CINZA, false)
+		if usando_esta:
+			escrever("em uso", r.position + Vector2(r.size.x / 2, 16), 11, OURO, false)
+		elif not dona:
+			escrever(tx(item_loja("skin_" + sk)["preco"]), r.position + Vector2(r.size.x / 2, 16), 11, CINZA, false)
+	escrever(tx("%d de %d skins · toque para usar") % [donas, l.size()], Vector2(LARG / 2, 112), 13, Color8(200, 170, 255), false)
+	desenhar_abas()
+	desenhar_popup()
+
+
+func clique_colecao(p: Vector2) -> void:
+	var l := lista_skins()
+	for i in l.size():
+		if ret_colecao(i).has_point(p):
+			var sk: String = l[i]
+			if sk == "" or tem("skin_" + sk):
+				prog["skin"] = sk
+				prog["perfil_env"] = {}
+				som("gema")
+				salvar()
+			else:
+				var it := item_loja("skin_" + sk)
+				var como: String = it.get("como", "Na Loja do Apoiador ou no baú das fases (cada baú soma 1% de chance).")
+				popup = {"titulo": tx(it["nome"]).to_upper(), "texto": como}
+			return
+
+
+# rastro da cor da skin quando o Kravenox anda
+func desenhar_rastro_skin(k: Vector2) -> void:
+	var sk := skin_atual()
+	if sk == "" or not k_andando:
+		return
+	var cor: Color = item_loja("skin_" + sk)["cor"]
+	for j in 7:
+		var f := fmod(tempo * 1.8 + j / 7.0, 1.0)
+		var pos := k + Vector2(-k_dir * (8 + f * 40), 24 - f * 16 + sin(j * 1.7 + tempo * 3) * 4)
+		draw_circle(pos, 4.0 * (1.0 - f) + 0.8, Color(cor, 0.75 * (1.0 - f)))
+
+
+# ------------------------------------------------------------ perfil (online)
+var perfil_aberto := {}
+
+
+func meu_perfil() -> Dictionary:
+	var skins := 0
+	for sk in lista_skins():
+		if sk != "" and tem("skin_" + sk):
+			skins += 1
+	return {"poder": poder(), "skin": skin_atual(), "titulo": str(prog.get("titulo", "")),
+		"abismo": int(prog.get("abismo_dano", 0)), "capitulos": prog["feitos"].size(),
+		"pesadelo": prog.get("feitos_p", {}).size(), "skins": skins}
+
+
+func enviar_perfil() -> void:
+	if conta() == "" or robo or not online_disponivel():
+		return
+	var pf := meu_perfil()
+	var env: Dictionary = prog.get("perfil_env", {})
+	if env.get("p", {}) == pf and agora() - float(env.get("t", 0.0)) < 6 * 3600:
+		return
+	prog["perfil_env"] = {"p": pf, "t": agora()}
+	var corpo := pf.duplicate()
+	corpo["id"] = id_jogador()
+	var r := await chamar_api("POST", "/perfil", corpo)
+	if r.has("erro"):
+		prog["perfil_env"] = {}
+
+
+func abrir_perfil(nome: String) -> void:
+	perfil_aberto = {"nome": nome, "carregando": true}
+	var r := await chamar_api("GET", "/perfil?nome=%s" % nome.uri_encode())
+	if str(perfil_aberto.get("nome", "")) != nome:
+		return
+	if r.has("erro"):
+		perfil_aberto = {"nome": nome, "erro": "Sem internet." if r["erro"] == "sem internet" else str(r["erro"])}
+	else:
+		perfil_aberto = r
+		perfil_aberto["nome"] = str(r.get("nome", nome))
+
+
+func desenhar_perfil() -> void:
+	if perfil_aberto.is_empty():
+		return
+	draw_rect(Rect2(0, 0, LARG, ALT), Color(0, 0, 0, 0.65))
+	var r := Rect2(30, 170, LARG - 60, 430)
+	var sk := str(perfil_aberto.get("skin", ""))
+	var cor: Color = item_loja("skin_" + sk)["cor"] if sk != "" and item_loja("skin_" + sk).size() > 0 else VERMELHO
+	caixa(r, Color8(20, 16, 28), 14, 2, cor, true, 10)
+	escrever(str(perfil_aberto["nome"]).to_upper(), Vector2(LARG / 2, r.position.y + 38), 24, OURO, true, fonte_titulo)
+	if perfil_aberto.get("carregando", false):
+		escrever("Carregando…", r.get_center(), 18, BRANCO, true)
+		return
+	if perfil_aberto.has("erro"):
+		texto_quebrado(str(perfil_aberto["erro"]), Vector2(r.position.x + 20, r.position.y + 90), r.size.x - 40, 16, Color8(255, 150, 140), 4, true)
+		return
+	var titulo := str(perfil_aberto.get("titulo", ""))
+	if titulo != "":
+		escrever(titulo, Vector2(LARG / 2, r.position.y + 64), 14, Color8(220, 170, 255), false)
+	var base := Vector2(LARG / 2, r.position.y + 230)
+	brilho_suave(base + Vector2(0, -70), 110, cor, 0.7)
+	sombra_chao(base, 50)
+	desenhar_arte_skin(sk if item_loja("skin_" + sk).size() > 0 else "", base, 140, true)
+	var linhas := [["Poder", num_grande(int(perfil_aberto.get("poder", 0)))],
+		["Recorde do Abismo", num_grande(int(perfil_aberto.get("abismo", 0))) + " " + tx("de dano")],
+		["Capítulos", "%d / %d" % [int(perfil_aberto.get("capitulos", 0)), TOTAL_CAPITULOS]],
+		["Pesadelo", "%d / %d" % [int(perfil_aberto.get("pesadelo", 0)), TOTAL_CAPITULOS]],
+		["Skins", "%d / %d" % [int(perfil_aberto.get("skins", 0)), lista_skins().size() - 1]]]
+	for i in linhas.size():
+		var y := r.position.y + 270 + i * 28
+		escrever_esq(tx(linhas[i][0]), Vector2(r.position.x + 24, y), 15, CINZA)
+		var v: String = linhas[i][1]
+		var wv := fonte.get_string_size(v, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		escrever_esq(v, Vector2(r.end.x - 24 - wv, y), 16, BRANCO)
+	escrever("toque para fechar", Vector2(LARG / 2, r.end.y - 14), 12, CINZA, false)
+
+
+# ------------------------------------------------------------ sugestões (online)
+var sugestoes := {}
+
+
+func enviar_sugestao() -> void:
+	var t := ""
+	if OS.has_feature("web"):
+		t = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Sua sugestão, ideia ou problema (o Rone vai ler):"))))
+	t = t.strip_edges().substr(0, 500)
+	if t == "":
+		return
+	popup = {"titulo": "SUGESTÃO", "texto": "Enviando…"}
+	var r := await chamar_api("POST", "/sugestao", {"id": id_jogador(), "texto": t})
+	if r.has("erro"):
+		popup = {"titulo": "SUGESTÃO", "texto": "Sem internet: tente de novo depois." if r["erro"] == "sem internet" else str(r["erro"])}
+	else:
+		som("nivel")
+		popup = {"titulo": "SUGESTÃO", "texto": "Recebida! Obrigado por ajudar a melhorar o jogo."}
+
+
+func carregar_sugestoes() -> void:
+	sugestoes = {"carregando": true}
+	var r := await chamar_api("POST", "/sugestoes", {"id": id_jogador(), "token": str(prog.get("token", ""))})
+	sugestoes = r
+
+
+func desenhar_sugestoes() -> void:
+	desenhar_fundo(0.7)
+	cabecalho("SUGESTÕES")
+	if sugestoes.get("carregando", false):
+		escrever("Carregando…", Vector2(LARG / 2, 300), 18, BRANCO, true)
+	elif sugestoes.has("erro"):
+		texto_quebrado(str(sugestoes["erro"]), Vector2(40, 200), LARG - 80, 16, Color8(255, 150, 140), 4, true)
+	else:
+		var lista: Array = sugestoes.get("lista", [])
+		if lista.is_empty():
+			escrever("Nenhuma sugestão ainda.", Vector2(LARG / 2, 300), 16, BRANCO, true)
+		var y := 120.0
+		for s in lista:
+			if y > ALT - 150:
+				break
+			var data := Time.get_datetime_string_from_unix_time(int(float(s.get("t", 0)) / 1000.0)).substr(0, 10)
+			escrever_esq("%s · %s" % [str(s.get("nome", "")), data], Vector2(24, y + 16), 14, OURO, fonte_titulo)
+			var h := texto_quebrado(str(s.get("texto", "")), Vector2(24, y + 24), LARG - 48, 14, BRANCO, 5)
+			y += 34 + h
+	desenhar_abas()
+
+
+# ------------------------------------------------------------ "te passaram no ranking"
+var ultrapassagem_vista := false
+
+
+func verificar_ultrapassagem() -> void:
+	if conta() == "" or robo or not online_disponivel():
+		return
+	for cat in ["poder", "abismo"]:
+		var r := await chamar_api("GET", "/ranking?cat=%s&id=%s" % [cat, id_jogador()])
+		if r.has("erro"):
+			return
+		var pos := int(r.get("minha_pos", 0))
+		var rp: Dictionary = prog.get("rank_pos", {})
+		var ant: Dictionary = rp.get(cat, {})
+		var top: Array = r.get("top", [])
+		if pos > 1 and str(ant.get("s", "")) == str(r.get("semana", "")) and int(ant.get("p", 0)) > 0 and pos > int(ant.get("p", 0)) and top.size() >= pos - 1 and popup.is_empty() and tela != "jogo":
+			popup = {"titulo": "PASSARAM VOCÊ!", "texto": tx("%s passou você no ranking de %s. Agora você está em %dº. Bora recuperar?") % [str(top[pos - 2]["nome"]), tx(nome_cat(cat)), pos]}
+		rp[cat] = {"s": str(r.get("semana", "")), "p": pos}
+		prog["rank_pos"] = rp
+	salvar()

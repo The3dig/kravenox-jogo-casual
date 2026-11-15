@@ -539,3 +539,35 @@
   que não abria).
 - **Passou a ser:** `the3dig.github.io/kravenox-jogar/mmo/`, onde a conversa
   do MMO publica e atualiza o jogo. Versão 2026-11-15g.
+
+## 15/11/2026: conteúdo para quem já está avançado
+
+- **Era:** depois de avançar, faltava objetivo novo e jeito de mostrar o que
+  conquistou (o Ludivicky está bem à frente e ganhou skin no baú).
+- **Passou a ser** (versão 2026-11-15h):
+  - **Evento da semana** (botão "Evento" no alto à direita da tela inicial):
+    muda toda segunda pela data do aparelho, funciona offline. Rodízio:
+    Semana do Thornox (25 chefes), da Caçada (2.500 monstros), do Abismo
+    (3 milhões de dano somado), da Forja (60 fusões). Prêmio: skin que só sai
+    no evento + 40 fragmentos (80 se já tiver a skin). Só conta o que for
+    feito naquela semana.
+  - **8 skins novas** (pintadas por `ferramentas/pintar_skins.py`):
+    conquista: Lendário (76 capítulos), do Pesadelo (76 no Pesadelo),
+    Abissal (5 milhões de dano numa partida do Abismo), Soberano (1º lugar
+    num ranking semanal); evento: Musgo, Prata, Estelar, Forja. Saem
+    sozinhas quando a pessoa cumpre; não se compram.
+  - **Coleção de skins** (botão "Skins" na tela do Kravenox): todas as skins,
+    as que faltam apagadas com o que fazer para ganhar; toque para usar.
+  - **Rastro da skin**: faíscas da cor da skin atrás do Kravenox quando ele
+    anda.
+  - **Perfil no ranking**: tocar num nome mostra skin, título, poder,
+    recorde do Abismo, capítulos, Pesadelo e skins. O ranking mostra a skin
+    de cada um ao lado do nome. O jogo manda o perfil sozinho (conta
+    necessária).
+  - **Sugestões**: botão "Enviar sugestão" na tela Online (com conta, até 10
+    por dia, 500 letras). Só quem está em `ADMINS` (wrangler.toml) lê, com o
+    botão "Ver sugestões"; o login passou a devolver um token para isso.
+  - **"Passaram você!"**: ao abrir o jogo, se alguém passou a pessoa no
+    ranking de Poder ou do Abismo naquela semana, aparece um aviso com o nome.
+- **Por quê:** pedido do Rone ("faça tudo") depois das sugestões para
+  melhorar o jogo para o Ludivicky. Nada disso deixa o Kravenox mais forte.

@@ -4,6 +4,10 @@ name = "kravenox-duelo"
 main = "src/index.js"
 compatibility_date = "2025-06-01"
 
+# Quem pode ler as sugestões no jogo (usuário da conta, separados por vírgula)
+[vars]
+ADMINS = ""
+
 [[durable_objects.bindings]]
 name = "SALAS"
 class_name = "Sala"

@@ -32,3 +32,12 @@ npx wrangler dev           # sobe em http://localhost:8787
   outros jogos (`jogo-coisa`) não mudaram.
 - A senha não é guardada: só hash PBKDF2-SHA256 (100 mil voltas, sal de 16
   bytes). 10 erros seguidos travam o login por 15 min.
+
+## Perfil e sugestões (15/11/2026)
+
+- `POST /api/perfil {id, poder, skin, titulo, abismo, capitulos, pesadelo, skins}`
+  (precisa de conta) e `GET /api/perfil?nome=X`.
+- `POST /api/sugestao {id, texto}` (precisa de conta, até 10 por dia).
+- `POST /api/sugestoes {id, token}` lista as últimas 100; só para usuários em
+  `ADMINS` no `wrangler.toml` (separados por vírgula). O token vem no
+  `/api/conta/criar` e no `/api/conta/entrar`.
