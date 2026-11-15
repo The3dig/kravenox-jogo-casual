@@ -41,3 +41,11 @@ npx wrangler dev           # sobe em http://localhost:8787
 - `POST /api/sugestoes {id, token}` lista as últimas 100; só para usuários em
   `ADMINS` no `wrangler.toml` (separados por vírgula). O token vem no
   `/api/conta/criar` e no `/api/conta/entrar`.
+
+## Progresso na conta (16/11/2026)
+
+- `POST /api/save/guardar {id, token, save, tamanho, forcar}`: guarda o save
+  (até 400 mil letras). Recusa (`menor: true`) se `tamanho` for menos da
+  metade do guardado, a não ser com `forcar`. A versão anterior fica em
+  `sv_ant:<id>`.
+- `POST /api/save/carregar {id, token}`: devolve `{save, tamanho, t}`.

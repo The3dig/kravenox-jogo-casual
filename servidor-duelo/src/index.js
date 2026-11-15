@@ -185,6 +185,10 @@ async function api(req, env, partes) {
   if (partes[0] === "perfil" && req.method === "GET") {
     return contas.fetch(new Request("https://interno/ver-perfil" + url.search));
   }
+  // 16/11: progresso salvo na conta (o Ludivicky perdeu o save do celular)
+  if (partes[0] === "save" && req.method === "POST" && (partes[1] === "guardar" || partes[1] === "carregar")) {
+    return contas.fetch(new Request("https://interno/save-" + partes[1], { method: "POST", body: JSON.stringify(corpo) }));
+  }
   if ((partes[0] === "sugestao" || partes[0] === "sugestoes") && req.method === "POST") {
     return contas.fetch(new Request("https://interno/" + partes[0], { method: "POST", body: JSON.stringify(corpo) }));
   }
@@ -457,6 +461,27 @@ export class Contas {
         skins: n(c.skins, 100), skin: String(c.skin || "").replace(/[^a-z]/g, "").slice(0, 12),
         titulo: String(c.titulo || "").replace(/[<>]/g, "").slice(0, 60), t: Date.now(),
       });
+      return json({ ok: true });
+    }
+    if (acao === "save-guardar" || acao === "save-carregar") {
+      // precisa do token da conta (vem no criar/entrar): ninguém mexe no save de outro
+      const dono = await this.contaDoId(limpaId(c.id));
+      if (!dono) return json({ erro: "sem conta" });
+      if (!dono.conta.token || !iguais(String(c.token || ""), dono.conta.token)) return json({ erro: "token" });
+      const chave = "sv:" + dono.conta.id;
+      if (acao === "save-carregar") {
+        const sv = await this.storage.get(chave);
+        return json(sv ? { save: sv.save, tamanho: sv.tamanho, t: sv.t } : { save: null });
+      }
+      const save = String(c.save || "");
+      const tamanho = Math.floor(Number(c.tamanho) || 0);
+      if (save.length < 10 || save.length > 400000) return json({ erro: "save inválido" });
+      const atual = await this.storage.get(chave);
+      // nunca troca um save grande por um bem menor (celular zerado), a não ser
+      // que o jogador tenha apagado o progresso de propósito ("forcar")
+      if (atual && tamanho < atual.tamanho * 0.5 && c.forcar !== true) return json({ ok: false, menor: true, tamanho: atual.tamanho });
+      if (atual) await this.storage.put("sv_ant:" + dono.conta.id, atual);   // guarda a versão anterior
+      await this.storage.put(chave, { save, tamanho, t: Date.now() });
       return json({ ok: true });
     }
     if (acao === "sugestao") {

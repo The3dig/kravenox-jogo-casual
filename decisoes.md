@@ -629,3 +629,29 @@
   A página do jogo agora pede (`navigator.storage.persist()`). Conferido que
   a Cratera do Cisma e o Quadros do Cisma guardam o save em pastas diferentes
   (um jogo não apaga o do outro).
+
+## 16/11/2026: progresso salvo na conta e recuperação do Ludivicky
+
+- **Era:** o progresso só existia no celular. O Ludivicky (Android, Chrome)
+  perdeu tudo, inclusive skins, e desanimou.
+- **Passou a ser** (versão 2026-11-16g):
+  - **Progresso salvo na conta**: com conta, o jogo manda uma cópia do save
+    para o servidor (no máximo 1 vez por minuto e sempre que o app vai para
+    segundo plano). Ao entrar na conta em qualquer celular, ou ao abrir o
+    jogo num celular que perdeu o save, o progresso da conta volta sozinho
+    ("PROGRESSO RECUPERADO") se for maior que o do celular. O servidor nunca
+    troca um save grande por um bem menor (só com "Apagar progresso" de
+    propósito) e guarda a versão anterior. Precisa do token da conta: quem
+    criou conta antes disso vê a tela de login na entrada para entrar de novo.
+  - "Apagar progresso" e "Colar progresso" mantêm a conta.
+  - Testado no navegador com o servidor de verdade: celular A no capítulo 21
+    criou conta; celular B zerado entrou na conta e voltou no capítulo 21,
+    com fragmentos e skin.
+  - **Recuperação do Ludivicky:** código de progresso (Ajustes → Colar
+    progresso) com capítulo 40 (39 vencidos), melhorias de um jogo real até
+    ali (robô), 300 fragmentos e as skins Gelo, Dourado, Vazio, Brasa e
+    Pioneiro (baú do beta já aberto). Ele estava no 26 em 13/11 e "longe" em
+    16/11; o número exato não foi informado, então foi escolhido para não
+    deixar ele para trás. O código não fica no repositório (é pessoal).
+  - **Sugestões:** `ADMINS = "roneignacio"` (confirmado pelo Rone).
+- **Por quê:** pedido do Rone ("arruma tudo").

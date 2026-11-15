@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-16f"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-16g"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -635,6 +635,7 @@ func salvar() -> void:
 	if robo:
 		return
 	gravar_save(JSON.stringify(prog))
+	subir_save.call_deferred()
 	checar_poder.call_deferred()
 	checar_conquistas_skin.call_deferred()
 
@@ -782,6 +783,7 @@ func _notification(what: int) -> void:
 	# o app foi para segundo plano: guarda (vale entre as ondas)
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST:
 		salvar_partida()
+		subir_save(true)
 
 
 func ir_para(t: String) -> void:
@@ -794,8 +796,11 @@ func ir_para(t: String) -> void:
 			# celular não vê nada (a conta fica salva); sem conta, pode jogar
 			# assim mesmo (o jogo funciona offline) e o pedido volta na próxima vez.
 			conta_pedida = true
-			if conta() == "" and not robo and online_disponivel() and OS.has_feature("web"):
-				abrir_conta(true)
+			if not robo and online_disponivel() and OS.has_feature("web"):
+				if conta() == "" or str(prog.get("token", "")) == "":
+					abrir_conta(true)   # sem conta, ou conta antiga sem o progresso na nuvem: entra de novo
+				else:
+					baixar_save(false)  # se este celular perdeu o progresso, volta o da conta
 		if not ultrapassagem_vista:
 			ultrapassagem_vista = true
 			verificar_ultrapassagem()
@@ -3524,8 +3529,14 @@ func clique_menu(p: Vector2) -> void:
 				efeitos_ligados = not efeitos_ligados
 			elif b["apagar"].has_point(p):
 				if apagar_confirma > 0:
+					var manter := {"conta": prog.get("conta", ""), "token": prog.get("token", ""), "id_jogador": prog.get("id_jogador", ""), "admin": prog.get("admin", false)}
 					apagar_saves()
 					carregar_progresso()
+					for k in manter:
+						if str(manter[k]) != "":
+							prog[k] = manter[k]
+					salvar()
+					subir_save(true, true)   # de propósito: a conta também recomeça
 					apagar_confirma = 0.0
 					cap_sel = 0
 					modo = "normal"
@@ -6729,9 +6740,15 @@ func copiar_progresso() -> void:
 func colar_progresso() -> void:
 	if colar_confirma > 0 and not progresso_recebido.is_empty():
 		# segundo toque: troca o progresso deste celular
+		var manter := {"conta": prog.get("conta", ""), "token": prog.get("token", ""), "id_jogador": prog.get("id_jogador", ""), "admin": prog.get("admin", false)}
 		apagar_saves()   # o código colado troca o progresso deste celular
-		gravar_save(JSON.stringify(progresso_recebido))
+		var novo: Dictionary = progresso_recebido.duplicate(true)
+		for k in manter:
+			if str(manter[k]) != "":
+				novo[k] = manter[k]
+		gravar_save(JSON.stringify(novo))
 		carregar_progresso()
+		subir_save(true, true)
 		cap_sel = 0
 		colar_confirma = 0.0
 		progresso_recebido = {}
@@ -7970,6 +7987,9 @@ func enviar_conta(acao: String, usuario: String, senha: String) -> void:
 	salvar()
 	som("nivel")
 	popup = {"titulo": "CONTA", "texto": (tx("Conta criada! Bem-vindo, %s.") if acao == "criar" else tx("Bem-vindo de volta, %s!")) % prog["conta"]}
+	if acao == "entrar":
+		await baixar_save(true)   # traz o progresso guardado na conta, se for maior
+	subir_save(true)
 	if tela == "ranking":
 		carregar_ranking()
 
@@ -8385,3 +8405,56 @@ func apagar_saves() -> void:
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(caminho))
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("try{localStorage.removeItem('kx_progresso')}catch(e){}")
+
+
+# ------------------------------------------------------------ progresso salvo na conta (16/11)
+# Com conta, o jogo guarda uma cópia do progresso no servidor (no máximo uma
+# vez por minuto, e sempre que o app vai para segundo plano). Se o celular
+# perder o save, ou em outro celular, ao entrar na conta o progresso volta.
+# O servidor nunca troca um save grande por um bem menor (celular zerado).
+var ultimo_up := 0.0
+var subindo := false
+
+
+func save_para_nuvem() -> Dictionary:
+	var d := prog.duplicate(true)
+	for k in ["token", "admin", "teste_compras"]:
+		d.erase(k)
+	return d
+
+
+func subir_save(agora_mesmo := false, forcar := false) -> void:
+	if robo or subindo or conta() == "" or str(prog.get("token", "")) == "" or not online_disponivel():
+		return
+	if not agora_mesmo and agora() - ultimo_up < 60.0:
+		return
+	subindo = true
+	ultimo_up = agora()
+	var d := save_para_nuvem()
+	var r := await chamar_api("POST", "/save/guardar", {"id": id_jogador(), "token": str(prog["token"]),
+		"save": JSON.stringify(d), "tamanho": tamanho_save(d), "forcar": forcar})
+	subindo = false
+	if r.get("menor", false):
+		baixar_save(false)   # a conta tem bem mais progresso que este celular: traz de volta
+	elif str(r.get("erro", "")) == "token":
+		prog["token"] = ""   # conta antiga: pede para entrar de novo na próxima vez
+
+
+func baixar_save(depois_de_entrar: bool) -> void:
+	if robo or conta() == "" or str(prog.get("token", "")) == "":
+		return
+	var r := await chamar_api("POST", "/save/carregar", {"id": id_jogador(), "token": str(prog["token"])})
+	if r.has("erro") or r.get("save", null) == null:
+		return
+	var d = JSON.parse_string(str(r["save"]))
+	if not (d is Dictionary) or tamanho_save(d) <= tamanho_save(prog):
+		return
+	for k in ["conta", "token", "id_jogador", "admin"]:
+		if prog.has(k):
+			d[k] = prog[k]
+	gravar_save(JSON.stringify(d))
+	carregar_progresso()
+	cap_sel = 0
+	som("nivel")
+	if tela != "jogo":
+		popup = {"titulo": "PROGRESSO RECUPERADO", "texto": tx("O progresso guardado na sua conta voltou: capítulo %d, %d fragmentos.") % [int(prog["liberado"]), int(prog["fragmentos"])]}

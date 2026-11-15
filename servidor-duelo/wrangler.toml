@@ -6,7 +6,7 @@ compatibility_date = "2025-06-01"
 
 # Quem pode ler as sugestões no jogo (usuário da conta, separados por vírgula)
 [vars]
-ADMINS = ""
+ADMINS = "roneignacio"
 
 [[durable_objects.bindings]]
 name = "SALAS"

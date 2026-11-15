@@ -922,5 +922,7 @@
  "Tentativa de hoje usada": "Today's attempt used",
  "Uma tentativa por dia": "One attempt per day",
  "Jogar sem conta": "Play without account",
- "A conta põe seu nome no ranking e junta os seus celulares. Sem ela o jogo funciona igual, só fica fora do online.": "An account puts your name in the ranking and links your phones. Without one the game works the same, just without the online part."
+ "A conta põe seu nome no ranking e junta os seus celulares. Sem ela o jogo funciona igual, só fica fora do online.": "An account puts your name in the ranking and links your phones. Without one the game works the same, just without the online part.",
+ "PROGRESSO RECUPERADO": "PROGRESS RESTORED",
+ "O progresso guardado na sua conta voltou: capítulo %d, %d fragmentos.": "The progress saved in your account is back: chapter %d, %d shards."
 }
