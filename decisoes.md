@@ -623,3 +623,9 @@
   os três. Testado: arquivo estragado, vazio, sumido e jogo novo gravado por
   cima mantêm o progresso; no navegador, apagando os arquivos do jogo, ele
   voltou pelo localStorage. Versão 2026-11-16e.
+- **Complemento (16/11, versão 2026-11-16f):** o print do Ludivicky era do
+  Chrome no Android. O Chrome pode apagar sozinho os dados de um site quando
+  falta espaço no celular, se o site não pediu armazenamento "persistente".
+  A página do jogo agora pede (`navigator.storage.persist()`). Conferido que
+  a Cratera do Cisma e o Quadros do Cisma guardam o save em pastas diferentes
+  (um jogo não apaga o do outro).
