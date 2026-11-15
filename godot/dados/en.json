@@ -926,5 +926,6 @@
  "PROGRESSO RECUPERADO": "PROGRESS RESTORED",
  "O progresso guardado na sua conta voltou: capítulo %d, %d fragmentos.": "The progress saved in your account is back: chapter %d, %d shards.",
  "PROGRESSO DE VOLTA!": "PROGRESS RESTORED!",
- "Bem-vindo de volta, %s! Capítulo %d liberado, skins devolvidas e +%d fragmentos.": "Welcome back, %s! Chapter %d unlocked, skins returned and +%d shards."
+ "Bem-vindo de volta, %s! Capítulo %d liberado, skins devolvidas e +%d fragmentos.": "Welcome back, %s! Chapter %d unlocked, skins returned and +%d shards.",
+ "Esse código não existe nesta versão do jogo (%s). Confira as letras; se o código for novo, feche o jogo, abra de novo para atualizar e tente outra vez.": "This code doesn't exist in this game version (%s). Check the letters; if the code is new, close the game, open it again to update and try once more."
 }

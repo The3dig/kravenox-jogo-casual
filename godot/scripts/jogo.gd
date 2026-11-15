@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-16h"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-16i"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -6764,6 +6764,10 @@ func colar_progresso() -> void:
 		if not OS.has_feature("web"):
 			popup = {"titulo": "COLAR PROGRESSO", "texto": "Copie o código do outro celular primeiro e depois toque aqui."}
 		return
+	var curto := c.strip_edges().to_upper().replace(" ", "").replace("-", "")
+	if RECUPERACOES.has(curto.sha256_text()):
+		aplicar_recuperacao(curto.sha256_text())   # código curto de recuperação colado aqui também vale
+		return
 	var d := ler_codigo(c)
 	if d.is_empty():
 		popup = {"titulo": "CÓDIGO INVÁLIDO", "texto": "Esse código não funcionou. Copie de novo o código inteiro (começa com KRX1-)."}
@@ -7060,7 +7064,7 @@ func pedir_codigo() -> void:
 		return
 	var nome_beta: String = CODIGOS_BETA.get(c.sha256_text(), "")
 	if nome_beta == "":
-		popup = {"titulo": "CÓDIGO DE PRESENTE", "texto": "Esse código não existe. Confira as letras e tente de novo."}
+		popup = {"titulo": "CÓDIGO DE PRESENTE", "texto": tx("Esse código não existe nesta versão do jogo (%s). Confira as letras; se o código for novo, feche o jogo, abra de novo para atualizar e tente outra vez.") % VERSAO}
 		som("dano")
 		return
 	if prog.get("beta", "") == "pronto":

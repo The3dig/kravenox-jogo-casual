@@ -661,3 +661,9 @@
   (`RECUPERACOES`). O progresso é **somado** ao do aparelho (fica o maior de
   cada coisa: capítulo, melhorias, skins), nunca trocado, e os 300
   fragmentos entram uma vez só. Ferramenta: `ferramentas/codigo_recuperacao.py`.
+- **16/11, versão 2026-11-16i:** o código do Ludivicky "falhou". A versão
+  com o código estava publicada; o provável é o jogo dele ainda não ter
+  atualizado, ou o código ter sido digitado em "Colar progresso". Agora o
+  código curto vale também em Colar progresso, e a mensagem de "código não
+  existe" mostra a versão do jogo e manda fechar e abrir de novo para
+  atualizar.
