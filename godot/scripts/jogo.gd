@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-15h"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-16a"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -3568,11 +3568,14 @@ func botao_icone(r: Rect2, tipo: String, rotulo: String, alerta := false) -> voi
 			draw_circle(c + Vector2(cos(tempo * 2) * 8, sin(tempo * 2) * 4), 7, ce)
 			draw_circle(c + Vector2(cos(tempo * 2) * 8, sin(tempo * 2) * 4), 3, Color(1, 1, 1, 0.9))
 		"engrenagem":
+			# 16/11: centralizada e do tamanho da caixa (antes saía para fora)
+			var cg := r.get_center() if rotulo == "" else c
+			var u := minf(1.0, r.size.y / 44.0)
 			for k in 8:
 				var a := k * TAU / 8
-				draw_line(c + Vector2.from_angle(a) * 8, c + Vector2.from_angle(a) * 15, OURO, 5)
-			draw_circle(c, 10, OURO)
-			draw_circle(c, 4, Color8(20, 16, 26))
+				draw_line(cg + Vector2.from_angle(a) * 7 * u, cg + Vector2.from_angle(a) * 13 * u, OURO, 4 * u)
+			draw_circle(cg, 9 * u, OURO)
+			draw_circle(cg, 3.5 * u, Color8(20, 16, 26))
 	if rotulo != "":
 		escrever(rotulo, Vector2(r.get_center().x, r.end.y - 11), 12, BRANCO, true)
 	if alerta:

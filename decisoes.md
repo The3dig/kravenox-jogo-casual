@@ -571,3 +571,9 @@
     ranking de Poder ou do Abismo naquela semana, aparece um aviso com o nome.
 - **Por quê:** pedido do Rone ("faça tudo") depois das sugestões para
   melhorar o jogo para o Ludivicky. Nada disso deixa o Kravenox mais forte.
+
+## 16/11/2026: engrenagem de Ajustes dentro do quadro
+
+- **Era:** a engrenagem do botão de Ajustes (tela inicial) ficava acima do
+  centro e maior que a caixa, saindo para fora (print do Rone).
+- **Passou a ser:** centralizada e do tamanho da caixa. Versão 2026-11-16a.
