@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-16a"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-16b"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -3235,8 +3235,7 @@ func clique_menu(p: Vector2) -> void:
 				som("gema")
 				comecar_capitulo(c)
 			elif b["desafio"].has_point(p) and liberou("desafio"):
-				som("gema")
-				comecar_desafio()
+				tentar_desafio()
 			elif b["abismo"].has_point(p) and liberou("abismo"):
 				som("gema")
 				comecar_abismo()
@@ -4753,6 +4752,18 @@ func desafio_feito_hoje() -> bool:
 	return prog.get("desafio_dia", "") == hoje()
 
 
+# 16/11: depois de vencer o Desafio do Dia, ele só volta no dia seguinte
+# (antes dava para jogar de novo, valendo só 2 fragmentos). Perder não conta:
+# pode tentar de novo no mesmo dia até vencer.
+func tentar_desafio() -> void:
+	if desafio_feito_hoje():
+		som("dano")
+		popup = {"titulo": "DESAFIO DO DIA", "texto": "Você já venceu o desafio de hoje! Um novo desafio chega amanhã."}
+		return
+	som("gema")
+	comecar_desafio()
+
+
 func comecar_desafio() -> void:
 	desafio = gerar_desafio()
 	tipo_partida = "desafio"
@@ -5127,7 +5138,7 @@ func comecar_modo(id: String) -> void:
 		comecar_abismo()
 		return
 	if id == "desafio":
-		comecar_desafio()
+		tentar_desafio()
 		return
 	tipo_partida = "especial"
 	bencaos = []

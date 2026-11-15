@@ -577,3 +577,13 @@
 - **Era:** a engrenagem do botão de Ajustes (tela inicial) ficava acima do
   centro e maior que a caixa, saindo para fora (print do Rone).
 - **Passou a ser:** centralizada e do tamanho da caixa. Versão 2026-11-16a.
+
+## 16/11/2026: Desafio do Dia só uma vez por dia
+
+- **Era:** depois de vencer o Desafio do Dia dava para jogar de novo (valendo
+  2 fragmentos).
+- **Passou a ser:** vencido, ele fica fechado até o dia seguinte ("Você já
+  venceu o desafio de hoje!"), pelo botão da tela inicial e pelo de Modos.
+  Perder não conta: dá para tentar de novo no mesmo dia até vencer. Versão
+  2026-11-16b.
+- **Por quê:** pedido do Rone.

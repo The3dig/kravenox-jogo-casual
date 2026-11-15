@@ -916,5 +916,6 @@
  "Entre de novo na conta (Online → Conta) para ler as sugestões.": "Log in again (Online → Account) to read suggestions.",
  "PASSARAM VOCÊ!": "YOU GOT PASSED!",
  "%s passou você no ranking de %s. Agora você está em %dº. Bora recuperar?": "%s passed you in the %s ranking. You're now #%d. Time to take it back?",
- "toque para entrar de novo": "tap to log in again"
+ "toque para entrar de novo": "tap to log in again",
+ "Você já venceu o desafio de hoje! Um novo desafio chega amanhã.": "You already beat today's challenge! A new one arrives tomorrow."
 }
