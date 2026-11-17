@@ -25,6 +25,11 @@ SKINS = {
     "prata": ((70, 75, 90), (240, 245, 255), (255, 60, 60)),
     "estelar": ((10, 12, 40), (130, 150, 255), (255, 255, 255)),
     "forja": ((25, 28, 35), (120, 130, 150), (255, 140, 40)),
+    # 17/11: Passe do Cisma, temporada 1 (cisma = trilha grátis; as outras, trilha paga)
+    "cisma": ((40, 10, 30), (200, 80, 150), (255, 200, 240)),
+    "rubro": ((60, 0, 10), (230, 40, 60), (255, 215, 90)),
+    "obsidiana": ((4, 2, 10), (60, 40, 90), (190, 120, 255)),
+    "aurora": ((10, 40, 50), (120, 240, 210), (255, 150, 230)),
 }
 FONTES = [("assets/arte/kravenox.png", "kravenox.png")] + [("assets/kravenox-passo-%d.png" % n, "kravenox-passo-%d.png" % n) for n in range(4)]
 

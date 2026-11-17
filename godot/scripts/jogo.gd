@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-16i"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-17a"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -659,6 +659,7 @@ func fim_capitulo(venceu: bool) -> void:
 	nova_cronica = venceu and not feito(capitulo) and trechos.has(str(capitulo))
 	if venceu:
 		contar_missao("caps")
+		contar_total("vitorias")
 		if modo == "pesadelo":
 			if not prog.has("feitos_p"):
 				prog["feitos_p"] = {}
@@ -1788,6 +1789,9 @@ func _unhandled_input(ev: InputEvent) -> void:
 		if tela == "mundos" and ev.pressed and ev.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			rolagem = clampf(rolagem + (60.0 if ev.button_index == MOUSE_BUTTON_WHEEL_DOWN else -60.0), 0.0, rolagem_max())
 			return
+		if tela == "passe" and ev.pressed and ev.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			rol_passe = clampf(rol_passe + (60.0 if ev.button_index == MOUSE_BUTTON_WHEEL_DOWN else -60.0), 0.0, rol_passe_max())
+			return
 		if tela == "loja" and ev.pressed and ev.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			rol_loja = clampf(rol_loja + (60.0 if ev.button_index == MOUSE_BUTTON_WHEEL_DOWN else -60.0), 0.0, rol_loja_max())
 			return
@@ -1805,6 +1809,7 @@ func _unhandled_input(ev: InputEvent) -> void:
 			toque_ini = p
 			toque_rola = rolagem
 			toque_rol_loja = rol_loja
+			toque_rol_passe = rol_passe
 			arrastou = false
 		elif not arrastou:
 			clique_menu(p)
@@ -1819,6 +1824,12 @@ func _unhandled_input(ev: InputEvent) -> void:
 			arrastou = true
 		if arrastou:
 			rolagem = clampf(toque_rola - (p.y - toque_ini.y), 0.0, rolagem_max())
+	elif ev is InputEventMouseMotion and tela == "passe" and (ev.button_mask & MOUSE_BUTTON_MASK_LEFT):
+		var p: Vector2 = make_input_local(ev).position
+		if p.distance_to(toque_ini) > 10:
+			arrastou = true
+		if arrastou:
+			rol_passe = clampf(toque_rol_passe - (p.y - toque_ini.y), 0.0, rol_passe_max())
 	elif ev is InputEventMouseMotion and tela == "loja" and (ev.button_mask & MOUSE_BUTTON_MASK_LEFT):
 		# a lista da loja rola com o dedo
 		var p: Vector2 = make_input_local(ev).position
@@ -2243,6 +2254,8 @@ func _draw() -> void:
 			desenhar_ordem()
 		"colecao":
 			desenhar_colecao()
+		"passe":
+			desenhar_passe()
 		"evento":
 			desenhar_evento()
 		"sugestoes":
@@ -3177,6 +3190,7 @@ func botoes_menu() -> Dictionary:
 	b["loja"] = Rect2(222, 20, 94, 34)
 	b["jogos"] = Rect2(60, 96, 116, 34)
 	b["online"] = Rect2(182, 96, 96, 34)
+	b["passe"] = Rect2(284, 96, 96, 34)
 	b["versao"] = Rect2(120, 668, 240, 30)
 	b["codigo"] = Rect2(120, 582, 240, 40)
 	b["desafio"] = Rect2(12, 200, 72, 74)
@@ -3268,7 +3282,7 @@ func clique_menu(p: Vector2) -> void:
 			if b["voltar"].has_point(p):
 				ir_para("kravenox")
 				return
-		"evento":
+		"evento", "passe":
 			if b["voltar"].has_point(p):
 				ir_para("inicio")
 				return
@@ -3343,6 +3357,10 @@ func clique_menu(p: Vector2) -> void:
 			elif b["evento"].has_point(p):
 				som("gema")
 				ir_para("evento")
+			elif b["passe"].has_point(p):
+				som("gema")
+				rol_passe = 0.0
+				ir_para("passe")
 			elif b["missoes"].has_point(p):
 				ir_para("missoes")
 			elif b["baus"].has_point(p):
@@ -3424,6 +3442,7 @@ func clique_menu(p: Vector2) -> void:
 				var ms: Dictionary = MISSOES[i]
 				if b["missao%d" % i].has_point(p) and int(m.get(ms["id"], 0)) >= int(ms["meta"]) and not m["pegas"].has(ms["id"]):
 					m["pegas"].append(ms["id"])
+					contar_total("missoes")
 					ganhar(int(ms["premio"]) + mundo_de(int(prog["liberado"])) / 2, "MISSÃO CUMPRIDA")
 					return
 		"loja":
@@ -3440,6 +3459,8 @@ func clique_menu(p: Vector2) -> void:
 			clique_ordem(p)
 		"colecao":
 			clique_colecao(p)
+		"passe":
+			clique_passe(p)
 		"jogos":
 			for i in JOGOS_NOSSOS.size():
 				if Rect2(14, 152 + i * 132, LARG - 28, 122).has_point(p):
@@ -3792,6 +3813,11 @@ func desenhar_inicio() -> void:
 	botao_icone(b["missoes"], "missoes", "Missões", missoes_prontas() > 0)
 	botao_icone(b["baus"], "baus", "Baús", not baus_prontos().is_empty())
 	botao_icone(b["evento"], "evento", "Evento", evento_cumprido_sem_ver())
+	botao(b["passe"], "Passe", OURO, true, true)
+	if passe_tem_premio():
+		var dp: Vector2 = b["passe"].position + Vector2(b["passe"].size.x - 6, 4)
+		draw_circle(dp, 7 + sin(tempo * 5), VERMELHO)
+		escrever("!", dp, 12, BRANCO, false)
 	var vf := valor_fora()
 	botao_icone(b["fora"], "fora", "Vigília +%d" % vf if vf > 0 else "Vigília", vf >= 1)
 	# começar / continuar
@@ -6466,6 +6492,14 @@ const LOJA_ITENS := [
 	{"id": "skin_prata", "nome": "Kravenox de Prata", "preco": "Evento", "tipo": "skin", "skin": "prata", "cor": Color8(240, 245, 255), "desc": "do evento Semana da Caçada", "exclusivo": true, "como": "Cumpra o evento Semana da Caçada."},
 	{"id": "skin_estelar", "nome": "Kravenox Estelar", "preco": "Evento", "tipo": "skin", "skin": "estelar", "cor": Color8(150, 170, 255), "desc": "do evento Semana do Abismo", "exclusivo": true, "como": "Cumpra o evento Semana do Abismo."},
 	{"id": "skin_forja", "nome": "Kravenox da Forja", "preco": "Evento", "tipo": "skin", "skin": "forja", "cor": Color8(255, 140, 40), "desc": "do evento Semana da Forja", "exclusivo": true, "como": "Cumpra o evento Semana da Forja."},
+	# 17/11: Passe do Cisma, temporada 1 (ganhos no passe, não se compram avulsos)
+	{"id": "skin_cisma", "nome": "Kravenox do Cisma", "preco": "Passe", "tipo": "skin", "skin": "cisma", "cor": Color8(230, 110, 190), "desc": "trilha grátis do Passe do Cisma, temporada 1", "exclusivo": true, "como": "Passe do Cisma (temporada 1), nível 20 da trilha grátis."},
+	{"id": "skin_rubro", "nome": "Kravenox Rubro", "preco": "Passe", "tipo": "skin", "skin": "rubro", "cor": Color8(240, 50, 70), "desc": "trilha paga do Passe do Cisma, temporada 1", "exclusivo": true, "como": "Passe do Cisma (temporada 1), nível 5 da trilha paga."},
+	{"id": "skin_obsidiana", "nome": "Kravenox de Obsidiana", "preco": "Passe", "tipo": "skin", "skin": "obsidiana", "cor": Color8(190, 120, 255), "desc": "trilha paga do Passe do Cisma, temporada 1", "exclusivo": true, "como": "Passe do Cisma (temporada 1), nível 12 da trilha paga."},
+	{"id": "skin_aurora", "nome": "Kravenox Aurora", "preco": "Passe", "tipo": "skin", "skin": "aurora", "cor": Color8(120, 240, 210), "desc": "trilha paga do Passe do Cisma, temporada 1", "exclusivo": true, "como": "Passe do Cisma (temporada 1), nível 20 da trilha paga."},
+	{"id": "aura_cisma", "nome": "Aura do Cisma", "preco": "Passe", "tipo": "aura", "cor": Color8(230, 80, 200), "desc": "a luz em volta do Kravenox fica magenta do Cisma", "exclusivo": true, "como": "Passe do Cisma (temporada 1), nível 3 da trilha paga."},
+	{"id": "aura_aurora", "nome": "Aura da Aurora", "preco": "Passe", "tipo": "aura", "cor": Color8(120, 240, 210), "desc": "a luz em volta do Kravenox fica verde-aurora", "exclusivo": true, "como": "Passe do Cisma (temporada 1), nível 15 da trilha paga."},
+	{"id": "moldura_cisma", "nome": "Moldura do Cisma", "preco": "Passe", "tipo": "moldura", "cor": Color8(230, 80, 200), "desc": "os quadros com poder ganham borda magenta", "exclusivo": true, "como": "Passe do Cisma (temporada 1), nível 8 da trilha paga."},
 	{"id": "moldura_brasa", "nome": "Moldura de Brasa", "preco": "R$ 2,90", "tipo": "moldura", "cor": Color8(255, 90, 40), "desc": "os quadros com poder ganham borda de brasa"},
 	{"id": "vel4", "nome": "Velocidade 4×", "preco": "R$ 4,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "o botão de velocidade ganha o 4×"},
 	{"id": "fora24", "nome": "Vigília de 24 horas", "preco": "R$ 2,90", "tipo": "conforto", "cor": Color8(214, 178, 106), "desc": "a Vigília junta fragmentos por até 24 h, e não 12 h"},
@@ -6474,6 +6508,8 @@ var toques_versao := 0
 
 
 func tem(id: String) -> bool:
+	if id in ["vel4", "fora24"] and passe_pago() and temporada_ativa():
+		return true   # conforto da trilha paga do Passe, enquanto a temporada durar
 	return bool(prog.get("teste_compras", false)) or prog.get("compras", {}).has(id)
 
 
@@ -6497,7 +6533,7 @@ func cor_moldura() -> Color:
 	var m := str(prog.get("moldura", ""))
 	if m == "ouro" and tem("apoiador"):
 		return OURO
-	if m == "moldura_brasa" and tem(m):
+	if m != "" and m != "ouro" and tem(m) and item_loja(m).get("tipo", "") == "moldura":
 		return item_loja(m)["cor"]
 	return Color(0, 0, 0, 0)
 
@@ -8174,6 +8210,7 @@ func checar_conquistas_skin() -> void:
 	var ev := evento_atual()
 	if not bool(e["feito"]) and progresso_evento() >= int(ev["meta"]):
 		e["feito"] = true
+		contar_total("eventos")
 		var it2 := item_loja("skin_" + str(ev["skin"]))
 		var tinha: bool = prog.get("compras", {}).has(it2["id"])
 		var frag := PREMIO_EVENTO * (2 if tinha else 1)
@@ -8513,3 +8550,262 @@ func aplicar_recuperacao(h: String) -> void:
 	som("nivel")
 	tremer(0.4, 200)
 	popup = {"titulo": "PROGRESSO DE VOLTA!", "texto": tx("Bem-vindo de volta, %s! Capítulo %d liberado, skins devolvidas e +%d fragmentos.") % [str(r["nome"]), lib, int(r["fragmentos"])]}
+
+
+# ============================================================ Passe do Cisma (17/11)
+# Temporada de 30 dias com 20 níveis. Sobe de nível jogando: capítulos
+# vencidos, chefes, monstros, missões, desafio do dia, modos, evento da semana
+# e dano no Abismo (conta só o que for feito durante a temporada).
+# Trilha grátis: fragmentos e uma skin no fim. Trilha paga: só visual e
+# conforto (skins, auras, moldura, títulos, 4× e Vigília de 24 h na
+# temporada). Nada de fragmentos ou força a mais: sem "pagar para ganhar".
+# A compra ainda não está ligada (como na Loja do Apoiador); o modo de teste
+# da loja libera a trilha paga para testar.
+const PASSE_INICIO_DIA := 20774   # 17/11/2026, em dias desde 1/1/1970
+const PASSE_DIAS := 30
+const PASSE_NIVEIS := 20
+const PASSE_XP_NIVEL := 300
+const PASSE_PRECO := "R$ 14,90"
+const PASSE_XP := {"vitorias": 25.0, "chefes": 5.0, "mortes": 0.1, "missoes": 20.0, "desafios": 40.0,
+	"modos": 15.0, "eventos": 200.0, "dano_abismo": 0.00005}
+const TEMPORADAS := [
+	{"nome": "Temporada 1 · O Despertar do Cisma",
+		"gratis": {1: {"frag": 10}, 2: {"frag": 10}, 3: {"frag": 12}, 4: {"frag": 12}, 5: {"frag": 40},
+			6: {"frag": 14}, 7: {"frag": 14}, 8: {"frag": 16}, 9: {"frag": 16}, 10: {"frag": 50},
+			11: {"frag": 18}, 12: {"frag": 18}, 13: {"frag": 20}, 14: {"frag": 20}, 15: {"frag": 60},
+			16: {"frag": 22}, 17: {"frag": 22}, 18: {"frag": 24}, 19: {"frag": 24}, 20: {"item": "skin_cisma"}},
+		"pago": {1: {"conforto": true}, 3: {"item": "aura_cisma"}, 5: {"item": "skin_rubro"}, 8: {"item": "moldura_cisma"},
+			10: {"titulo": "Desperto do Cisma (T1)"}, 12: {"item": "skin_obsidiana"}, 15: {"item": "aura_aurora"},
+			18: {"titulo": "Lorde do Cisma (T1)"}, 20: {"item": "skin_aurora"}}},
+]
+var rol_passe := 0.0
+var toque_rol_passe := 0.0
+
+
+func dia_hoje() -> int:
+	return int(floor(agora() / 86400.0))
+
+
+func temporada_idx() -> int:
+	return int(floor(float(dia_hoje() - PASSE_INICIO_DIA) / PASSE_DIAS))
+
+
+func temporada_ativa() -> bool:
+	var t := temporada_idx()
+	return t >= 0 and t < TEMPORADAS.size()
+
+
+func dias_temporada() -> int:
+	return PASSE_DIAS - posmod(dia_hoje() - PASSE_INICIO_DIA, PASSE_DIAS)
+
+
+func passe_pago() -> bool:
+	if not temporada_ativa():
+		return false
+	var id := "passe_t%d" % (temporada_idx() + 1)
+	return bool(prog.get("teste_compras", false)) or prog.get("compras", {}).has(id)
+
+
+func estado_passe() -> Dictionary:
+	var e = prog.get("passe", {})
+	if not (e is Dictionary) or int(e.get("t", -99)) != temporada_idx():
+		var base := {}
+		for k in PASSE_XP:
+			base[k] = total_de(k)
+		e = {"t": temporada_idx(), "base": base, "g": [], "p": []}
+		prog["passe"] = e
+	return e
+
+
+func xp_passe() -> int:
+	var e := estado_passe()
+	var xp := 0.0
+	for k in PASSE_XP:
+		xp += maxf(0.0, float(total_de(k) - int(e["base"].get(k, 0)))) * PASSE_XP[k]
+	return int(xp)
+
+
+func nivel_passe() -> int:
+	return mini(PASSE_NIVEIS, xp_passe() / PASSE_XP_NIVEL)
+
+
+func premio_passe(trilha: String, n: int) -> Dictionary:
+	if not temporada_ativa():
+		return {}
+	return TEMPORADAS[temporada_idx()][trilha].get(n, {})
+
+
+func passe_pego(trilha: String, n: int) -> bool:
+	return n in Array(estado_passe()["g" if trilha == "gratis" else "p"])
+
+
+func passe_pode_pegar(trilha: String, n: int) -> bool:
+	return temporada_ativa() and not premio_passe(trilha, n).is_empty() and n <= nivel_passe() \
+		and not passe_pego(trilha, n) and (trilha == "gratis" or passe_pago())
+
+
+func passe_tem_premio() -> bool:
+	if not temporada_ativa():
+		return false
+	for n in range(1, nivel_passe() + 1):
+		if passe_pode_pegar("gratis", n) or passe_pode_pegar("pago", n):
+			return true
+	return false
+
+
+func texto_premio(pr: Dictionary) -> String:
+	if pr.has("frag"):
+		return "+%d" % int(pr["frag"])
+	if pr.has("item"):
+		return tx(item_loja(pr["item"])["nome"]).replace("Kravenox ", "")
+	if pr.has("titulo"):
+		return tx("Título")
+	if pr.has("conforto"):
+		return tx("4× e Vigília 24 h")
+	return ""
+
+
+func pegar_passe(trilha: String, n: int) -> void:
+	var pr := premio_passe(trilha, n)
+	var e := estado_passe()
+	e["g" if trilha == "gratis" else "p"].append(n)
+	var texto := ""
+	if pr.has("frag"):
+		prog["fragmentos"] = int(prog["fragmentos"]) + int(pr["frag"])
+		texto = tx("+%d fragmentos") % int(pr["frag"])
+	elif pr.has("item"):
+		var it := item_loja(pr["item"])
+		var cp: Dictionary = prog.get("compras", {})
+		cp[it["id"]] = "passe"
+		prog["compras"] = cp
+		match it["tipo"]:
+			"skin":
+				prog["skin"] = it["skin"]
+				skin_ganha = it["skin"]
+				skin_ganha_t = 4.5
+			"aura":
+				prog["aura"] = it["id"]
+			"moldura":
+				prog["moldura"] = it["id"]
+		texto = tx("%s: %s.") % [tx(it["nome"]), tx(it["desc"])]
+	elif pr.has("titulo"):
+		prog["titulo"] = str(pr["titulo"])
+		texto = tx("Novo título: %s") % str(pr["titulo"])
+	elif pr.has("conforto"):
+		texto = tx("Velocidade 4× e Vigília de 24 h liberadas até o fim da temporada.")
+	prog["perfil_env"] = {}
+	salvar()
+	som("nivel")
+	popup = {"titulo": tx("PASSE · NÍVEL %d") % n, "texto": texto}
+
+
+func rol_passe_max() -> float:
+	return maxf(0.0, PASSE_NIVEIS * 70.0 - (ALT - 96 - 312))
+
+
+func ret_passe(trilha: String, n: int) -> Rect2:
+	var y := 312 + (n - 1) * 70.0 - rol_passe
+	return Rect2(16, y, 196, 62) if trilha == "gratis" else Rect2(LARG - 212, y, 196, 62)
+
+
+func desenhar_premio_passe(r: Rect2, pr: Dictionary, trilha: String, n: int) -> void:
+	var pego := passe_pego(trilha, n)
+	var pode := passe_pode_pegar(trilha, n)
+	var travado := trilha == "pago" and not passe_pago()
+	var cor := OURO if trilha == "pago" else Color8(170, 200, 255)
+	caixa(r, Color8(44, 32, 18) if pode else Color(0.06, 0.05, 0.08, 0.93), 10, 2 if pode else 1, cor if pode else Color(cor, 0.35), true, 4)
+	if pr.is_empty():
+		return
+	var c := r.position + Vector2(36, r.size.y / 2)
+	if pr.has("frag"):
+		cristal(c, 12)
+	elif pr.has("item"):
+		var it := item_loja(pr["item"])
+		if it["tipo"] == "skin":
+			desenhar_arte_skin(it["skin"], c + Vector2(0, 24), 50, true)
+		else:
+			brilho_suave(c, 26, it["cor"], 1.0)
+			draw_arc(c, 13, 0, TAU, 24, it["cor"], 3, true)
+	elif pr.has("titulo"):
+		escrever("T", c, 24, cor, true, fonte_titulo)
+		brilho_suave(c, 22, cor, 0.6)
+	elif pr.has("conforto"):
+		escrever("4×", c, 20, cor, true, fonte_titulo)
+	var a := 0.45 if (travado or (n > nivel_passe() and not pego)) else 1.0
+	escrever_esq(encurtar(texto_premio(pr), fonte, 14, r.size.x - 80), r.position + Vector2(66, 28), 14, Color(BRANCO, a))
+	var estado_txt := tx("pego") if pego else (tx("Pegar!") if pode else (tx("trilha paga") if travado else tx("nível %d") % n))
+	escrever_esq(estado_txt, r.position + Vector2(66, 48), 12, VERDE if pego else (OURO if pode else CINZA))
+	if travado and not pego:
+		draw_rect(Rect2(r.end - Vector2(22, 22), Vector2(12, 9)), Color(CINZA, 0.8))
+		draw_arc(r.end - Vector2(16, 22), 4, PI, TAU, 8, Color(CINZA, 0.8), 2)
+
+
+func desenhar_passe() -> void:
+	desenhar_fundo(0.7)
+	rol_passe = clampf(rol_passe, 0.0, rol_passe_max())
+	if not temporada_ativa():
+		cabecalho("PASSE DO CISMA")
+		escrever("A próxima temporada chega em breve!", Vector2(LARG / 2, 300), 18, BRANCO, true)
+		desenhar_abas()
+		desenhar_popup()
+		return
+	var tp: Dictionary = TEMPORADAS[temporada_idx()]
+	var nv := nivel_passe()
+	var xp := xp_passe()
+	# lista (desenhada antes do topo, que fica por cima ao rolar)
+	for n in range(1, PASSE_NIVEIS + 1):
+		var rg := ret_passe("gratis", n)
+		if rg.end.y < 300 or rg.position.y > ALT - 90:
+			continue
+		var cn := Vector2(LARG / 2, rg.get_center().y)
+		var feito := n <= nv
+		draw_circle(cn, 18, Color8(60, 40, 20) if feito else Color8(24, 20, 32))
+		draw_arc(cn, 18, 0, TAU, 24, OURO if feito else PEDRA_BORDA, 2, true)
+		escrever(str(n), cn, 16, OURO if feito else CINZA, true, fonte_titulo)
+		desenhar_premio_passe(rg, premio_passe("gratis", n), "gratis", n)
+		desenhar_premio_passe(ret_passe("pago", n), premio_passe("pago", n), "pago", n)
+	draw_rect(Rect2(0, 0, LARG, 304), Color8(14, 9, 20))
+	cabecalho("PASSE DO CISMA")
+	escrever(tx(tp["nome"]), Vector2(LARG / 2, 120), 16, Color8(230, 120, 200), true, fonte_titulo)
+	escrever(tx("Termina em %d dias") % dias_temporada(), Vector2(LARG / 2, 142), 13, CINZA, false)
+	escrever(tx("NÍVEL %d") % nv if nv < PASSE_NIVEIS else tx("NÍVEL MÁXIMO!"), Vector2(LARG / 2, 172), 22, OURO, true, fonte_titulo)
+	var r := Rect2(40, 186, LARG - 80, 22)
+	caixa(r, Color(0.05, 0.04, 0.07, 0.9), 8, 1, Color(OURO, 0.6))
+	var fr := 1.0 if nv >= PASSE_NIVEIS else float(xp % PASSE_XP_NIVEL) / PASSE_XP_NIVEL
+	degrade(Rect2(r.position + Vector2(3, 3), Vector2((r.size.x - 6) * fr, r.size.y - 6)), OURO, Color8(150, 90, 30))
+	escrever("%d / %d XP" % [xp % PASSE_XP_NIVEL if nv < PASSE_NIVEIS else PASSE_XP_NIVEL, PASSE_XP_NIVEL], r.get_center(), 13, BRANCO, true)
+	escrever("XP: capítulos, chefes, missões, desafio, modos, evento e Abismo", Vector2(LARG / 2, 222), 12, CINZA, false)
+	var bp := Rect2(40, 236, LARG - 80, 40)
+	if passe_pago():
+		caixa(bp, Color8(50, 36, 16), 10, 2, OURO, true, 4)
+		escrever("TRILHA PAGA LIBERADA", bp.get_center(), 16, OURO, true, fonte_titulo)
+	else:
+		botao(bp, tx("Liberar trilha paga · %s") % PASSE_PRECO, OURO, true, true)
+	escrever_esq(tx("GRÁTIS"), Vector2(20, 296), 13, Color8(170, 200, 255), fonte_titulo)
+	var wp := fonte_titulo.get_string_size(tx("PAGA"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+	escrever_esq(tx("PAGA"), Vector2(LARG - 20 - wp, 296), 13, OURO, fonte_titulo)
+	desenhar_abas()
+	desenhar_popup()
+
+
+func clique_passe(p: Vector2) -> void:
+	if not temporada_ativa():
+		return
+	if Rect2(40, 236, LARG - 80, 40).has_point(p) and not passe_pago():
+		popup = {"titulo": "TRILHA PAGA", "texto": tx("A compra ainda não está ligada: começa a funcionar quando o pagamento estiver pronto. A trilha paga só tem visual e conforto (skins, auras, moldura, títulos, 4× e Vigília 24 h). Quem não paga continua com todos os prêmios da trilha grátis.")}
+		return
+	if p.y < 304 or p.y > ALT - 90:
+		return
+	for n in range(1, PASSE_NIVEIS + 1):
+		for trilha in ["gratis", "pago"]:
+			if ret_passe(trilha, n).has_point(p):
+				var pr := premio_passe(trilha, n)
+				if pr.is_empty():
+					return
+				if passe_pode_pegar(trilha, n):
+					pegar_passe(trilha, n)
+				elif trilha == "pago" and not passe_pago():
+					popup = {"titulo": "TRILHA PAGA", "texto": tx("Este prêmio é da trilha paga (%s): %s") % [PASSE_PRECO, texto_premio(pr)]}
+				elif n > nivel_passe():
+					popup = {"titulo": tx("NÍVEL %d") % n, "texto": tx("Chegue ao nível %d do passe para pegar: %s") % [n, texto_premio(pr)]}
+				return

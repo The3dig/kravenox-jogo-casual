@@ -667,3 +667,29 @@
   código curto vale também em Colar progresso, e a mensagem de "código não
   existe" mostra a versão do jogo e manda fechar e abrir de novo para
   atualizar.
+
+## 17/11/2026: Passe do Cisma (temporada com trilha grátis e paga)
+
+- **Era:** o único jeito de gerar renda planejado era a Loja do Apoiador
+  (itens avulsos, compra ainda não ligada).
+- **Passou a ser** (versão 2026-11-17a): **Passe do Cisma**, botão "Passe"
+  na tela inicial. Temporada de 30 dias (a 1ª, "O Despertar do Cisma",
+  começa em 17/11/2026), 20 níveis de 300 XP. O XP vem do que já se faz no
+  jogo, contando só o feito na temporada: capítulo vencido 25, chefe 5,
+  monstro 0,1, missão 20, desafio do dia 40, modo 15, evento da semana 200,
+  dano no Abismo 1 a cada 20 mil. Quem joga todo dia sobe ~1 nível por dia.
+  - **Trilha grátis:** fragmentos em todo nível (baús maiores nos níveis 5,
+    10 e 15) e a skin Kravenox do Cisma no 20.
+  - **Trilha paga (R$ 14,90):** só visual e conforto: 4× e Vigília de 24 h
+    durante a temporada (nível 1), Aura do Cisma (3), skin Rubro (5),
+    Moldura do Cisma (8), título "Desperto do Cisma (T1)" (10), skin de
+    Obsidiana (12), Aura da Aurora (15), título "Lorde do Cisma (T1)" (18),
+    skin Aurora (20). Sem fragmentos nem força a mais (regra do Rone: nada
+    de pagar para ganhar). Os itens ganhos ficam para sempre.
+  - A compra ainda não está ligada (como na Loja do Apoiador); o modo de
+    teste da loja libera a trilha paga para testar.
+  - Depois de 30 dias, se não houver temporada 2 definida, o passe mostra
+    "a próxima temporada chega em breve".
+- **Por quê:** ideia do Rone para gerar renda no futuro ("todo jogo tem o
+  passe"). O preço sugerido por ele era R$ 24,99; ficou R$ 14,90 para
+  começar (constante `PASSE_PRECO`, fácil de mudar).
