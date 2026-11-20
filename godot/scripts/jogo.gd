@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-17a"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-20a"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -6704,7 +6704,7 @@ func desenhar_loja_apoiador() -> void:
 		texto_quebrado(it["desc"], r.position + Vector2(76, 27), r.size.x - 200, 12, Color8(210, 200, 220), 3)
 		var bb := Rect2(LARG - 128, r.position.y + 14, 108, 40)
 		if not dono:
-			botao(bb, it["preco"], OURO, true, true)
+			botao(bb, preco_mostrado(str(it["preco"])), OURO, true, true)
 		elif it["tipo"] == "conforto":
 			botao(bb, "Ativo", VERDE, true, false)
 		else:
@@ -7672,6 +7672,7 @@ func desenhar_online() -> void:
 		escrever_esq(itens[i][1], r.position + Vector2(92, 34), 18, OURO, fonte_titulo)
 		texto_quebrado(itens[i][2], r.position + Vector2(92, 42), r.size.x - 108, 13, Color8(220, 210, 230), 3)
 	if conta() != "":
+		botao(Rect2(LARG / 2 - 90, 652, 180, 34), "Confirmar exclusão?" if tempo < excluir_ate else "Excluir conta", VERMELHO, true, tempo < excluir_ate)
 		botao(Rect2(24, 596, LARG / 2 - 30, 40), "Enviar sugestão", AZUL, true, false)
 		if bool(prog.get("admin", false)):
 			botao(Rect2(LARG / 2 + 6, 596, LARG / 2 - 30, 40), "Ver sugestões", OURO, true, false)
@@ -7680,6 +7681,14 @@ func desenhar_online() -> void:
 
 
 func clique_online(p: Vector2) -> void:
+	if conta() != "" and Rect2(LARG / 2 - 90, 652, 180, 34).has_point(p):
+		if tempo < excluir_ate:
+			excluir_ate = -1.0
+			excluir_conta()
+		else:
+			excluir_ate = tempo + 4.0
+			popup = {"titulo": "EXCLUIR CONTA", "texto": "Isso apaga do servidor a sua conta, o perfil, o progresso guardado na conta e o seu lugar no ranking. O progresso deste celular continua. Para confirmar, toque de novo em Excluir conta em até 4 segundos."}
+		return
 	if conta() != "" and Rect2(24, 596, LARG / 2 - 30, 40).has_point(p):
 		enviar_sugestao()
 		return
@@ -8233,8 +8242,9 @@ func lista_skins() -> Array:
 
 
 func ret_colecao(i: int) -> Rect2:
-	var w := (LARG - 40) / 3.0
-	return Rect2(14 + (i % 3) * (w + 6), 128 + (i / 3) * 116, w, 110)
+	# 20/11: 4 colunas (com 18 skins, 3 colunas passavam da barra de baixo)
+	var w := (LARG - 46) / 4.0
+	return Rect2(14 + (i % 4) * (w + 6), 128 + (i / 4) * 116, w, 110)
 
 
 func desenhar_colecao() -> void:
@@ -8254,12 +8264,13 @@ func desenhar_colecao() -> void:
 		if dona:
 			brilho_suave(r.get_center() + Vector2(0, -10), 40, cor, 0.5)
 		desenhar_arte_skin(sk, r.position + Vector2(r.size.x / 2, 78), 68, dona)
-		var nome := "Kravenox" if sk == "" else tx(item_loja("skin_" + sk)["nome"]).replace("Kravenox ", "")
+		var nome := "Kravenox" if sk == "" else tx(item_loja("skin_" + sk)["nome"]).replace("Kravenox ", "").trim_prefix("de ").trim_prefix("do ").trim_prefix("da ").replace(" Kravenox", "")
+		nome = nome.substr(0, 1).to_upper() + nome.substr(1)
 		escrever(encurtar(nome, fonte, 13, r.size.x - 8), r.position + Vector2(r.size.x / 2, 94), 13, BRANCO if dona else CINZA, false)
 		if usando_esta:
 			escrever("em uso", r.position + Vector2(r.size.x / 2, 16), 11, OURO, false)
 		elif not dona:
-			escrever(tx(item_loja("skin_" + sk)["preco"]), r.position + Vector2(r.size.x / 2, 16), 11, CINZA, false)
+			escrever(tx(preco_mostrado(str(item_loja("skin_" + sk)["preco"]))), r.position + Vector2(r.size.x / 2, 16), 11, CINZA, false)
 	escrever(tx("%d de %d skins · toque para usar") % [donas, l.size()], Vector2(LARG / 2, 112), 13, Color8(200, 170, 255), false)
 	desenhar_abas()
 	desenhar_popup()
@@ -8780,7 +8791,7 @@ func desenhar_passe() -> void:
 		caixa(bp, Color8(50, 36, 16), 10, 2, OURO, true, 4)
 		escrever("TRILHA PAGA LIBERADA", bp.get_center(), 16, OURO, true, fonte_titulo)
 	else:
-		botao(bp, tx("Liberar trilha paga · %s") % PASSE_PRECO, OURO, true, true)
+		botao(bp, tx("Liberar trilha paga · %s") % preco_mostrado(PASSE_PRECO), OURO, true, true)
 	escrever_esq(tx("GRÁTIS"), Vector2(20, 296), 13, Color8(170, 200, 255), fonte_titulo)
 	var wp := fonte_titulo.get_string_size(tx("PAGA"), HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
 	escrever_esq(tx("PAGA"), Vector2(LARG - 20 - wp, 296), 13, OURO, fonte_titulo)
@@ -8805,7 +8816,39 @@ func clique_passe(p: Vector2) -> void:
 				if passe_pode_pegar(trilha, n):
 					pegar_passe(trilha, n)
 				elif trilha == "pago" and not passe_pago():
-					popup = {"titulo": "TRILHA PAGA", "texto": tx("Este prêmio é da trilha paga (%s): %s") % [PASSE_PRECO, texto_premio(pr)]}
+					popup = {"titulo": "TRILHA PAGA", "texto": tx("Este prêmio é da trilha paga (%s): %s") % [preco_mostrado(PASSE_PRECO), texto_premio(pr)]}
 				elif n > nivel_passe():
 					popup = {"titulo": tx("NÍVEL %d") % n, "texto": tx("Chegue ao nível %d do passe para pegar: %s") % [n, texto_premio(pr)]}
 				return
+
+
+# ------------------------------------------------------------ pronto para as lojas (20/11)
+# Enquanto a compra não estiver ligada (App Store / Google Play / Pix), os
+# preços aparecem como "Em breve": a Apple recusa app que mostra preço de algo
+# que não dá para comprar. Quando ligar, troque para true.
+const COMPRAS_LIGADAS := false
+var excluir_ate := -1.0
+
+
+func preco_mostrado(preco: String) -> String:
+	if COMPRAS_LIGADAS or not preco.begins_with("R$"):
+		return preco
+	return tx("Em breve")
+
+
+# A Apple e o Google exigem que quem cria conta consiga excluí-la pelo app.
+func excluir_conta() -> void:
+	if str(prog.get("token", "")) == "":
+		popup = {"titulo": "EXCLUIR CONTA", "texto": "Entre de novo na conta (toque em Conta, acima) e depois toque em Excluir conta."}
+		return
+	popup = {"titulo": "EXCLUIR CONTA", "texto": "Excluindo…"}
+	var r := await chamar_api("POST", "/conta/excluir", {"id": id_jogador(), "token": str(prog["token"])})
+	if r.has("erro"):
+		popup = {"titulo": "EXCLUIR CONTA", "texto": "Sem internet: tente de novo depois." if r["erro"] == "sem internet" else str(r["erro"])}
+		return
+	for k in ["conta", "token", "admin", "perfil_env", "poder_env", "rank_pos"]:
+		prog.erase(k)
+	prog["nome_duelo"] = ""
+	prog["id_jogador"] = ""   # um número novo na próxima vez que usar o online
+	salvar()
+	popup = {"titulo": "CONTA EXCLUÍDA", "texto": "Sua conta foi apagada do servidor. O progresso deste celular continua aqui."}

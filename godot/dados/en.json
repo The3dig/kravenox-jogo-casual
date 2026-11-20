@@ -963,5 +963,16 @@
  "trilha paga do Passe do Cisma, temporada 1": "premium track of the Schism Pass, season 1",
  "a luz em volta do Kravenox fica magenta do Cisma": "the light around Kravenox turns Schism magenta",
  "a luz em volta do Kravenox fica verde-aurora": "the light around Kravenox turns aurora green",
- "os quadros com poder ganham borda magenta": "tiles with powers get a magenta border"
+ "os quadros com poder ganham borda magenta": "tiles with powers get a magenta border",
+ "Em breve": "Soon",
+ "Excluir conta": "Delete account",
+ "Confirmar exclusão?": "Confirm deletion?",
+ "EXCLUIR CONTA": "DELETE ACCOUNT",
+ "CONTA EXCLUÍDA": "ACCOUNT DELETED",
+ "Excluindo…": "Deleting…",
+ "Isso apaga do servidor a sua conta, o perfil, o progresso guardado na conta e o seu lugar no ranking. O progresso deste celular continua. Para confirmar, toque de novo em Excluir conta em até 4 segundos.": "This deletes your account, profile, cloud progress and ranking entry from the server. The progress on this phone stays. To confirm, tap Delete account again within 4 seconds.",
+ "Entre de novo na conta (toque em Conta, acima) e depois toque em Excluir conta.": "Log in again (tap Account, above) and then tap Delete account.",
+ "Sua conta foi apagada do servidor. O progresso deste celular continua aqui.": "Your account was deleted from the server. The progress on this phone stays here.",
+ "Esse nome não pode ser usado. Escolha outro.": "That name can't be used. Choose another.",
+ "Entre de novo na conta para poder excluí-la.": "Log in again to delete your account."
 }

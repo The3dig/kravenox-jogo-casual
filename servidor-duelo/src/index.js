@@ -178,6 +178,17 @@ async function api(req, env, partes) {
   if (partes[0] === "conta" && req.method === "POST" && (partes[1] === "criar" || partes[1] === "entrar")) {
     return contas.fetch(new Request("https://interno/" + partes[1], { method: "POST", body: JSON.stringify(corpo) }));
   }
+  // 20/11: excluir conta (exigência da Apple e do Google para apps com conta).
+  // Apaga a conta, o perfil, o save na nuvem e as linhas do ranking da semana.
+  if (partes[0] === "conta" && req.method === "POST" && partes[1] === "excluir") {
+    const r = await (await contas.fetch(new Request("https://interno/excluir", { method: "POST", body: JSON.stringify(corpo) }))).json();
+    if (r.ok) {
+      const ranking = env.RANKING.get(env.RANKING.idFromName("global"));
+      await ranking.fetch(new Request("https://interno/remover", { method: "POST", body: JSON.stringify({ id: r.id }) }));
+      return json({ ok: true });
+    }
+    return json(r);
+  }
   // 15/11: perfil (aparece ao tocar no nome no ranking) e sugestões para o Rone
   if (partes[0] === "perfil" && req.method === "POST") {
     return contas.fetch(new Request("https://interno/perfil", { method: "POST", body: JSON.stringify(corpo) }));
@@ -259,6 +270,18 @@ export class Ranking {
         ...this.posicao(tabela, id, cat),
         campeoes: this.ordenar(passada, cat).slice(0, 3).map(([i, v], k) => ({ pos: k + 1, nome: v.nome, valor: v.valor, eu: i === id })),
       });
+    }
+    if (acao === "remover" && req.method === "POST") {
+      const id = limpaId((await req.json()).id);
+      if (!id) return json({ erro: "dados inválidos" }, 400);
+      for (const chave of (await this.storage.list({ prefix: "s:" + semana() + ":" })).keys()) {
+        const tabela = (await this.storage.get(chave)) || {};
+        if (tabela[id]) {
+          delete tabela[id];
+          await this.storage.put(chave, tabela);
+        }
+      }
+      return json({ ok: true });
     }
     return json({ erro: "não encontrado" }, 404);
   }
@@ -411,6 +434,18 @@ function hexParaBytes(h) {
   return new Uint8Array(h.match(/../g).map((x) => parseInt(x, 16)));
 }
 
+// 20/11: os nomes aparecem para todos no ranking: barra palavrões e nomes que
+// fingem ser do jogo. Compara sem acento e trocando números por letras (4→a, 0→o...).
+const FEIOS = ["porra", "caralh", "buceta", "bucet", "piroca", "cuzao", "cuzinho", "foder", "fodase", "foda",
+  "merda", "puta", "puto", "viado", "arrombad", "otario", "babaca", "vagabund", "piranha", "xota", "xoxota",
+  "fuck", "shit", "bitch", "cunt", "pussy", "nigg", "nazi", "hitler", "estupr", "pedofil", "admin", "moderador", "suporte", "oficial"];
+
+function nomeFeio(n) {
+  const base = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/4/g, "a").replace(/3/g, "e").replace(/1/g, "i").replace(/0/g, "o").replace(/5/g, "s").replace(/_/g, "");
+  return FEIOS.some((f) => base.includes(f));
+}
+
 function novoToken() {
   return [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -505,6 +540,16 @@ export class Contas {
       const lista = [...(await this.storage.list({ prefix: "g:", reverse: true, limit: 100 })).values()].filter((g) => !g.nome.toLowerCase().startsWith("zzteste"));
       return json({ lista });
     }
+    if (acao === "excluir") {
+      const dono = await this.contaDoId(limpaId(c.id));
+      if (!dono) return json({ erro: "sem conta" });
+      if (!dono.conta.token || !iguais(String(c.token || ""), dono.conta.token)) return json({ erro: "Entre de novo na conta para poder excluí-la." });
+      const id = dono.conta.id;
+      for (const k of ["u:" + dono.chave, "i:" + id, "p:" + id, "sv:" + id, "sv_ant:" + id, "f:" + dono.chave, "lim:" + dono.chave]) await this.storage.delete(k);
+      // celulares que entraram nessa conta também apontavam para ela
+      for (const [k, v] of await this.storage.list({ prefix: "i:" })) if (v === dono.chave) await this.storage.delete(k);
+      return json({ ok: true, id });
+    }
     const nome = String(c.usuario || "").trim();
     const senha = String(c.senha || "");
     const id = limpaId(c.id);
@@ -513,6 +558,7 @@ export class Contas {
     if (!id) return json({ erro: "dados inválidos" }, 400);
     const chave = nome.toLowerCase();
     if (acao === "criar") {
+      if (nomeFeio(chave)) return json({ erro: "Esse nome não pode ser usado. Escolha outro." });
       if (await this.storage.get("u:" + chave)) return json({ erro: "Esse usuário já existe. Escolha outro ou toque em Entrar." });
       const ja = await this.storage.get("i:" + id);
       if (ja) return json({ erro: "Este celular já tem a conta " + (await this.storage.get("u:" + ja)).nome + ". Use Entrar." });

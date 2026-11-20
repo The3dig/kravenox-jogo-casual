@@ -693,3 +693,26 @@
 - **Por quê:** ideia do Rone para gerar renda no futuro ("todo jogo tem o
   passe"). O preço sugerido por ele era R$ 24,99; ficou R$ 14,90 para
   começar (constante `PASSE_PRECO`, fácil de mudar).
+
+## 20/11/2026: revisão para lançar como app
+
+- **Revisão:** robô jogou a campanha inteira (76 capítulos), o Pesadelo
+  inteiro depois do Normal (76, com 24 derrotas no caminho), o Abismo (onda
+  51) e o Desafio do Dia, sem nenhum erro. Prints de todas as 24 telas em
+  português e inglês.
+- **Corrigido** (versão 2026-11-20a):
+  - Tela Skins em 4 colunas (com 18 skins, a última linha ficava atrás da
+    barra de baixo); nomes curtos ("Gelo", "Vazio").
+  - **Excluir conta** (Online, dois toques): apaga do servidor conta, perfil,
+    progresso na nuvem e o lugar no ranking. Exigência da Apple e do Google
+    para apps com conta.
+  - **Filtro de nomes** no servidor: palavrões (também com números no lugar
+    de letras) e nomes como "admin", "suporte", "oficial" são recusados,
+    porque os nomes aparecem para todos.
+  - **Preços como "Em breve"** enquanto a compra não estiver ligada
+    (`COMPRAS_LIGADAS`): a Apple recusa app que mostra preço de algo que não
+    dá para comprar.
+  - **Política de privacidade** reescrita: ela ainda dizia que o jogo não
+    coleta nada e não usa servidor; agora explica a conta opcional, o que
+    fica no servidor, o Duelo, como excluir a conta, compras e crianças.
+    Falta o e-mail de contato (pedido ao Rone).
