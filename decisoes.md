@@ -716,3 +716,22 @@
     coleta nada e não usa servidor; agora explica a conta opcional, o que
     fica no servidor, o Duelo, como excluir a conta, compras e crianças.
     Falta o e-mail de contato (pedido ao Rone).
+
+## 20/11/2026: Colosso refeito (visual)
+
+- **Era:** o gigante era uma mancha roxa escura (a arte do Sentinela
+  escurecida), os ataques eram retângulos vermelhos chapados e o chão uma
+  faixa lisa. O Rone: "parece jogo de menos do que a época do Atari".
+- **Passou a ser** (versão 2026-11-20b), mesma jogabilidade:
+  - cenário: céu de tempestade, lua, ruínas, relâmpagos no fundo, brasas
+    subindo, bruma onde o gigante pisa e chão de pedra em perspectiva;
+  - o gigante nas cores da arte, com contorno de luz, olhos acesos e um
+    núcleo de energia no peito (onde o raio do Kravenox acerta); balança,
+    treme ao levar golpe, racha aos 70% e 35% de vida e fica vermelho no fim;
+    o núcleo fica vermelho quando um ataque está para cair;
+  - ataques: punho de armadura descendo do céu (pisada), meteoros (chuva),
+    raio do céu em coluna (faixa) e onda de fogo no chão com o lugar seguro
+    marcado "AQUI!" (onda); todos com aviso no chão, impacto, poeira e
+    pedaços;
+  - raio do Kravenox em zigue-zague com faíscas; barra do gigante maior,
+    dividida em 10 partes e mostrando o dano que acabou de entrar.

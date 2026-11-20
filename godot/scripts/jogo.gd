@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-20a"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-20b"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -5296,7 +5296,14 @@ func comecar_modo(id: String) -> void:
 			esp["ataques"] = []
 			esp["t_ataque"] = 2.5
 			var vida := dano_base_esp() * 1000.0
-			esp["boss"] = {"hp": vida, "hp_max": vida, "flash": 0.0}
+			esp["boss"] = {"hp": vida, "hp_max": vida, "flash": 0.0, "hp_vis": vida}
+			esp["fx"] = []
+			esp["raios"] = []
+			esp["brasas"] = []
+			esp["relampago"] = 0.0
+			esp["t_relampago"] = 3.0
+			for _i in 36:
+				esp["brasas"].append({"p": Vector2(randf_range(0, LARG), randf_range(150, 700)), "v": randf_range(12, 40), "f": randf() * TAU, "tam": randf_range(1.0, 2.6)})
 			aviso("Arraste para os lados para desviar!", 3.0)
 		"refugio":
 			k_vis = Vector2(240, 780)
@@ -5788,8 +5795,10 @@ func atualizar_colosso(dt: float) -> void:
 		boss["hp"] -= d
 		boss["flash"] = 0.06
 		esp["dano"] += d
-		var alvo := Vector2(240 + randf_range(-60, 60), randf_range(180, 330))
-		efeitos.append({"t": "raio", "a": k_vis + Vector2(0, -24), "b": alvo, "vida": 0.15})
+		var alvo := pos_nucleo() + Vector2(randf_range(-26, 26), randf_range(-30, 30))
+		esp["raios"].append({"a": k_vis + Vector2(0, -24), "b": alvo, "vida": 0.18, "crit": crit})
+		for _i in (10 if crit else 5):
+			fx_colosso(alvo, Vector2.from_angle(randf() * TAU) * randf_range(60, 220), randf_range(0.2, 0.45), Color8(220, 170, 255) if not crit else OURO, randf_range(1.5, 3.5), 0.0)
 		texto_voa(alvo, ("%d!" if crit else "%d") % int(d), OURO if crit else BRANCO, 26 if crit else 18)
 		som("corte")
 		if boss["hp"] <= 0:
@@ -5803,14 +5812,14 @@ func atualizar_colosso(dt: float) -> void:
 		var tipos := ["pisada", "faixa", "onda", "chuva"] if t > 20 else ["pisada", "faixa"]
 		match tipos.pick_random():
 			"pisada":
-				esp["ataques"].append({"tipo": "circ", "x": k_vis.x, "r": 75.0, "t": 1.1, "max": 1.1})
+				esp["ataques"].append({"tipo": "circ", "x": k_vis.x, "r": 75.0, "t": 1.1, "max": 1.1, "fonte": "punho"})
 			"faixa":
 				esp["ataques"].append({"tipo": "col", "x": clampf(k_vis.x + randf_range(-40, 40), 50, LARG - 50), "w": 110.0, "t": 1.0, "max": 1.0})
 			"onda":
 				esp["ataques"].append({"tipo": "lin", "x": randf_range(70, LARG - 70), "w": 120.0, "t": 1.4, "max": 1.4})
 			"chuva":
 				for _i in 3:
-					esp["ataques"].append({"tipo": "circ", "x": randf_range(40, LARG - 40), "r": 55.0, "t": randf_range(0.9, 1.4), "max": 1.4})
+					esp["ataques"].append({"tipo": "circ", "x": randf_range(40, LARG - 40), "r": 55.0, "t": randf_range(0.9, 1.4), "max": 1.4, "fonte": "meteoro"})
 	for a in esp["ataques"]:
 		a["t"] -= dt
 		if a["t"] <= 0 and not a.get("feito", false):
@@ -5825,9 +5834,11 @@ func atualizar_colosso(dt: float) -> void:
 					pega = absf(k_vis.x - a["x"]) > a["w"] / 2
 			tremer(0.3, 0)
 			som("esmagamento")
+			impacto_colosso(a)
 			if pega:
 				ferir_kx(hp_max * (0.25 if t < 60 else 0.34))
 	esp["ataques"] = esp["ataques"].filter(func(a): return a["t"] > -0.35)
+	animar_colosso(dt)
 
 
 # ------------------------------------------------------------ Refúgio
@@ -6150,6 +6161,8 @@ func desenhar_esp() -> void:
 		draw_circle(t["p"], 6, Color8(200, 120, 255))
 		draw_circle(t["p"], 3, Color(1, 1, 1, 0.9))
 	desenhar_efeitos()
+	if id == "colosso":
+		desenhar_colosso_frente()
 	desenhar_topo_esp()
 	if id == "refugio":
 		desenhar_painel_refugio()
@@ -6240,10 +6253,17 @@ func desenhar_topo_esp() -> void:
 	escrever("%d / %d" % [int(maxf(0, hp)), int(hp_max)], Vector2(bx + bw / 2, 103), 16, BRANCO)
 	if id == "colosso":
 		var boss: Dictionary = esp["boss"]
-		var wb := LARG - 60
-		caixa(Rect2(28, 134, wb + 4, 14), Color(0.05, 0.04, 0.07, 0.9), 4, 1, Color(ROXO, 0.6))
-		degrade(Rect2(31, 137, (wb - 2) * clampf(boss["hp"] / boss["hp_max"], 0, 1), 8), Color8(170, 90, 255), Color8(80, 30, 140))
-		escrever("GIGANTE DO VAZIO", Vector2(LARG / 2, 160), 13, Color8(210, 180, 255), true, fonte_titulo)
+		var wb := LARG - 60.0
+		var rb := Rect2(28, 132, wb + 4, 18)
+		caixa(rb, Color(0.04, 0.02, 0.06, 0.95), 5, 2, Color8(150, 90, 230), true, 3)
+		var fv := clampf(float(boss.get("hp_vis", boss["hp"])) / boss["hp_max"], 0, 1)
+		var fh := clampf(boss["hp"] / boss["hp_max"], 0, 1)
+		draw_rect(Rect2(31, 135, (wb - 2) * fv, 12), Color(1, 0.95, 0.85, 0.85))   # dano que acabou de entrar
+		degrade(Rect2(31, 135, (wb - 2) * fh, 12), Color8(200, 110, 255) if fh > 0.33 else Color8(255, 80, 90), Color8(90, 30, 150) if fh > 0.33 else Color8(140, 20, 40))
+		draw_line(Vector2(31, 137), Vector2(31 + (wb - 2) * fh, 137), Color(1, 1, 1, 0.25), 2)
+		for k in range(1, 10):
+			draw_line(Vector2(31 + (wb - 2) * k / 10.0, 135), Vector2(31 + (wb - 2) * k / 10.0, 147), Color(0, 0, 0, 0.45), 1)
+		escrever("GIGANTE DO VAZIO", Vector2(LARG / 2, 164), 14, Color8(225, 195, 255), true, fonte_titulo)
 
 
 func desenhar_sala() -> void:
@@ -6325,37 +6345,298 @@ func desenhar_painel_refugio() -> void:
 		escrever("Tocar numa obra pronta melhora ela", Vector2(LARG / 2, 632), 13, CINZA)
 
 
+# ------------------------------------------------------------ Colosso: visual (20/11)
+# Refeito: o Rone achou o Colosso "pior que jogo de Atari". Agora tem céu de
+# tempestade, lua, ruínas, brasas, névoa, chão de pedra, o gigante nas cores
+# da arte com olhos e núcleo acesos (racha conforme perde vida), punho que
+# desce, meteoros, raio do céu e onda de fogo com o ponto seguro marcado.
+const COL_BASE := Vector2(240, 612)
+const COL_ALT := 448.0
+
+
+func pos_gigante() -> Vector2:
+	var t: float = esp.get("t", 0.0)
+	var balanco := Vector2(sin(t * 0.7) * 10, sin(t * 1.6) * 4)
+	var boss: Dictionary = esp["boss"]
+	if boss["flash"] > 0:
+		balanco += Vector2(sin(tempo * 97.0) * 4, cos(tempo * 83.0) * 2)   # treme ao levar golpe (igual em tudo que usa a posição)
+	return COL_BASE + balanco
+
+
+func pos_nucleo() -> Vector2:
+	return pos_gigante() + Vector2(0, -COL_ALT * 0.75)
+
+
+func fx_colosso(p: Vector2, v: Vector2, vida: float, cor: Color, tam: float, gravidade: float) -> void:
+	if esp["fx"].size() < 220:
+		esp["fx"].append({"p": p, "v": v, "vida": vida, "max": vida, "cor": cor, "tam": tam, "g": gravidade})
+
+
+func impacto_colosso(a: Dictionary) -> void:
+	match a["tipo"]:
+		"circ":
+			for _i in 26:
+				var ang := randf_range(PI, TAU)
+				fx_colosso(Vector2(a["x"], 660), Vector2(cos(ang) * randf_range(60, 260), sin(ang) * randf_range(80, 320)),
+					randf_range(0.4, 0.9), Color8(120, 100, 130) if randf() < 0.6 else Color8(255, 140, 80), randf_range(2, 5), 700.0)
+		"col":
+			for _i in 22:
+				fx_colosso(Vector2(a["x"] + randf_range(-a["w"] / 2, a["w"] / 2), 660), Vector2(randf_range(-80, 80), randf_range(-380, -120)),
+					randf_range(0.3, 0.7), Color8(220, 180, 255), randf_range(1.5, 3.5), 500.0)
+		"lin":
+			for _i in 30:
+				var x := randf_range(0, LARG)
+				if absf(x - a["x"]) > a["w"] / 2:
+					fx_colosso(Vector2(x, 660), Vector2(randf_range(-30, 30), randf_range(-260, -90)), randf_range(0.4, 0.8), Color8(255, 110, 200), randf_range(2, 4), 200.0)
+
+
+func animar_colosso(dt: float) -> void:
+	var boss: Dictionary = esp["boss"]
+	boss["hp_vis"] = maxf(boss["hp"], move_toward(float(boss.get("hp_vis", boss["hp"])), boss["hp"], boss["hp_max"] * 0.35 * dt))
+	for f in esp["fx"]:
+		f["vida"] -= dt
+		f["v"].y += f["g"] * dt
+		f["p"] += f["v"] * dt
+	esp["fx"] = esp["fx"].filter(func(f): return f["vida"] > 0)
+	for r in esp["raios"]:
+		r["vida"] -= dt
+	esp["raios"] = esp["raios"].filter(func(r): return r["vida"] > 0)
+	for b in esp["brasas"]:
+		b["p"].y -= b["v"] * dt
+		b["p"].x += sin(esp["t"] * 1.3 + b["f"]) * 12 * dt
+		if b["p"].y < 150:
+			b["p"] = Vector2(randf_range(0, LARG), randf_range(660, 720))
+	esp["relampago"] = maxf(0.0, esp["relampago"] - dt)
+	esp["t_relampago"] -= dt
+	if esp["t_relampago"] <= 0:
+		esp["t_relampago"] = randf_range(3.5, 7.0)
+		esp["relampago"] = 0.35
+		esp["raio_ceu"] = Vector2(randf_range(40, LARG - 40), 0)
+
+
+func raio_zigue(a: Vector2, b: Vector2, partes: int, amp: float, semente: int) -> PackedVector2Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = semente
+	var pts := PackedVector2Array([a])
+	var n := (b - a).orthogonal().normalized()
+	for k in range(1, partes):
+		pts.append(a.lerp(b, float(k) / partes) + n * rng.randf_range(-amp, amp))
+	pts.append(b)
+	return pts
+
+
 func desenhar_colosso() -> void:
 	var boss: Dictionary = esp["boss"]
 	var t: float = esp["t"]
-	var base := Vector2(240, 430)
-	brilho_suave(base + Vector2(0, -150), 220, ROXO, 0.8 + 0.2 * sin(tempo * 2))
-	sombra_chao(base, 130)
-	var resp := 1.0 + 0.02 * sin(tempo * 2.5)
-	contorno("sentinela", base, 300 * resp, false, Color(ROXO, 0.7))
-	desenhar_arte("sentinela", base, 300 * resp, false, Color(0.55, 0.38, 0.85))
+	var vida := clampf(boss["hp"] / boss["hp_max"], 0, 1)
+	var furia := vida < 0.33
+	# céu de tempestade
+	degrade(Rect2(0, 0, LARG, 330), Color8(8, 4, 16), Color8(34, 12, 46))
+	degrade(Rect2(0, 330, LARG, 280), Color8(34, 12, 46), Color8(90, 22, 50) if not furia else Color8(120, 20, 30))
+	var lua := Vector2(352, 222)
+	brilho_suave(lua, 150, Color8(200, 160, 255), 0.5)
+	draw_circle(lua, 58, Color8(214, 196, 236))
+	draw_circle(lua + Vector2(14, -8), 50, Color8(196, 176, 222))
+	draw_circle(lua + Vector2(-18, 16), 9, Color8(176, 156, 206))
+	draw_circle(lua + Vector2(10, 26), 6, Color8(176, 156, 206))
+	# relâmpago no fundo
+	if esp.get("relampago", 0.0) > 0:
+		var ra: Vector2 = esp.get("raio_ceu", Vector2(100, 0))
+		var al: float = esp["relampago"] / 0.35
+		draw_rect(Rect2(0, 0, LARG, 600), Color(0.8, 0.7, 1.0, 0.12 * al))
+		var zz := raio_zigue(ra, ra + Vector2(randf_range(-60, 60), 420), 9, 26, int(ra.x))
+		draw_polyline(zz, Color(0.75, 0.6, 1, 0.35 * al), 6, true)
+		draw_polyline(zz, Color(1, 1, 1, 0.8 * al), 1.6, true)
+	# ruínas ao longe
+	var ruina := PackedVector2Array([Vector2(0, 600), Vector2(0, 520), Vector2(22, 520), Vector2(22, 470), Vector2(40, 462), Vector2(48, 500),
+		Vector2(78, 505), Vector2(84, 430), Vector2(96, 418), Vector2(106, 432), Vector2(110, 520), Vector2(150, 530), Vector2(170, 545),
+		Vector2(310, 545), Vector2(330, 512), Vector2(352, 512), Vector2(356, 450), Vector2(372, 436), Vector2(386, 452), Vector2(390, 515),
+		Vector2(420, 508), Vector2(430, 470), Vector2(446, 466), Vector2(452, 520), Vector2(480, 525), Vector2(480, 600)])
+	draw_colored_polygon(ruina, Color8(20, 10, 26))
+	# o gigante
+	var g := pos_gigante()
+	brilho_suave(g + Vector2(0, -COL_ALT * 0.55), 300, Color8(255, 40, 70) if furia else Color8(140, 70, 255), 0.55 + 0.15 * sin(tempo * 2))
+	contorno("sentinela", g, COL_ALT, false, Color(Color8(255, 70, 90) if furia else Color8(190, 130, 255), 0.85))
+	desenhar_arte("sentinela", g, COL_ALT, false, Color(1.0, 0.92, 1.05))
 	if boss["flash"] > 0:
-		desenhar_arte("sentinela", base, 300 * resp, false, Color(1, 0.8, 1, 0.22), true)
-	# o chão por onde o Kravenox anda
-	draw_rect(Rect2(0, 600, LARG, 90), Color(0.1, 0.05, 0.12, 0.6))
-	draw_line(Vector2(0, 600), Vector2(LARG, 600), Color(ROXO, 0.4), 2)
-	draw_line(Vector2(0, 690), Vector2(LARG, 690), Color(ROXO, 0.4), 2)
+		desenhar_arte("sentinela", g, COL_ALT, false, Color(1, 0.9, 1, 0.18), true)
+	var w := COL_ALT * 157.0 / 300.0
+	# a parte de baixo da arte (névoa clara) some numa bruma escura
+	var cor_bruma := Color8(72, 18, 48) if not furia else Color8(100, 20, 34)
+	var rb := Rect2(g.x - w / 2 - 30, g.y - COL_ALT * 0.36, w + 60, COL_ALT * 0.36 + 4)
+	degrade(rb, Color(cor_bruma, 0.0), cor_bruma)
+	for k in 5:
+		brilho_suave(Vector2(g.x - w * 0.4 + k * w * 0.2, g.y - 30 + sin(tempo + k) * 6), 90, Color(cor_bruma).darkened(0.2), 1.0)
+	# rachaduras que acendem conforme ele perde vida
+	var nucleo := pos_nucleo()
+	var cor_racha := Color8(255, 90, 120) if furia else Color8(200, 140, 255)
+	if vida < 0.7:
+		for rr in [[Vector2(-6, -10), Vector2(-30, -40), Vector2(-52, -46)], [Vector2(8, -6), Vector2(34, -30), Vector2(40, -62)], [Vector2(0, 12), Vector2(-14, 46), Vector2(-6, 80)]]:
+			var pts := PackedVector2Array()
+			for v in rr:
+				pts.append(nucleo + v)
+			draw_polyline(pts, Color(cor_racha, 0.35), 6, true)
+			draw_polyline(pts, Color(1, 0.9, 1, 0.9), 1.5, true)
+	if vida < 0.35:
+		for rr in [[Vector2(-50, 40), Vector2(-70, 90), Vector2(-60, 130)], [Vector2(46, 30), Vector2(70, 80)], [Vector2(-20, -70), Vector2(-40, -100)]]:
+			var pts2 := PackedVector2Array()
+			for v in rr:
+				pts2.append(nucleo + v)
+			draw_polyline(pts2, Color(cor_racha, 0.35), 6, true)
+			draw_polyline(pts2, Color(1, 0.9, 1, 0.9), 1.5, true)
+	# olhos
+	var olhos_y := g.y - COL_ALT * (1.0 - 0.097)
+	var cor_olho := Color8(255, 60, 60) if furia else Color8(255, 210, 120)
+	for ox in [-0.045 * w, 0.035 * w]:
+		var po := Vector2(g.x + ox, olhos_y)
+		brilho_suave(po, 22, cor_olho, 1.2)
+		draw_circle(po, 2.6, Color(1, 1, 0.9))
+	# núcleo: fica vermelho quando um ataque está carregando
+	var carregando := false
+	for a in esp["ataques"]:
+		if a["t"] > 0 and a["t"] < 0.5:
+			carregando = true
+	var cor_n := Color8(255, 60, 80) if carregando or furia else Color8(190, 120, 255)
+	var pulso := 1.0 + 0.15 * sin(tempo * 6)
+	brilho_suave(nucleo, 70 * pulso, cor_n, 1.0)
+	draw_circle(nucleo, 13 * pulso, Color(cor_n, 0.9))
+	draw_circle(nucleo, 6, Color(1, 1, 1, 0.95))
+	for k in 6:
+		var an := tempo * 1.5 + k * TAU / 6
+		draw_line(nucleo + Vector2.from_angle(an) * 16, nucleo + Vector2.from_angle(an) * (24 + 4 * sin(tempo * 8 + k)), Color(cor_n, 0.8), 2, true)
+	# névoa onde ele pisa
+	for k in 7:
+		var fx := fmod(k * 83.0 + t * (8 + k * 2), LARG + 160) - 80
+		brilho_suave(Vector2(fx, 586 + (k % 3) * 8), 120, Color8(70, 40, 90), 0.75)
+	# chão de pedra em perspectiva
+	degrade(Rect2(0, 598, LARG, 132), Color8(40, 26, 50), Color8(14, 8, 20))
+	var fuga := Vector2(240, 430)
+	for k in range(-6, 7):
+		var xb := 240 + k * 90.0
+		var xt := fuga.x + (xb - fuga.x) * (598 - fuga.y) / (730 - fuga.y)
+		draw_line(Vector2(xt, 598), Vector2(xb, 730), Color(0, 0, 0, 0.35), 1.5)
+	for y in [612.0, 632.0, 660.0, 698.0]:
+		draw_line(Vector2(0, y), Vector2(LARG, y), Color(0, 0, 0, 0.3), 1.5)
+	draw_line(Vector2(0, 598), Vector2(LARG, 598), Color(Color8(190, 120, 255), 0.5), 2)
+	# avisos dos ataques no chão
 	for a in esp["ataques"]:
 		var f: float = clampf(1.0 - a["t"] / a["max"], 0, 1)
-		var cor := Color(1.0, 0.15, 0.2, 0.18 + 0.35 * f) if a["t"] > 0 else Color(1, 0.9, 0.8, 0.8)
+		if a["t"] <= 0:
+			continue
+		var pisca := 0.5 + 0.5 * sin(tempo * (10 + 20 * f))
 		match a["tipo"]:
 			"circ":
-				draw_set_transform(Vector2(a["x"], 645), 0, Vector2(1, 0.4))
-				draw_circle(Vector2.ZERO, a["r"], cor)
-				draw_arc(Vector2.ZERO, a["r"] * f, 0, TAU, 32, Color(1, 0.4, 0.4, 0.9), 3, true)
+				draw_set_transform(Vector2(a["x"], 662), 0, Vector2(1, 0.32))
+				draw_circle(Vector2.ZERO, a["r"], Color(1, 0.1, 0.15, 0.12 + 0.25 * f))
+				draw_arc(Vector2.ZERO, a["r"], 0, TAU, 40, Color(1, 0.3, 0.3, 0.6 + 0.4 * pisca), 3, true)
+				draw_arc(Vector2.ZERO, a["r"] * f, 0, TAU, 40, Color(1, 0.75, 0.5, 0.9), 2, true)
+				for k in 6:
+					var an := k * TAU / 6 + tempo
+					draw_line(Vector2.from_angle(an) * a["r"] * 0.55, Vector2.from_angle(an) * a["r"] * 0.85, Color(1, 0.4, 0.4, 0.7), 3)
 				draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
 			"col":
-				draw_rect(Rect2(a["x"] - a["w"] / 2, 600, a["w"], 90), cor)
+				var x0: float = a["x"] - a["w"] / 2
+				draw_rect(Rect2(x0, 598, a["w"], 132), Color(0.8, 0.3, 1, 0.1 + 0.2 * f))
+				for xx in [x0, x0 + a["w"]]:
+					draw_line(Vector2(xx, 150), Vector2(xx, 730), Color(0.9, 0.5, 1, (0.25 + 0.5 * f) * pisca), 2)
+				for k in 3:
+					var yy := 620 + k * 30 - fmod(tempo * 60, 30)
+					draw_polyline(PackedVector2Array([Vector2(a["x"] - 16, yy + 10), Vector2(a["x"], yy), Vector2(a["x"] + 16, yy + 10)]), Color(1, 0.6, 1, 0.7), 3)
 			"lin":
-				draw_rect(Rect2(0, 600, a["x"] - a["w"] / 2, 90), cor)
-				draw_rect(Rect2(a["x"] + a["w"] / 2, 600, LARG - a["x"] - a["w"] / 2, 90), cor)
+				var gap0: float = a["x"] - a["w"] / 2
+				var gap1: float = a["x"] + a["w"] / 2
+				draw_rect(Rect2(0, 598, gap0, 132), Color(1, 0.15, 0.3, 0.1 + 0.28 * f))
+				draw_rect(Rect2(gap1, 598, LARG - gap1, 132), Color(1, 0.15, 0.3, 0.1 + 0.28 * f))
+				for k in 8:
+					var xr := fmod(k * 61.0, LARG)
+					if xr > gap0 - 10 and xr < gap1 + 10:
+						continue
+					draw_polyline(PackedVector2Array([Vector2(xr, 610), Vector2(xr + 10, 630 + 20 * f), Vector2(xr - 6, 660 + 40 * f)]), Color(1, 0.5, 0.4, 0.7 * f), 2)
+				draw_rect(Rect2(gap0, 598, a["w"], 132), Color(0.3, 1, 0.7, 0.10 + 0.08 * pisca))
+				draw_line(Vector2(gap0, 598), Vector2(gap0, 730), Color(0.4, 1, 0.7, 0.8), 2)
+				draw_line(Vector2(gap1, 598), Vector2(gap1, 730), Color(0.4, 1, 0.7, 0.8), 2)
+				escrever("AQUI!", Vector2(a["x"], 616), 14, Color8(140, 255, 190), true, fonte_titulo)
 	if t < 6:
-		escrever("Arraste para os lados para desviar das áreas vermelhas", Vector2(LARG / 2, 730), 14, CINZA)
+		escrever("Arraste para os lados para desviar dos ataques", Vector2(LARG / 2, 748), 14, BRANCO)
+
+
+# o que fica na frente do Kravenox: punho, meteoros, raio do céu, onda de fogo,
+# o raio do Kravenox, faíscas e brasas
+func desenhar_colosso_frente() -> void:
+	for a in esp["ataques"]:
+		var f: float = clampf(1.0 - a["t"] / a["max"], 0, 1)
+		var depois := clampf(-a["t"] / 0.35, 0, 1)   # 0 = acabou de bater, 1 = sumiu
+		match a["tipo"]:
+			"circ":
+				if a.get("fonte", "") == "punho":
+					if a["t"] > 0 and f > 0.55:
+						var y := lerpf(150, 640, pow((f - 0.55) / 0.45, 2.2))
+						desenhar_punho(Vector2(a["x"], y), 1.0)
+					elif a["t"] <= 0 and depois < 0.6:
+						desenhar_punho(Vector2(a["x"], 640 - depois * 20), 1.0 - depois)
+				elif a["t"] > 0 and f > 0.3:
+					var ff := (f - 0.3) / 0.7
+					var mp := Vector2(a["x"] - 120 * (1 - ff), lerpf(-40, 650, ff))
+					var cauda := mp + Vector2(-60, -110)
+					draw_line(mp, cauda, Color(1, 0.5, 0.2, 0.35), 18, true)
+					draw_line(mp, cauda.lerp(mp, 0.4), Color(1, 0.85, 0.5, 0.7), 7, true)
+					brilho_suave(mp, 40, Color8(255, 130, 60), 1.2)
+					draw_circle(mp, 12, Color8(80, 50, 60))
+					draw_circle(mp + Vector2(-3, -3), 6, Color8(255, 170, 90))
+				if a["t"] <= 0:
+					draw_set_transform(Vector2(a["x"], 662), 0, Vector2(1, 0.32))
+					draw_arc(Vector2.ZERO, a["r"] * (0.6 + depois * 1.2), 0, TAU, 40, Color(1, 0.85, 0.7, 1.0 - depois), 8 * (1 - depois) + 1, true)
+					draw_circle(Vector2.ZERO, a["r"] * 0.8, Color(1, 0.6, 0.4, 0.35 * (1 - depois)))
+					draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
+			"col":
+				if a["t"] <= 0:
+					var wv: float = a["w"] * (1.0 - depois * 0.7)
+					brilho_suave(Vector2(a["x"], 450), wv * 2.2, Color8(190, 110, 255), 1.4 * (1 - depois))
+					draw_rect(Rect2(a["x"] - wv / 2, 0, wv, 730), Color(0.85, 0.6, 1, 0.55 * (1 - depois)))
+					draw_rect(Rect2(a["x"] - wv / 6, 0, wv / 3, 730), Color(1, 1, 1, 0.9 * (1 - depois)))
+			"lin":
+				if a["t"] <= 0:
+					var alt := 90.0 * (1 - depois)
+					for xx in range(0, int(LARG), 14):
+						if absf(xx - a["x"]) < a["w"] / 2:
+							continue
+						var hh := alt * (0.6 + 0.4 * sin(xx * 0.7 + tempo * 20))
+						draw_colored_polygon(PackedVector2Array([Vector2(xx, 690), Vector2(xx + 7, 690 - hh), Vector2(xx + 14, 690)]),
+							Color(1, 0.35 + 0.3 * sin(xx), 0.7, 0.85 * (1 - depois)))
+	# raio do Kravenox no núcleo
+	for r in esp["raios"]:
+		var al: float = r["vida"] / 0.18
+		var zz := raio_zigue(r["a"], r["b"], 8, 16, int(tempo * 30) + int(r["b"].x))
+		var cor := OURO if r["crit"] else Color8(200, 150, 255)
+		draw_polyline(zz, Color(cor, 0.35 * al), 9, true)
+		draw_polyline(zz, Color(1, 1, 1, al), 2.2, true)
+		brilho_suave(r["b"], 46, cor, 1.3 * al)
+		draw_circle(r["b"], 7 * al, Color(1, 1, 1, al))
+	# faíscas e pedaços
+	for f in esp["fx"]:
+		var a2: float = f["vida"] / f["max"]
+		draw_circle(f["p"], f["tam"] * (0.5 + 0.5 * a2), Color(f["cor"], a2))
+	# brasas subindo
+	for b in esp["brasas"]:
+		var c := Color8(255, 150, 90) if int(b["f"] * 10) % 3 == 0 else Color8(200, 120, 255)
+		draw_circle(b["p"], b["tam"], Color(c, 0.35 + 0.35 * sin(tempo * 3 + b["f"])))
+
+
+func desenhar_punho(c: Vector2, alfa: float) -> void:
+	# um punho de armadura descendo do céu (pedra escura com runas acesas)
+	brilho_suave(c + Vector2(0, -40), 110, Color8(150, 80, 255), 0.8 * alfa)
+	var braco := PackedVector2Array([c + Vector2(-34, -200), c + Vector2(34, -200), c + Vector2(30, -60), c + Vector2(-30, -60)])
+	draw_colored_polygon(braco, Color(Color8(30, 22, 40), alfa))
+	var punho := PackedVector2Array([c + Vector2(-52, -72), c + Vector2(52, -72), c + Vector2(60, -30), c + Vector2(48, 4),
+		c + Vector2(-48, 4), c + Vector2(-60, -30)])
+	draw_colored_polygon(punho, Color(Color8(44, 32, 58), alfa))
+	var borda := punho.duplicate()
+	borda.append(punho[0])
+	draw_polyline(borda, Color(Color8(190, 130, 255), 0.9 * alfa), 3, true)
+	for k in 4:
+		var x := -36 + k * 24
+		draw_line(c + Vector2(x, -34), c + Vector2(x, 0), Color(0, 0, 0, 0.5 * alfa), 3)
+	draw_line(c + Vector2(-26, -54), c + Vector2(26, -54), Color(Color8(255, 120, 200), 0.9 * alfa), 2)
 
 
 func desenhar_fim_esp() -> void:
