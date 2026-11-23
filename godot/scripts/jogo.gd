@@ -18,7 +18,7 @@ var OX := 57.0
 var OY := 200.0
 const LOJA_Y := 600.0
 const NIVEL_MAX := 5
-const VERSAO := "2026-11-20b"   # aparece em Ajustes: diz qual versão está no aparelho
+const VERSAO := "2026-11-23a"   # aparece em Ajustes: diz qual versão está no aparelho
 const FASES := 4             # ondas por capítulo; a 4ª tem chefe
 const DANO_MONSTROS := 1.12
 const ABISMO_VIDA := 2.2   # 14/11: o Abismo estava fácil (ficou fora do reforço dos capítulos)
@@ -797,7 +797,7 @@ func ir_para(t: String) -> void:
 			# celular não vê nada (a conta fica salva); sem conta, pode jogar
 			# assim mesmo (o jogo funciona offline) e o pedido volta na próxima vez.
 			conta_pedida = true
-			if not robo and online_disponivel() and OS.has_feature("web"):
+			if not robo and online_disponivel() and DisplayServer.get_name() != "headless":
 				if conta() == "" or str(prog.get("token", "")) == "":
 					abrir_conta(true)   # sem conta, ou conta antiga sem o progresso na nuvem: entra de novo
 				else:
@@ -7051,7 +7051,7 @@ func copiar_progresso() -> void:
 		popup = {"titulo": "CÓDIGO DO PROGRESSO", "texto": "Mande o código para o outro celular (WhatsApp, Notas, e-mail). Lá, em Ajustes, toque em Colar progresso."}
 	else:
 		DisplayServer.clipboard_set(c)
-		popup = {"titulo": "CÓDIGO COPIADO", "texto": "O código já está copiado. Mande para o outro celular (WhatsApp, Notas, e-mail) e lá, em Ajustes, toque em Colar progresso."}
+		await perguntar("O código já foi copiado. Mande para o outro celular (WhatsApp, Notas, e-mail); lá, em Ajustes, toque em Colar progresso.", c)
 
 
 func colar_progresso() -> void:
@@ -7073,13 +7073,8 @@ func colar_progresso() -> void:
 		popup = {"titulo": "PROGRESSO CARREGADO", "texto": "Pronto! Este celular agora está no capítulo %d, com %d fragmentos." % [int(prog["liberado"]), int(prog["fragmentos"])]}
 		return
 	var c := ""
-	if OS.has_feature("web"):
-		c = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Cole aqui o código do outro celular:"))))
-	else:
-		c = DisplayServer.clipboard_get()
+	c = await perguntar("Cole aqui o código do outro celular:")
 	if c.strip_edges() == "":
-		if not OS.has_feature("web"):
-			popup = {"titulo": "COLAR PROGRESSO", "texto": "Copie o código do outro celular primeiro e depois toque aqui."}
 		return
 	var curto := c.strip_edges().to_upper().replace(" ", "").replace("-", "")
 	if RECUPERACOES.has(curto.sha256_text()):
@@ -7367,14 +7362,9 @@ func ret_skin_beta(i: int) -> Rect2:
 
 func pedir_codigo() -> void:
 	var c := ""
-	if OS.has_feature("web"):
-		c = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Digite o código de presente:"))))
-	else:
-		c = DisplayServer.clipboard_get()
+	c = await perguntar("Digite o código de presente:")
 	c = c.strip_edges().to_upper().replace(" ", "").replace("-", "")
 	if c == "":
-		if not OS.has_feature("web"):
-			popup = {"titulo": "CÓDIGO DE PRESENTE", "texto": "Copie o código e depois toque aqui."}
 		return
 	if RECUPERACOES.has(c.sha256_text()):
 		aplicar_recuperacao(c.sha256_text())
@@ -7466,9 +7456,7 @@ func pedir_nome_duelo() -> bool:
 		return true
 	if nome_duelo() != "":
 		return true
-	var n := "Jogador"
-	if OS.has_feature("web"):
-		n = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Seu nome no online (os outros jogadores vão ver):"))))
+	var n: String = await perguntar("Seu nome no online (os outros jogadores vão ver):")
 	n = n.strip_edges().substr(0, 16)
 	if n == "":
 		return false
@@ -7492,7 +7480,7 @@ func conectar_duelo(codigo: String) -> void:
 
 
 func criar_sala() -> void:
-	if not pedir_nome_duelo():
+	if not await pedir_nome_duelo():
 		return
 	var c := ""
 	for _i in 4:
@@ -7501,13 +7489,10 @@ func criar_sala() -> void:
 
 
 func entrar_sala() -> void:
-	if not pedir_nome_duelo():
+	if not await pedir_nome_duelo():
 		return
 	var c := ""
-	if OS.has_feature("web"):
-		c = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Código da sala (4 letras):"))))
-	else:
-		c = DisplayServer.clipboard_get()
+	c = await perguntar("Código da sala (4 letras):")
 	c = c.strip_edges().to_upper().replace(" ", "")
 	if c.length() != 4:
 		if c != "":
@@ -7866,11 +7851,9 @@ func carregar_ordem() -> void:
 
 
 func criar_ordem() -> void:
-	if not pedir_nome_duelo():
+	if not await pedir_nome_duelo():
 		return
-	var n := "Ordem do Cisma"
-	if OS.has_feature("web"):
-		n = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Nome da sua Ordem:"))))
+	var n: String = await perguntar("Nome da sua Ordem:", "Ordem do Cisma")
 	n = n.strip_edges()
 	if n == "":
 		return
@@ -7887,13 +7870,10 @@ func criar_ordem() -> void:
 
 
 func entrar_ordem() -> void:
-	if not pedir_nome_duelo():
+	if not await pedir_nome_duelo():
 		return
 	var c := ""
-	if OS.has_feature("web"):
-		c = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Código da Ordem (5 letras):"))))
-	else:
-		c = DisplayServer.clipboard_get()
+	c = await perguntar("Código da Ordem (5 letras):")
 	c = c.strip_edges().to_upper().replace(" ", "")
 	if c.length() != 5:
 		if c != "":
@@ -8294,7 +8274,14 @@ var conta_pedida := false
 
 func abrir_conta(entrada := false) -> void:
 	if not OS.has_feature("web"):
-		popup = {"titulo": "CONTA", "texto": "A conta só pode ser criada no jogo pelo navegador."}
+		# 23/11: no app (Android/iPhone) a tela de conta é do próprio jogo
+		var r := await formulario("Conta Kravenox",
+			tx("Primeira vez? Escolha um usuário e uma senha e toque em Criar conta. No outro celular, use os mesmos e toque em Entrar.")
+				+ (" " + tx("A conta põe seu nome no ranking e junta os seus celulares. Sem ela o jogo funciona igual, só fica fora do online.") if entrada else ""),
+			[{"rotulo": "Usuário", "senha": false}, {"rotulo": "Senha", "senha": true}],
+			[{"id": "entrar", "texto": "Entrar"}, {"id": "criar", "texto": "Criar conta", "cheio": true}, {"id": "cancelar", "texto": "Jogar sem conta" if entrada else "Cancelar"}])
+		if str(r["acao"]) in ["criar", "entrar"]:
+			enviar_conta(str(r["acao"]), str(r["valores"][0]).strip_edges(), str(r["valores"][1]))
 		return
 	if cb_conta == null:
 		cb_conta = JavaScriptBridge.create_callback(_resposta_conta)
@@ -8668,9 +8655,7 @@ var sugestoes := {}
 
 
 func enviar_sugestao() -> void:
-	var t := ""
-	if OS.has_feature("web"):
-		t = str(JavaScriptBridge.eval("window.prompt(%s, '') || ''" % JSON.stringify(tx("Sua sugestão, ideia ou problema (o Rone vai ler):"))))
+	var t: String = await perguntar("Sua sugestão, ideia ou problema (o Rone vai ler):")
 	t = t.strip_edges().substr(0, 500)
 	if t == "":
 		return
@@ -9133,3 +9118,129 @@ func excluir_conta() -> void:
 	prog["id_jogador"] = ""   # um número novo na próxima vez que usar o online
 	salvar()
 	popup = {"titulo": "CONTA EXCLUÍDA", "texto": "Sua conta foi apagada do servidor. O progresso deste celular continua aqui."}
+
+
+# ------------------------------------------------------------ caixas de texto (23/11)
+# No navegador usa a caixa do próprio navegador; no app (Android/iPhone) usa
+# uma caixa do jogo, com o teclado do celular (antes, no app, só dava para
+# colar da área de transferência).
+signal formulario_respondido(r: Dictionary)
+
+
+func perguntar(texto: String, inicial := "") -> String:
+	if OS.has_feature("web"):
+		return str(JavaScriptBridge.eval("window.prompt(%s, %s) || ''" % [JSON.stringify(tx(texto)), JSON.stringify(inicial)]))
+	var r := await formulario("", texto, [{"rotulo": "", "senha": false, "inicial": inicial}],
+		[{"id": "cancelar", "texto": "Cancelar"}, {"id": "ok", "texto": "OK", "cheio": true}])
+	return str(r["valores"][0]) if r["acao"] == "ok" else ""
+
+
+func estilo_caixa(fundo: Color, borda: Color, raio := 10) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = fundo
+	sb.border_color = borda
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(raio)
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	sb.content_margin_top = 8
+	sb.content_margin_bottom = 8
+	return sb
+
+
+# Monta a caixa: título, texto, campos e botões. Devolve {acao, valores}.
+func formulario(titulo: String, nota: String, campos: Array, botoes: Array) -> Dictionary:
+	var camada := CanvasLayer.new()
+	camada.layer = 50
+	add_child(camada)
+	var tema := Theme.new()
+	tema.default_font = fonte
+	tema.default_font_size = 18
+	var fundo := ColorRect.new()
+	fundo.color = Color(0, 0, 0, 0.72)
+	fundo.size = Vector2(LARG, ALT)
+	fundo.mouse_filter = Control.MOUSE_FILTER_STOP
+	camada.add_child(fundo)
+	var painel := PanelContainer.new()
+	painel.theme = tema
+	painel.add_theme_stylebox_override("panel", estilo_caixa(Color8(26, 20, 36), OURO, 14))
+	painel.position = Vector2(26, 150)
+	painel.custom_minimum_size = Vector2(LARG - 52, 0)
+	camada.add_child(painel)
+	var caixa_v := VBoxContainer.new()
+	caixa_v.add_theme_constant_override("separation", 10)
+	painel.add_child(caixa_v)
+	if titulo != "":
+		var lt := Label.new()
+		lt.text = tx(titulo)
+		lt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lt.add_theme_font_override("font", fonte_titulo)
+		lt.add_theme_font_size_override("font_size", 24)
+		lt.add_theme_color_override("font_color", OURO)
+		caixa_v.add_child(lt)
+	var entradas := []
+	var nota_em_cima := titulo == "" and nota != ""
+	if nota_em_cima:
+		var lq := Label.new()
+		lq.text = tx(nota)
+		lq.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lq.custom_minimum_size = Vector2(LARG - 80, 0)
+		lq.add_theme_font_size_override("font_size", 18)
+		lq.add_theme_color_override("font_color", BRANCO)
+		caixa_v.add_child(lq)
+		nota = ""
+	for cp in campos:
+		if str(cp.get("rotulo", "")) != "":
+			var lr := Label.new()
+			lr.text = tx(str(cp["rotulo"]))
+			lr.add_theme_color_override("font_color", BRANCO)
+			caixa_v.add_child(lr)
+		var le := LineEdit.new()
+		le.secret = bool(cp.get("senha", false))
+		le.text = str(cp.get("inicial", ""))
+		le.custom_minimum_size = Vector2(0, 48)
+		le.add_theme_font_size_override("font_size", 20)
+		le.add_theme_stylebox_override("normal", estilo_caixa(Color8(14, 10, 20), Color8(140, 110, 60), 8))
+		le.add_theme_stylebox_override("focus", estilo_caixa(Color8(14, 10, 20), BRANCO, 8))
+		le.add_theme_color_override("font_color", BRANCO)
+		caixa_v.add_child(le)
+		entradas.append(le)
+	if nota != "":
+		var ln := Label.new()
+		ln.text = tx(nota)
+		ln.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		ln.custom_minimum_size = Vector2(LARG - 80, 0)
+		ln.add_theme_font_size_override("font_size", 15)
+		ln.add_theme_color_override("font_color", Color8(200, 190, 215))
+		caixa_v.add_child(ln)
+	var linha := HBoxContainer.new()
+	linha.add_theme_constant_override("separation", 8)
+	caixa_v.add_child(linha)
+	var resposta := func(acao: String) -> void:
+		var vals := []
+		for le in entradas:
+			vals.append(le.text)
+		formulario_respondido.emit({"acao": acao, "valores": vals})
+	for bt in botoes:
+		var b := Button.new()
+		b.text = tx(str(bt["texto"]))
+		b.custom_minimum_size = Vector2(0, 50)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var cheio := bool(bt.get("cheio", false))
+		b.add_theme_stylebox_override("normal", estilo_caixa(OURO if cheio else Color8(40, 30, 54), OURO, 8))
+		b.add_theme_stylebox_override("hover", estilo_caixa(OURO.lightened(0.1) if cheio else Color8(54, 42, 70), OURO, 8))
+		b.add_theme_stylebox_override("pressed", estilo_caixa(OURO.darkened(0.2) if cheio else Color8(30, 22, 40), OURO, 8))
+		b.add_theme_color_override("font_color", Color8(26, 20, 36) if cheio else OURO)
+		b.add_theme_color_override("font_hover_color", Color8(26, 20, 36) if cheio else OURO)
+		b.add_theme_color_override("font_pressed_color", Color8(26, 20, 36) if cheio else OURO)
+		var id := str(bt["id"])
+		b.pressed.connect(func(): resposta.call(id))
+		linha.add_child(b)
+	if not entradas.is_empty():
+		var ultima: LineEdit = entradas[-1]
+		ultima.text_submitted.connect(func(_t): resposta.call(str(botoes[-1]["id"]) if botoes[-1]["id"] != "cancelar" else str(botoes[0]["id"])))
+		entradas[0].grab_focus.call_deferred()
+	var r: Dictionary = await formulario_respondido
+	DisplayServer.virtual_keyboard_hide()
+	camada.queue_free()
+	return r

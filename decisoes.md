@@ -735,3 +735,17 @@
     pedaços;
   - raio do Kravenox em zigue-zague com faíscas; barra do gigante maior,
     dividida em 10 partes e mostrando o dano que acabou de entrar.
+
+## 23/11/2026: primeiro app de Android (APK de teste) e caixas de texto do app
+
+- **Era:** o jogo só existia no navegador. No app, a conta, o código de
+  presente, o "colar progresso", o nome, o código da sala, a Ordem e a
+  sugestão dependiam de caixas do navegador (no app ou não funcionavam ou só
+  colavam da área de transferência).
+- **Passou a ser** (versão 2026-11-23a): caixas de texto do próprio jogo
+  (teclado do celular) e a tela de conta do app (Entrar / Criar conta /
+  Jogar sem conta), também na entrada. No navegador continua como antes.
+  Primeiro **APK de teste** (Android 32 e 64 bits, 76 MB, assinado com chave
+  de teste), para instalar direto no celular sem publicar. Como gerar:
+  `godot/ferramentas/APK-ANDROID.md`.
+- **Por quê:** o Rone quer ver o app antes de publicar no Google Play.
